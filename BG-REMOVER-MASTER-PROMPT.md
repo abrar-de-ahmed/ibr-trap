@@ -285,10 +285,10 @@ ibr-deploy/
 
 | Variable | Value | Purpose |
 |----------|-------|---------|
-| `STRIPE_SECRET_KEY` | `sk_live_****...****` | Stripe API authentication |
+| `STRIPE_SECRET_KEY` | `sk_live_****...****` (set in CF Dashboard) | Stripe API authentication |
 | `STRIPE_PRICE_ID` | `price_1QxGOHP7H2Dn9RlR6KBFM1Ko` | Stripe product price ID |
 | `STRIPE_PRODUCT_ID` | `prod_Qw6lTBYWqRxMRy` | Stripe product ID |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_no7Ks3Q6OTvekohOOjlBknFtu2oJv1CG` | Webhook signature verification |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_****...****` (set in CF Dashboard) | Webhook signature verification |
 
 ### GitHub Actions Secrets (set in GitHub Settings)
 
