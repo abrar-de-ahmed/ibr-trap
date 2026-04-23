@@ -49,7 +49,11 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.png", sizes: "1024x1024", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
   metadataBase: new URL(SITE_URL),
   alternates: {
@@ -145,7 +149,9 @@ export default function RootLayout({
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'G-K1QRPR8ZL9');
+              gtag('config', 'G-K1QRPR8ZL9', {
+                send_page_view: true
+              });
             `,
           }}
         />

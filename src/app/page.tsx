@@ -637,7 +637,14 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="py-6 text-center text-sm text-slate-400 border-t border-slate-200 bg-white mt-auto">
-        &copy; 2025 BG Remover Digital. All rights reserved.
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+          <span>&copy; {new Date().getFullYear()} BG Remover Digital. All rights reserved.</span>
+          <span className="hidden sm:inline text-slate-300">|</span>
+          <div className="flex items-center gap-4">
+            <a href="/privacy-policy" className="hover:text-violet-600 transition-colors">Privacy Policy</a>
+            <a href="/terms-of-service" className="hover:text-violet-600 transition-colors">Terms of Service</a>
+          </div>
+        </div>
       </footer>
     </div>
   );
