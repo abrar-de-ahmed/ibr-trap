@@ -26,6 +26,7 @@ const BATCH_MAX = 30;
 const STORAGE_KEY_COUNT = 'bg_remover_used_count';
 const STORAGE_KEY_PAID = 'bg_remover_is_paid';
 const STORAGE_KEY_CLIENT_REF = 'bg_remover_client_ref';
+const STORAGE_KEY_SESSION_ID = 'bg_remover_session_id';
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_DIMENSION = 4096;
 
@@ -62,10 +63,14 @@ async function openCheckout(): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ clientRefId }),
     });
-    const data = await resp.json() as { url?: string; error?: string };
+    const data = await resp.json() as { url?: string; sessionId?: string; error?: string };
     if (!resp.ok || !data.url) {
       toast.error(data.error || 'Could not start checkout. Please try again.');
       return;
+    }
+    // Store session ID for post-payment verification
+    if (data.sessionId) {
+      lsSet(STORAGE_KEY_SESSION_ID, data.sessionId);
     }
     const w = 520;
     const h = 720;
@@ -81,16 +86,19 @@ async function openCheckout(): Promise<void> {
   }
 }
 
-// Verify payment status via CF Pages Function (server-validated)
+// Verify payment status via Stripe API (server-validated, no KV needed)
 async function verifyPaymentStatus(): Promise<boolean> {
-  const clientRefId = getClientRefId();
+  // Try session_id from URL params first (user just returned from Stripe), then from localStorage
+  const urlParams = new URLSearchParams(window.location.search);
+  const sessionId = urlParams.get('session_id') || lsGet(STORAGE_KEY_SESSION_ID);
+  if (!sessionId) return false;
   try {
     const resp = await fetch('/api/verify-payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientRefId }),
+      body: JSON.stringify({ sessionId }),
     });
-    const data = await resp.json() as { paid?: boolean };
+    const data = await resp.json() as { paid?: boolean; images?: number };
     if (data.paid) {
       lsSet(STORAGE_KEY_PAID, 'true');
       return true;
