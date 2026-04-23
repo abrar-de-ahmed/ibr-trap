@@ -152,19 +152,18 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
 
-        {/* TODO: Add Google Analytics when you have the Measurement ID */}
-        {/* Uncomment and replace G-XXXXXXX with your actual ID:
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
+        {/* Google Analytics */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-K1QRPR8ZL9"></script>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'G-XXXXXXX');
+              gtag('config', 'G-K1QRPR8ZL9');
             `,
           }}
-        /> */}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
