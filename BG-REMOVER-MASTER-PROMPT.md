@@ -1,8 +1,9 @@
 # BG Remover Digital — MASTER PROMPT (Complete Project Reference)
 
-> **Last Updated:** April 24, 2025
-> **Version:** 2.0 — Post-Launch (All Agents Live)
+> **Last Updated:** April 24, 2026
+> **Version:** 3.0 — All 5 Agents Live + Legal + Branding Complete
 > **Project Owner:** Abrar Ahmed
+> **Contact Email:** craftedminds3@gmail.com
 > **Project:** BG Remover Digital (formerly IBR-Trap)
 > **Live URL:** https://bgremoverdigital.pages.dev
 > **Future Domain:** https://bgremoverdigital.com (planned, not purchased yet)
@@ -26,6 +27,7 @@ If this is a new chat session, the AI assistant should:
 - Change the domain or branding without explicit permission
 - Modify Stripe keys or webhook configurations
 - Deploy without git commit + push (all deploys go through CF Pages git integration)
+- Mention img.ly by name in any user-facing content — always use "third-party AI integration" or "client-side AI technology"
 
 ---
 
@@ -57,7 +59,7 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-## 2. ALL AGENTS — COMPLETE STATUS
+## 2. ALL 5 AGENTS — COMPLETE STATUS
 
 ### Agent 1: Monitor Agent ✅ LIVE
 
@@ -66,7 +68,7 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 | **Workflow File** | `.github/workflows/monitor.yml` |
 | **Script File** | `.github/workflows/scripts/monitor.js` |
 | **Schedule** | Every 12 hours (0:00 UTC and 12:00 UTC) + manual trigger |
-| **Email Behavior** | Instant alert on ANY failure + weekly OK email on Sundays |
+| **Email Behavior** | INSTANT alert on ANY failure + weekly OK email on Sundays |
 | **GitHub Secrets** | GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, CF_API_TOKEN, CF_ACCOUNT_ID |
 
 **7 Checks:**
@@ -86,44 +88,36 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-### Agent 2: Security Agent ✅ LIVE
+### Agent 2: Security Agent v2 ✅ LIVE
 
 | Detail | Value |
 |--------|-------|
 | **Workflow File** | `.github/workflows/security-agent.yml` |
 | **Script File** | `.github/workflows/scripts/security-audit.js` |
 | **Schedule** | Every Monday at 6:00 UTC + manual trigger |
-| **Email Behavior** | Weekly report only (no instant alerts) |
+| **Email Behavior** | INSTANT alert if CRITICAL/HIGH findings + scheduled weekly report on Monday |
+| **Smart Logic** | If all clear on manual trigger → skips email to avoid noise |
 | **GitHub Secrets** | GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL |
 
 **6 Checks:**
 1. `npm audit` — dependency vulnerability scanning
-2. Secret scanning — scans all .ts/.js/.json files for exposed keys:
-   - Stripe live/test keys, webhook secrets, publishable keys
-   - Google API keys, GitHub PATs, AWS access keys, private keys
+2. Secret scanning — scans all .ts/.js/.json files for exposed keys
 3. `.gitignore` audit — ensures .env, .pem, .key patterns are blocked
 4. Dependency count review — flags if >20 packages
-5. Security headers check — verifies via live site:
-   - X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
-   - Referrer-Policy, Content-Security-Policy
+5. Security headers check — verifies via live site
 6. Email report with severity levels (CRITICAL, HIGH, MEDIUM, LOW)
-
-**Limitations (Phase 1):**
-- Static checks only — does NOT learn patterns or track trends
-- In-memory rate limiting resets per CF worker cold start
-- No fingerprinting or behavioral analysis yet
-- Secret scanning is pattern-based, not semantic
 
 ---
 
-### Agent 3: SEO Agent ✅ LIVE
+### Agent 3: SEO Agent v2 ✅ LIVE
 
 | Detail | Value |
 |--------|-------|
 | **Workflow File** | `.github/workflows/seo-agent.yml` |
 | **Script File** | `.github/workflows/scripts/seo-check.js` |
 | **Schedule** | Every Wednesday at 6:00 UTC + manual trigger |
-| **Email Behavior** | Weekly report only (no instant alerts) |
+| **Email Behavior** | INSTANT alert if CRITICAL/HIGH or site down + scheduled weekly report |
+| **Smart Logic** | If all clear on manual trigger → skips email |
 | **GitHub Secrets** | GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL |
 
 **10 Checks:**
@@ -140,51 +134,89 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-### Agent 4: PM Agent ✅ LIVE
+### Agent 4: PM Agent v2 ✅ LIVE
 
 | Detail | Value |
 |--------|-------|
 | **Workflow File** | `.github/workflows/pm-agent.yml` |
 | **Script File** | `.github/workflows/scripts/pm-report.js` |
 | **Schedule** | Every Friday at 6:00 UTC + manual trigger |
-| **Email Behavior** | Weekly report only |
+| **Email Behavior** | INSTANT alert if site DOWN or Stripe API fails + scheduled weekly report |
+| **Smart Logic** | If all clear on manual trigger → skips email |
 | **GitHub Secrets** | GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, CF_API_TOKEN, CF_ACCOUNT_ID, STRIPE_SECRET_KEY |
+| **Extra Secret** | GITHUB_TOKEN (auto-provided by GitHub Actions for Supervisor API) |
 
 **Report Contents:**
 1. Site health: uptime, response time, content verification
 2. Stripe revenue: 7-day transactions, total revenue, unique customers
 3. CF deployment status: latest deployment ID and status
-4. Agent status dashboard: all 4 agents with schedule and status
+4. Agent status dashboard: all 5 agents with schedule and status
 5. Actionable recommendations based on revenue and performance data
-6. KPI cards in HTML email
-
-**Revenue Data Source:**
-- Calls Stripe API directly: `GET /v1/checkout/sessions?created[gte]=<7_days_ago>&payment_status=paid`
-- Shows individual transactions with date, email, amount
-- Uses the full Stripe secret key from GitHub secrets
 
 ---
 
-### Always-Active Security: Middleware + Headers
+### Agent 5: Supervisor Agent v1 ✅ LIVE
 
-**Middleware File:** `functions/_middleware.ts`
-- Runs BEFORE every `/api/*` request
-- IP-based rate limiting (in-memory, per CF worker instance):
-  - create-checkout: 5 req/min/IP
-  - verify-payment: 30 req/min/IP
-  - webhook: 100 req/min/IP
-  - default: 60 req/min/IP
-- UUID format validation on clientRefId
-- Rate limit headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
-- Logs warnings when rate limit nearly exceeded
+| Detail | Value |
+|--------|-------|
+| **Workflow File** | `.github/workflows/supervisor-agent.yml` |
+| **Script File** | `.github/workflows/scripts/supervisor.js` |
+| **Schedule** | Daily at 7:00 UTC (12:00 PM PKT) + manual trigger |
+| **Email Behavior** | Always emails daily (it IS the meta-monitor). INSTANT alert if any agent missed schedule |
+| **GitHub Secrets** | GITHUB_TOKEN (auto), GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, CF_API_TOKEN, CF_ACCOUNT_ID, STRIPE_SECRET_KEY |
 
-**Headers File:** `_headers` (project root)
-- X-Frame-Options: DENY
-- X-Content-Type-Options: nosniff
-- Referrer-Policy: strict-origin-when-cross-origin
-- Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
-- X-XSS-Protection: 1; mode=block
-- Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; connect-src 'self' https://api.stripe.com https://*.stripe.com; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; worker-src 'self' blob:;
+**Responsibilities:**
+1. Pings all 4 other agents via GitHub Actions API — checks last run time
+2. Verifies each agent ran within its expected schedule window
+3. Quick site health ping (HTTP status + response time)
+4. Quick API endpoint check (webhook health)
+5. Stripe revenue pulse (3-day window)
+6. **Learning pattern analysis:**
+   - Performance trends (response time patterns)
+   - Revenue patterns (when first sale happens, traffic correlation)
+   - Agent reliability (repeated failures → flag for investigation)
+   - System health scoring
+7. INSTANT ALERT if any agent missed its schedule or failed
+
+**Agent Schedule Windows (Supervisor checks these):**
+
+| Agent | Expected Schedule | Max Age Before "MISSED" |
+|-------|-------------------|------------------------|
+| Monitor | Every 12 hours | 14 hours |
+| Security | Monday 6:00 UTC | 170 hours (~7 days + 2h) |
+| SEO | Wednesday 6:00 UTC | 170 hours |
+| PM | Friday 6:00 UTC | 170 hours |
+| Supervisor | Daily 7:00 UTC | 26 hours |
+
+---
+
+### Always-Active Security: Headers
+
+**Headers File:** `_headers` (project root) — CSP is critical, blocks unauthorized scripts/connections
+
+```
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+X-XSS-Protection: 1; mode=block
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+Content-Security-Policy:
+  script-src: 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com
+  connect-src: 'self' https://api.stripe.com https://*.stripe.com https://staticimgly.com
+  img-src: 'self' data: blob: https://z-cdn.chatglm.cn
+  frame-src: https://js.stripe.com https://hooks.stripe.com
+  style-src: 'self' 'unsafe-inline'
+  font-src: 'self' https://fonts.gstatic.com
+  worker-src: 'self' blob:
+```
+
+**CSP domains and WHY they're allowed:**
+- `js.stripe.com` — Stripe Checkout JS
+- `www.googletagmanager.com` — Google Analytics
+- `api.stripe.com`, `*.stripe.com` — Stripe API calls
+- `staticimgly.com` — AI model download (ONNX model CDN)
+- `z-cdn.chatglm.cn` — Favicon CDN
 
 ---
 
@@ -192,34 +224,44 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ```
 ibr-deploy/
-├── _headers                                  # CF Pages security headers (always active)
+├── _headers                                  # CF Pages security headers (CSP + standard headers)
 ├── .gitignore
 ├── .github/
 │   └── workflows/
 │       ├── monitor.yml                       # Monitor Agent (every 12h)
-│       ├── security-agent.yml                # Security Agent (weekly Monday)
-│       ├── seo-agent.yml                     # SEO Agent (weekly Wednesday)
-│       ├── pm-agent.yml                      # PM Agent (weekly Friday)
+│       ├── security-agent.yml                # Security Agent v2 (weekly Monday)
+│       ├── seo-agent.yml                     # SEO Agent v2 (weekly Wednesday)
+│       ├── pm-agent.yml                      # PM Agent v2 (weekly Friday)
+│       ├── supervisor-agent.yml              # Supervisor Agent v1 (daily 7:00 UTC)
 │       └── scripts/
-│           ├── monitor.js                    # 317 lines — site monitoring
-│           ├── security-audit.js             # ~200 lines — security scanning
-│           ├── seo-check.js                  # ~250 lines — SEO auditing
-│           └── pm-report.js                  # ~250 lines — PM reporting
+│           ├── monitor.js                    # Site monitoring + auto-redeploy
+│           ├── security-audit.js             # v2: npm audit, secrets, headers + instant alert
+│           ├── seo-check.js                  # v2: meta, sitemap, JSON-LD + instant alert
+│           ├── pm-report.js                  # v2: revenue, 5-agent dashboard + instant alert
+│           └── supervisor.js                 # v1: agent compliance + learning patterns
 ├── functions/
-│   ├── _middleware.ts                        # Rate limiting + security (always active)
+│   ├── _middleware.ts                        # Rate limiting + UUID validation
 │   └── api/
 │       ├── create-checkout.ts                # POST /api/create-checkout
 │       ├── verify-payment.ts                 # GET/POST /api/verify-payment
 │       └── webhook.ts                        # POST/GET /api/webhook
 ├── public/
+│   ├── favicon.ico                           # Custom branded favicon (16/32/48/64px)
+│   ├── favicon.png                           # Custom branded favicon (1024x1024)
+│   ├── apple-touch-icon.png                  # iOS home screen icon
+│   ├── og-image.png                          # Social media preview (1344x768)
 │   ├── robots.txt                            # Search engine rules
 │   ├── sitemap.xml                           # XML sitemap
 │   └── googlec9fe8dd65678b590.html          # GSC verification file
 ├── src/
 │   ├── app/
 │   │   ├── globals.css                       # Tailwind 4 + shadcn theme
-│   │   ├── layout.tsx                        # Root layout + full SEO + GA + JSON-LD
-│   │   └── page.tsx                          # Main app (731 lines, all-in-one)
+│   │   ├── layout.tsx                        # Root layout + SEO + GA + JSON-LD + favicon
+│   │   ├── page.tsx                          # Main app (~650 lines, all-in-one) + footer with legal links
+│   │   ├── privacy-policy/
+│   │   │   └── page.tsx                      # Privacy Policy page (craftedminds3@gmail.com)
+│   │   └── terms-of-service/
+│   │       └── page.tsx                      # Terms of Service page (craftedminds3@gmail.com)
 │   ├── components/
 │   │   └── ui/
 │   │       └── dialog.tsx                    # shadcn/ui Dialog component
@@ -229,7 +271,7 @@ ibr-deploy/
 ├── BG-REMOVER-SEO-STRATEGY.md                # SEO strategy (3-phase plan)
 ├── BG-REMOVER-WORKLOG.md                     # Chronological work log
 ├── next.config.ts                            # output: "export", reactStrictMode: false
-├── package.json                              # 12 prod deps, 5 dev deps
+├── package.json                              # Dependencies
 ├── postcss.config.mjs
 ├── tailwind.config.ts
 └── tsconfig.json                             # functions/ excluded from TS check
@@ -243,31 +285,31 @@ ibr-deploy/
 
 | Variable | Value | Purpose |
 |----------|-------|---------|
-| `STRIPE_SECRET_KEY` | `sk_live_****...****` | Stripe API authentication (set in CF Dashboard) |
-| `STRIPE_PRICE_ID` | `price_...` (set in CF) | Stripe product price ID |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_****...****` | Webhook signature verification |
-| `SITE_URL` | `https://bgremoverdigital.pages.dev` | Base URL for redirects |
+| `STRIPE_SECRET_KEY` | `sk_live_****...****` | Stripe API authentication |
+| `STRIPE_PRICE_ID` | `price_1QxGOHP7H2Dn9RlR6KBFM1Ko` | Stripe product price ID |
+| `STRIPE_PRODUCT_ID` | `prod_Qw6lTBYWqRxMRy` | Stripe product ID |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_no7Ks3Q6OTvekohOOjlBknFtu2oJv1CG` | Webhook signature verification |
 
 ### GitHub Actions Secrets (set in GitHub Settings)
 
 | Secret | Used By | Purpose |
 |--------|---------|---------|
-| `GMAIL_USER` | All 4 agents | Gmail SMTP sender address |
-| `GMAIL_APP_PASS` | All 4 agents | Gmail app password |
-| `ALERT_EMAIL` | All 4 agents | Report recipient email |
-| `CF_API_TOKEN` | Monitor, PM | Cloudflare API for redeploy + status |
-| `CF_ACCOUNT_ID` | Monitor, PM | Cloudflare account ID |
-| `STRIPE_SECRET_KEY` | PM Agent | Stripe API for revenue data |
+| `GMAIL_USER` | All 5 agents | Gmail SMTP sender address |
+| `GMAIL_APP_PASS` | All 5 agents | Gmail app password |
+| `ALERT_EMAIL` | All 5 agents | craftedminds3@gmail.com (all reports go here) |
+| `CF_API_TOKEN` | Monitor, PM, Supervisor | Cloudflare API for redeploy + status |
+| `CF_ACCOUNT_ID` | Monitor, PM, Supervisor | `a5dff0139652af1d62f80ae1c6f1e9f5` |
+| `STRIPE_SECRET_KEY` | PM, Supervisor | Stripe API for revenue data |
+| `GITHUB_TOKEN` | Supervisor | Auto-provided by GitHub Actions (for checking agent runs) |
 
 ### Third-Party Services
 
 | Service | Status | Details |
 |---------|--------|---------|
-| **Google Search Console** | ✅ Verified | URL prefix: bgremoverdigital.pages.dev |
-| **Google Analytics** | ✅ Active | Measurement ID: G-K1QRPR8ZL9, Timezone: Asia/Karachi, Currency: USD |
-| **Stripe** | ✅ LIVE | Product: 500 images for $9, Webhook: checkout.session.completed |
-
-**IMPORTANT:** Stripe keys are in CF env vars AND GitHub secrets (PM Agent needs it for revenue reports). GSC uses HTML file verification (public/googlec9fe8dd65678b590.html). GA uses gtag.js in layout.tsx head.
+| **Google Search Console** | ✅ Verified | URL prefix: bgremoverdigital.pages.dev, HTML file verification |
+| **Google Analytics** | ✅ Active | ID: G-K1QRPR8ZL9, Timezone: Asia/Karachi, Currency: USD, Industry: Technology |
+| **Stripe** | ✅ LIVE | Product: 500 images for $9, Webhook: checkout.session.completed only |
+| **Cloudflare Pages** | ✅ LIVE | Project: bgremoverdigital, Account: a5dff0139652af1d62f80ae1c6f1e9f5 |
 
 ---
 
@@ -299,15 +341,37 @@ Frontend: Sets localStorage bg_remover_is_paid = 'true'
 User gets 500 images unlocked
 ```
 
-**Key Points:**
-- Payment verification is SERVER-SIDE via Stripe API (no localStorage loophole)
-- Webhook exists so Stripe doesn't retry, but actual verification is API-based
-- No CF KV dependency — simpler architecture
-- clientRefId (UUID) stored in localStorage for tracking
+---
+
+## 6. EMAIL SCHEDULE — COMPLETE CROSS-CHECK REFERENCE
+
+All times in UTC. Pakistan = UTC+5.
+
+| Day | 7:00 UTC (12:00 PM PKT) | 6:00 UTC (11:00 AM PKT) | 0:00/12:00 UTC (5:00 AM/PM PKT) |
+|-----|------------------------|------------------------|----------------------------------|
+| **Every Day** | **Supervisor** daily report | — | **Monitor** health check |
+| **Monday** | Supervisor | **Security** weekly report | Monitor |
+| **Tuesday** | Supervisor | — | Monitor |
+| **Wednesday** | Supervisor | **SEO** weekly report | Monitor |
+| **Thursday** | Supervisor | — | Monitor |
+| **Friday** | Supervisor | **PM** weekly report | Monitor |
+| **Saturday** | Supervisor | — | Monitor |
+| **Sunday** | Supervisor | — | **Monitor** weekly "All OK" email |
+
+**INSTANT ALERT RULES (all agents):**
+- **Monitor**: Instant on ANY check failure (site down, content missing, etc.)
+- **Security**: Instant on CRITICAL/HIGH findings (secrets in code, critical vulns)
+- **SEO**: Instant on CRITICAL/HIGH findings + site down
+- **PM**: Instant on site DOWN + Stripe API failure
+- **Supervisor**: Instant if ANY agent missed its schedule
+
+**ALL-CLEAR RULES (manual dispatch):**
+- If all clear and triggered manually → Security/SEO/PM SKIP email (no noise)
+- Supervisor ALWAYS emails (daily heartbeat)
 
 ---
 
-## 6. ARCHITECTURE DECISIONS & RATIONALE
+## 7. ARCHITECTURE DECISIONS & RATIONALE
 
 | Decision | Rationale |
 |----------|-----------|
@@ -317,40 +381,25 @@ User gets 500 images unlocked
 | `reactStrictMode: false` | img.ly runs twice in strict mode — known bug |
 | Client-side AI (img.ly) | $0 API costs, privacy (images never leave device) |
 | IP rate limiting in middleware | Basic protection; CF WAF for advanced rules |
-| Weekly agent cadence | Mon=Security, Wed=SEO, Fri=PM — spreads load, avoids overlap |
-| 12h monitor checks | Fast detection of downtime + auto-redeploy |
-| gtag.js for GA (not next/script) | Static export can't use Next.js script optimization |
+| 5 agents with instant alerts | Problem found → email immediately, not wait for schedule |
+| Supervisor cross-checks agents | If any agent fails silently, Supervisor catches it |
+| Daily Supervisor cadence | Owner gets daily heartbeat + pattern analysis |
+| CSP allows staticimgly.com | img.ly ONNX model CDN — without this, AI model download is blocked |
+| CSP allows googletagmanager.com | GA4 tracking — without this, analytics is blind |
+| "third-party AI integration" in legal | Never mention img.ly by name in user-facing content |
 
 ---
 
-## 7. EMAIL SCHEDULE — WHAT TO EXPECT
+## 8. BRANDING & LEGAL
 
-| Day | What Arrives | From Agent |
-|-----|-------------|------------|
-| **Sunday** | Weekly OK report (if all checks pass) | Monitor |
-| **Any day** | INSTANT alert if site goes down or checks fail | Monitor |
-| **Monday 6:00 UTC** | Security audit report (npm audit, secrets, headers) | Security |
-| **Wednesday 6:00 UTC** | SEO audit report (meta, sitemap, structured data) | SEO |
-| **Friday 6:00 UTC** | PM report (revenue, health, agent status, recommendations) | PM |
-
-**Note for Pakistan (UTC+5):** All agent times are UTC. Monday 6:00 UTC = Monday 11:00 AM Pakistan time.
-
-**Known Gap:** If an agent's cron job FAILS silently (GitHub Actions issue), no alert is sent. Currently, the owner must manually verify that weekly emails arrive. A "meta-monitor" for agent health is planned for Phase 2.
-
----
-
-## 8. CURRENT LIMITATIONS & KNOWN ISSUES
-
-| Issue | Severity | Status | Notes |
-|-------|----------|--------|-------|
-| Rate limiting is in-memory only | Medium | Known | Resets per CF worker cold start. Advanced protection needs CF WAF rules |
-| Agents are static (no learning) | Medium | Phase 2 | They run same checks each week, no trend analysis or pattern recognition |
-| No agent health monitoring | Medium | Planned | If a cron fails silently, nobody knows. Need meta-monitor |
-| CF Pages `_headers` partially applied | Low | Known | Some headers only apply to API routes, not static pages. CF managed headers take precedence |
-| No OG image yet | Low | Pending | og-image.png referenced in meta tags but file doesn't exist yet |
-| Paywall uses localStorage for initial check | Low | Known | Server verification happens on mount + after payment, so loophole is minimal |
-| Only 1 page (no programmatic SEO pages) | Medium | Phase 2 | SEO strategy has 25+ pages planned |
-| No tests | Low | Planned | Zero test files. Add when scaling |
+| Item | Status | Details |
+|------|--------|---------|
+| **Favicon** | ✅ Done | `favicon.ico` + `favicon.png` + `apple-touch-icon.png` (blue-to-purple gradient) |
+| **OG Image** | ✅ Done | `og-image.png` (1344x768) — social media preview card |
+| **Privacy Policy** | ✅ Done | `/privacy-policy` — craftedminds3@gmail.com, no img.ly mention |
+| **Terms of Service** | ✅ Done | `/terms-of-service` — full legal coverage, $9 pricing |
+| **Footer Links** | ✅ Done | Copyright + Privacy Policy + Terms of Service |
+| **Contact Email** | ✅ Done | craftedminds3@gmail.com (legal pages + agent alerts) |
 
 ---
 
@@ -364,12 +413,11 @@ User gets 500 images unlocked
 | **Paid Users** | ~12 | ~45 | ~112 |
 | **Organic Traffic** | 10/day | 50/day | 200/day |
 | **SEO Pages** | 10 | 25 | 50+ |
-| **Google Rankings (top 10)** | 2 keywords | 5 keywords | 15 keywords |
 
 ### Revenue Formula
 - Price per user: $9 (one-time)
 - Cost per user: $0 (client-side AI, CF Pages free tier)
-- Profit margin: ~100% (minus Stripe fees: $0.59 + 2.9% = ~$0.85 per transaction)
+- Profit margin: ~100% (minus Stripe fees: ~$0.85 per transaction)
 - Net per transaction: ~$8.15
 
 ---
@@ -382,38 +430,65 @@ User gets 500 images unlocked
 - [x] Rebranding (IBR-Trap → BG Remover Digital)
 - [x] CF Pages deployment (bgremoverdigital.pages.dev)
 - [x] Monitor Agent (12h cron, 7 checks, auto-redeploy)
-- [x] Security Agent v1 (weekly audit, secret scanning, headers)
-- [x] SEO Agent v1 (meta, sitemap, JSON-LD, OG, Twitter)
-- [x] PM Agent v1 (weekly revenue report, agent dashboard)
-- [x] Security middleware (rate limiting, UUID validation)
-- [x] Security headers (CSP, X-Frame-Options, etc.)
-- [x] Google Search Console verified
-- [x] Google Analytics integrated (G-K1QRPR8ZL9)
-- [x] Stripe webhook configured
+- [x] Security Agent v2 (instant alerts, weekly audit)
+- [x] SEO Agent v2 (instant alerts, weekly audit)
+- [x] PM Agent v2 (instant alerts, revenue tracking, 5-agent dashboard)
+- [x] Supervisor Agent v1 (daily health, agent compliance, learning patterns)
+- [x] Security headers (CSP with GA + img.ly domains)
+- [x] Google Search Console verified (HTML file)
+- [x] Google Analytics integrated (G-K1QRPR8ZL9, CSP fixed)
+- [x] Stripe webhook configured (checkout.session.completed)
+- [x] Custom favicon + OG image + apple-touch-icon
+- [x] Privacy Policy + Terms of Service pages
+- [x] Footer with legal links
 
-### 🔲 Phase 2: Growth (NEXT)
-- [ ] Agent health meta-monitor (verify all agents are actually running)
-- [ ] OG image generation (1200x630px for social sharing)
+### 🔲 Phase 2: Growth (COOKING — Week 1-2)
+- [ ] System cooks for 1-2 weeks, all agents run on schedule
+- [ ] Verify all emails arriving correctly
+- [ ] Collect baseline GA data (traffic, bounce rate, sessions)
+- [ ] GSC starts showing indexation data
+- [ ] Submit sitemap to GSC manually (if not auto-discovered)
+- [ ] Custom 404 page
+
+### 🔲 Phase 3: Content & SEO (Week 3+)
+- [ ] First blog post (Week 3 — "Best Free Background Remover 2026")
+- [ ] GA conversion events (full funnel tracking: upload → process → download → paywall → checkout → success)
 - [ ] Programmatic SEO pages Wave 1 (10 keyword-targeted pages)
-- [ ] Submit sitemap to GSC manually
-- [ ] Advanced CF WAF rate limiting rules
-- [ ] Security Agent v2 (pattern tracking, fingerprinting)
-- [ ] Domain purchase: bgremoverdigital.com + migration
+- [ ] Social proof elements ("X images processed", testimonials)
+- [ ] Email capture mechanism (lead generation)
 
-### 🔲 Phase 3: Scale
-- [ ] Programmatic SEO pages Wave 2 (15 more pages)
-- [ ] Blog content (5 SEO-optimized articles)
-- [ ] SEO Phase C: backlink outreach, directory submissions
-- [ ] PM Agent v2: trend analysis, month-over-month comparisons
-- [ ] Dynamic agent learning (store historical data, detect anomalies)
-- [ ] Server-side API option (remove.bg/Adobe for higher quality)
+### 🔲 Phase 4: Scale
+- [ ] Programmatic SEO pages Wave 2 (15+ more pages)
+- [ ] Blog content (1-2 posts per week)
+- [ ] Backlink outreach, directory submissions
+- [ ] Domain purchase: bgremoverdigital.com + migration
+- [ ] Security Agent v2 (pattern tracking, fingerprinting)
+- [ ] PM Agent v3 (revenue dashboards, month-over-month)
+- [ ] manifest.json / PWA support
 - [ ] A/B testing for conversion optimization
+
+### 🔲 Phase 5: Clone
+- [ ] Clone entire system with different branding
+- [ ] Estimated time: 30 minutes (all code ready, rebrand + reconfigure)
 
 ---
 
-## 11. CLONING THIS PROJECT
+## 11. CURRENT LIMITATIONS & KNOWN ISSUES
 
-**Yes, this system is 100% clonable for other products.** To create a clone (e.g., "ImageBGRemover"):
+| Issue | Severity | Status | Notes |
+|-------|----------|--------|-------|
+| Rate limiting is in-memory only | Medium | Known | Resets per CF worker cold start. CF WAF for advanced |
+| Agents are rule-based (not ML) | Low | By design | Supervisor monitors patterns, agents act on rules |
+| No GA conversion events yet | Medium | Phase 3 | Only pageviews tracked, full funnel tracking planned |
+| No custom 404 page | Low | Phase 2 | CF default 404 shows on wrong URLs |
+| No social proof or email capture | Medium | Phase 3 | Directly impacts conversion rates |
+| No manifest.json (PWA) | Low | Phase 4 | Can't "Add to Home Screen" on mobile |
+
+---
+
+## 12. CLONING THIS PROJECT
+
+**Yes, this system is 100% clonable.** To create a clone (e.g., "ImageBGRemover"):
 
 1. Create new GitHub repo
 2. Create new CF Pages project
@@ -421,25 +496,8 @@ User gets 500 images unlocked
 4. Create new Stripe webhook (get new whsec secret)
 5. Create new GSC property + GA property
 6. Copy all code, change branding
-7. Set new CF env vars (STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET, SITE_URL)
-8. Set new GitHub secrets
+7. Set new CF env vars (STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET)
+8. Set new GitHub secrets (GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, CF_API_TOKEN, CF_ACCOUNT_ID, STRIPE_SECRET_KEY)
 9. Deploy
 
 **Estimated time: 30 minutes** — all code is ready, just rebrand + reconfigure.
-
----
-
-## 12. GIT COMMIT HISTORY (All 10 Commits)
-
-| # | Hash | Message |
-|---|------|---------|
-| 10 | 2bb2421 | Add Google Analytics tracking (G-K1QRPR8ZL9) |
-| 9 | c4123f3 | Add Google Search Console verification file |
-| 8 | 25cfadf | Update worklog with deployment verification results |
-| 7 | 9ef7269 | Deploy all 4 agents: Security, SEO, PM, Monitor + headers + docs |
-| 6 | 84a2e84 | Force rebuild: refresh CF Pages Functions |
-| 5 | 2bf2b4b | Stripe v2: API-based payment verification (no KV dependency) |
-| 4 | 9542914 | Fix verify-payment: use single onRequest handler for all methods |
-| 3 | 950526f | Exclude functions/ from TypeScript build check |
-| 2 | 811d226 | Stripe integration: replace Lemon Squeezy with server-validated payments |
-| 1 | ec18710 | Rebrand: IBR-Trap → BG Remover Digital, domain bgremoverdigital.pages.dev |
