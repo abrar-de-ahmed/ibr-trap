@@ -226,10 +226,10 @@ export default function PrivacyPolicy() {
               If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices,
               please contact us at:{" "}
               <a
-                href="mailto:abrarahmedcoder@gmail.com"
+                href="mailto:craftedminds3@gmail.com"
                 className="text-violet-600 hover:text-violet-700 font-medium underline"
               >
-                abrarahmedcoder@gmail.com
+                craftedminds3@gmail.com
               </a>
             </p>
           </section>

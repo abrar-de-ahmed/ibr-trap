@@ -162,10 +162,10 @@ export default function TermsOfService() {
             <p className="text-slate-600 leading-relaxed">
               If you have any questions about these Terms of Service, please contact us at:{" "}
               <a
-                href="mailto:abrarahmedcoder@gmail.com"
+                href="mailto:craftedminds3@gmail.com"
                 className="text-violet-600 hover:text-violet-700 font-medium underline"
               >
-                abrarahmedcoder@gmail.com
+                craftedminds3@gmail.com
               </a>
             </p>
           </section>
