@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * BG Remover Digital — Security Agent v1
+ * BG Remover Digital — Security Agent v2
  * Runs weekly (Monday 6:00 UTC) via GitHub Actions
- * Checks: npm audit, dependency vulnerabilities, secret scanning, config audit
- * Sends email report with findings and severity levels
+ * INSTANT ALERT: If CRITICAL/HIGH found → email immediately
+ * SCHEDULED: If all clear → email on scheduled Monday only (skip on manual dispatch)
+ * Checks: npm audit, dependency vulnerabilities, secret scanning, config audit, security headers
  */
 
 const https = require('https');
@@ -14,9 +15,10 @@ const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS;
 const ALERT_EMAIL = process.env.ALERT_EMAIL;
 const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const EVENT_NAME = process.env.GITHUB_EVENT_NAME || 'schedule'; // "schedule" or "workflow_dispatch"
 
 function log(msg) {
-  console.log(`[SecurityAgent ${new Date().toISOString()}] ${msg}`);
+  console.log(`[SecurityAgent v2 ${new Date().toISOString()}] ${msg}`);
 }
 
 // ── Run npm audit ──
@@ -43,7 +45,6 @@ function runNpmAudit() {
 function scanForSecrets() {
   log('Scanning for potential secrets...');
   const findings = [];
-  const { execSync } = require('child_process');
   const { readFileSync, readdirSync } = require('fs');
   const path = require('path');
 
@@ -58,7 +59,6 @@ function scanForSecrets() {
     { pattern: /-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----/g, name: 'Private Key' },
   ];
 
-  // Check source files
   const dirsToScan = ['src', 'functions', 'scripts', '.github'];
   for (const dir of dirsToScan) {
     try {
@@ -79,7 +79,7 @@ function scanForSecrets() {
                 message: `Potential ${name} found in source code. Move to environment variables!`,
               });
             }
-            pattern.lastIndex = 0; // Reset regex
+            pattern.lastIndex = 0;
           }
         } catch (e) { /* skip unreadable files */ }
       }
@@ -177,7 +177,8 @@ async function sendEmail(subject, html) {
 
 // ── Main ──
 async function main() {
-  log('=== Security Agent v1 Started ===');
+  log('=== Security Agent v2 Started ===');
+  log(`Trigger: ${EVENT_NAME}`);
 
   if (!GMAIL_USER || !GMAIL_APP_PASS || !ALERT_EMAIL) {
     log('ERROR: Missing email credentials');
@@ -192,8 +193,8 @@ async function main() {
   const vulnCount = Object.keys(audit.vulnerabilities || {}).length;
   if (vulnCount > 0) {
     for (const [pkg, info] of Object.entries(audit.vulnerabilities)) {
-      const via = (info as any).via || [];
-      const severity = (info as any).severity || 'unknown';
+      const via = (info.as any || {}).via || [];
+      const severity = (info.as any || {}).severity || 'unknown';
       allFindings.push({
         severity: severity === 'critical' ? 'CRITICAL' : severity === 'high' ? 'HIGH' : severity === 'moderate' ? 'MEDIUM' : 'LOW',
         type: `Vulnerable Package: ${pkg}`,
@@ -228,14 +229,24 @@ async function main() {
   allFindings.push(...headerIssues);
   log(`  Found ${headerIssues.length} header issues`);
 
-  // ── Build Report ──
+  // ── Evaluate severity ──
   const critical = allFindings.filter(f => f.severity === 'CRITICAL');
   const high = allFindings.filter(f => f.severity === 'HIGH');
   const medium = allFindings.filter(f => f.severity === 'MEDIUM');
   const low = allFindings.filter(f => f.severity === 'LOW');
   const totalFindings = allFindings.length;
+  const hasCriticalOrHigh = critical.length > 0 || high.length > 0;
 
   log(`Total findings: ${totalFindings} (Critical: ${critical.length}, High: ${high.length}, Medium: ${medium.length}, Low: ${low.length})`);
+
+  // ── INSTANT ALERT LOGIC ──
+  // CRITICAL/HIGH found → always email instantly (schedule or manual)
+  // All clear → only email on scheduled Monday run (skip on manual dispatch)
+  if (!hasCriticalOrHigh && EVENT_NAME === 'workflow_dispatch') {
+    log('No CRITICAL/HIGH findings on manual trigger. Skipping email to avoid noise.');
+    log('=== Security Agent v2 Finished ===');
+    return;
+  }
 
   const severityColor = { CRITICAL: '#dc2626', HIGH: '#ea580c', MEDIUM: '#ca8a04', LOW: '#2563eb' };
   const severityBg = { CRITICAL: '#fef2f2', HIGH: '#fff7ed', MEDIUM: '#fefce8', LOW: '#eff6ff' };
@@ -249,14 +260,14 @@ async function main() {
         </tr>`).join('')
     : '<tr><td colspan="3" style="padding:12px;text-align:center;color:#16a34a;font-weight:bold">No security issues found! All clear.</td></tr>';
 
-  const hasIssues = critical.length > 0 || high.length > 0;
-  const statusColor = hasIssues ? '#dc2626' : '#16a34a';
-  const statusText = hasIssues ? 'Action Required' : 'All Clear';
+  const statusColor = hasCriticalOrHigh ? '#dc2626' : '#16a34a';
+  const statusText = hasCriticalOrHigh ? 'INSTANT ALERT - Action Required' : 'All Clear';
+  const subjectPrefix = hasCriticalOrHigh ? 'INSTANT ALERT:' : '';
 
   const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:700px;margin:0 auto;padding:20px">
 <div style="background:${statusColor};color:white;padding:12px 16px;border-radius:8px 8px 0 0">
-  <h2 style="margin:0;font-size:18px">BG Remover Digital - Weekly Security Report</h2>
-  <p style="margin:4px 0 0;font-size:13px;opacity:0.9">${new Date().toISOString().split('T')[0]} | Status: ${statusText} | ${totalFindings} finding(s)</p>
+  <h2 style="margin:0;font-size:18px">${hasCriticalOrHigh ? 'SECURITY ALERT' : 'Weekly Security Report'}</h2>
+  <p style="margin:4px 0 0;font-size:13px;opacity:0.9">${new Date().toISOString().split('T')[0]} | ${statusText} | ${totalFindings} finding(s)</p>
 </div>
 <div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px">
   <div style="display:flex;gap:12px;margin-bottom:16px">
@@ -270,7 +281,7 @@ async function main() {
     <tr style="background:#f3f4f6"><th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Severity</th><th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Type</th><th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Details</th></tr>
     ${findingsRows}
   </table>
-  ${hasIssues ? `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:12px;margin-top:16px"><p style="margin:0;font-size:13px;color:#dc2626"><strong>Recommendation:</strong> Address Critical and High findings immediately. See <a href="https://github.com/abrar-de-ahmed/ibr-trap/actions">GitHub Actions</a> for details.</p></div>` : ''}
+  ${hasCriticalOrHigh ? `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:12px;margin-top:16px"><p style="margin:0;font-size:13px;color:#dc2626"><strong>INSTANT ALERT:</strong> Address Critical and High findings immediately. See <a href="https://github.com/abrar-de-ahmed/ibr-trap/actions">GitHub Actions</a> for details.</p></div>` : ''}
   <div style="font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:12px;margin-top:16px">
     <p style="margin:0">Checks: npm audit, secret scanning, gitignore audit, dependency review, security headers</p>
     <p style="margin:4px 0 0">Site: <a href="${SITE_URL}">${SITE_URL}</a> | Next scan: Next Monday 6:00 UTC</p>
@@ -279,7 +290,7 @@ async function main() {
 
   try {
     await sendEmail(
-      hasIssues ? `SECURITY: ${critical.length} critical, ${high.length} high findings` : 'Weekly Security Report - All Clear',
+      hasCriticalOrHigh ? `INSTANT ALERT: ${critical.length} critical, ${high.length} high findings` : 'Weekly Security Report - All Clear',
       html
     );
     log('Security report email sent.');
@@ -287,7 +298,7 @@ async function main() {
     log(`Email error: ${e.message}`);
   }
 
-  log('=== Security Agent v1 Finished ===');
+  log('=== Security Agent v2 Finished ===');
 }
 
 main().catch(e => { log(`Fatal: ${e.message}`); process.exit(1); });

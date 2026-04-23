@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * BG Remover Digital — PM Agent v1
+ * BG Remover Digital — PM Agent v2
  * Runs weekly (Friday 6:00 UTC) via GitHub Actions
- * Generates: Site health report, Stripe revenue summary, deployment status,
- * agent status overview, and actionable weekly summary
- * All data is gathered via public APIs and Stripe API
+ * INSTANT ALERT: If site DOWN or Stripe API failure → email immediately
+ * SCHEDULED: If all clear → email on scheduled Friday only (skip on manual dispatch)
+ * Generates: Site health, Stripe revenue, deployment status, agent overview, recommendations
  */
 
 const https = require('https');
@@ -17,13 +17,14 @@ const ALERT_EMAIL = process.env.ALERT_EMAIL;
 const CF_API_TOKEN = process.env.CF_API_TOKEN;
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+const EVENT_NAME = process.env.GITHUB_EVENT_NAME || 'schedule';
 
 const SITE_URL = 'https://bgremoverdigital.pages.dev';
 const CF_PROJECT = 'bgremoverdigital';
 const GITHUB_REPO = 'abrar-de-ahmed/ibr-trap';
 
 function log(msg) {
-  console.log(`[PMAgent ${new Date().toISOString()}] ${msg}`);
+  console.log(`[PMAgent v2 ${new Date().toISOString()}] ${msg}`);
 }
 
 function fetchUrl(url, options = {}) {
@@ -63,16 +64,13 @@ async function getStripeRevenue() {
   }
 
   try {
-    // Get checkout sessions from last 7 days
     const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
     const url = `https://api.stripe.com/v1/checkout/sessions?created[gte]=${sevenDaysAgo}&payment_status=paid&limit=100`;
     const auth = Buffer.from(STRIPE_SECRET_KEY + ':').toString('base64');
 
     const result = await new Promise((resolve, reject) => {
       const req = https.get(url, {
-        headers: {
-          'Authorization': `Basic ${auth}`,
-        },
+        headers: { 'Authorization': `Basic ${auth}` },
         timeout: 15000,
       }, (res) => {
         let body = '';
@@ -162,7 +160,8 @@ async function checkSiteHealth() {
 
 // ── Main ──
 async function main() {
-  log('=== PM Agent v1 Started ===');
+  log('=== PM Agent v2 Started ===');
+  log(`Trigger: ${EVENT_NAME}`);
 
   if (!GMAIL_USER || !GMAIL_APP_PASS || !ALERT_EMAIL) {
     log('ERROR: Missing email credentials');
@@ -179,10 +178,56 @@ async function main() {
 
   log(`Site: ${siteHealth.online ? 'ONLINE' : 'DOWN'}, Revenue: $${stripeData.totalRevenue || 0}, Deploy: ${deployStatus.latestDeploy?.status || 'unknown'}`);
 
+  // ── INSTANT ALERT: Site is DOWN ──
+  if (!siteHealth.online) {
+    log('INSTANT ALERT: Site is DOWN');
+    try {
+      const alertHtml = `<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+<div style="background:#dc2626;color:white;padding:12px 16px;border-radius:8px 8px 0 0">
+  <h2 style="margin:0;font-size:18px">INSTANT ALERT - Site is DOWN</h2>
+  <p style="margin:4px 0 0;font-size:13px;opacity:0.9">${new Date().toISOString()}</p>
+</div>
+<div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px">
+  <p style="margin:0;color:#dc2626"><strong>Site returned HTTP ${siteHealth.statusCode} or unreachable: ${siteHealth.error || 'Unknown'}</strong></p>
+  <p style="margin:8px 0 0;font-size:13px">Monitor Agent should auto-redeploy. If you see this, check Cloudflare dashboard manually.</p>
+  <p style="margin:8px 0 0;font-size:12px;color:#6b7280">Site: <a href="${SITE_URL}">${SITE_URL}</a> | CF: <a href="https://github.com/abrar-de-ahmed/ibr-trap/actions">Actions</a></p>
+</div></div>`;
+      await sendEmail('INSTANT ALERT: Site DOWN detected by PM Agent', alertHtml);
+      log('Instant alert sent: site down');
+    } catch (e) { log(`Alert email error: ${e.message}`); }
+    return;
+  }
+
+  // ── INSTANT ALERT: Stripe API failure ──
+  if (stripeData.error && STRIPE_SECRET_KEY) {
+    log('INSTANT ALERT: Stripe API failure');
+    try {
+      const alertHtml = `<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+<div style="background:#ea580c;color:white;padding:12px 16px;border-radius:8px 8px 0 0">
+  <h2 style="margin:0;font-size:18px">ALERT - Stripe API Error</h2>
+</div>
+<div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px">
+  <p style="margin:0;color:#ea580c"><strong>Stripe API returned error:</strong> ${stripeData.error}</p>
+  <p style="margin:8px 0 0;font-size:13px">Payment processing may be affected. Check Stripe dashboard and API key.</p>
+</div></div>`;
+      await sendEmail('ALERT: Stripe API error detected', alertHtml);
+      log('Alert sent: Stripe API failure');
+    } catch (e) { log(`Alert email error: ${e.message}`); }
+  }
+
+  // ── INSTANT ALERT LOGIC ──
+  // If all clear and manual dispatch → skip email
+  const hasAlerts = !siteHealth.online || (stripeData.error && STRIPE_SECRET_KEY);
+  if (!hasAlerts && EVENT_NAME === 'workflow_dispatch') {
+    log('No critical issues on manual trigger. Skipping scheduled report.');
+    log('=== PM Agent v2 Finished ===');
+    return;
+  }
+
   // Build revenue table
   let revenueHtml = '';
   if (stripeData.error) {
-    revenueHtml = `<p style="color:#ca8a04;font-size:13px">Could not fetch revenue data: ${stripeData.error}. Add STRIPE_SECRET_KEY to GitHub Actions secrets.</p>`;
+    revenueHtml = `<p style="color:#ca8a04;font-size:13px">Could not fetch revenue data: ${stripeData.error}.</p>`;
   } else if (stripeData.totalSessions === 0) {
     revenueHtml = `<p style="color:#6b7280;font-size:13px">No paid transactions in the last 7 days.</p>`;
   } else {
@@ -201,20 +246,20 @@ async function main() {
 
   // Agent status
   const agents = [
-    { name: 'Monitor Agent', schedule: 'Every 12 hours', status: siteHealth.online ? 'Active' : 'Alerting', icon: siteHealth.online ? '🟢' : '🔴' },
-    { name: 'Security Agent', schedule: 'Weekly (Monday)', status: 'Scheduled', icon: '🟢' },
-    { name: 'SEO Agent', schedule: 'Weekly (Wednesday)', status: 'Scheduled', icon: '🟢' },
-    { name: 'PM Agent (this report)', schedule: 'Weekly (Friday)', status: 'Running now', icon: '🔵' },
+    { name: 'Monitor Agent', schedule: 'Every 12 hours', status: siteHealth.online ? 'Active' : 'Alerting', icon: siteHealth.online ? 'ON' : 'ALERT' },
+    { name: 'Security Agent', schedule: 'Weekly (Monday)', status: 'Scheduled', icon: 'ON' },
+    { name: 'SEO Agent', schedule: 'Weekly (Wednesday)', status: 'Scheduled', icon: 'ON' },
+    { name: 'PM Agent (this report)', schedule: 'Weekly (Friday)', status: 'Running now', icon: 'RUNNING' },
+    { name: 'Supervisor Agent', schedule: 'Daily (7:00 UTC)', status: 'Scheduled', icon: 'ON' },
   ];
   const agentRows = agents.map(a => `
     <tr>
-      <td style="padding:6px 8px;border:1px solid #ddd;font-size:13px">${a.icon} ${a.name}</td>
+      <td style="padding:6px 8px;border:1px solid #ddd;font-size:13px">${a.name}</td>
       <td style="padding:6px 8px;border:1px solid #ddd;font-size:13px">${a.schedule}</td>
-      <td style="padding:6px 8px;border:1px solid #ddd;font-size:13px;font-weight:600">${a.status}</td>
+      <td style="padding:6px 8px;border:1px solid #ddd;font-size:13px;font-weight:600;color:${a.icon === 'ALERT' ? '#dc2626' : '#16a34a'}">${a.icon}</td>
     </tr>`).join('');
 
   // Recommendations
-  const week = new Date().getWeekNumber ? `Week ${Math.ceil((new Date() - new Date(new Date().getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 000))}` : '';
   const recommendations = [];
   if (!stripeData.error && stripeData.totalSessions === 0) {
     recommendations.push('No revenue this week. Consider: (1) Share on social media, (2) Submit to directories, (3) Start SEO content creation');
@@ -241,7 +286,6 @@ async function main() {
 </div>
 <div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px">
 
-  <!-- KPI Cards -->
   <div style="display:flex;gap:12px;margin-bottom:20px">
     <div style="flex:1;background:#f0fdf4;padding:14px;border-radius:8px;text-align:center;border:1px solid #bbf7d0">
       <div style="font-size:28px;font-weight:bold;color:#16a34a">${siteHealth.online ? 'UP' : 'DOWN'}</div>
@@ -259,24 +303,21 @@ async function main() {
       <div style="font-size:11px;color:#9ca3af">Last 7 days</div>
     </div>
     <div style="flex:1;background:#fff7ed;padding:14px;border-radius:8px;text-align:center;border:1px solid #fed7aa">
-      <div style="font-size:28px;font-weight:bold;color:#ea580c">${deployStatus.latestDeploy?.status === 'active' ? 'LIVE' : '—'}</div>
+      <div style="font-size:28px;font-weight:bold;color:#ea580c">${deployStatus.latestDeploy?.status === 'active' ? 'LIVE' : '--'}</div>
       <div style="font-size:12px;color:#6b7280;margin-top:2px">Deploy Status</div>
       <div style="font-size:11px;color:#9ca3af">${deployStatus.latestDeploy?.id || '?'}</div>
     </div>
   </div>
 
-  <!-- Revenue Details -->
   <h3 style="font-size:14px;margin:0 0 8px;color:#374151">Revenue Details</h3>
   ${revenueHtml}
 
-  <!-- Agent Status -->
-  <h3 style="font-size:14px;margin:16px 0 8px;color:#374151">Agent Status Dashboard</h3>
+  <h3 style="font-size:14px;margin:16px 0 8px;color:#374151">Agent Status Dashboard (5 Agents)</h3>
   <table style="border-collapse:collapse;width:100%;margin-bottom:16px">
     <tr style="background:#f3f4f6"><th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Agent</th><th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Schedule</th><th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Status</th></tr>
     ${agentRows}
   </table>
 
-  <!-- Recommendations -->
   <h3 style="font-size:14px;margin:0 0 8px;color:#374151">Recommendations</h3>
   <ul style="margin:0 0 16px;padding-left:20px">${recHtml}</ul>
 
@@ -287,13 +328,13 @@ async function main() {
 </div></div>`;
 
   try {
-    await sendEmail(`Weekly PM Report — $${(stripeData.totalRevenue || 0).toFixed(2)} revenue`, html);
+    await sendEmail(`Weekly PM Report - $${(stripeData.totalRevenue || 0).toFixed(2)} revenue`, html);
     log('PM report email sent.');
   } catch (e) {
     log(`Email error: ${e.message}`);
   }
 
-  log('=== PM Agent v1 Finished ===');
+  log('=== PM Agent v2 Finished ===');
 }
 
 main().catch(e => { log(`Fatal: ${e.message}`); process.exit(1); });
