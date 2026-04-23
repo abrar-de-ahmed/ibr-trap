@@ -1,4 +1,4 @@
-name: IBR-Trap Site Monitor
+name: BG Remover Digital Site Monitor
 
 on:
   schedule:

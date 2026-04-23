@@ -544,7 +544,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="py-6 text-center text-sm text-slate-400 border-t border-slate-200 bg-white mt-auto">
-        &copy; 2025 BG Remover. All rights reserved.
+        &copy; 2025 BG Remover Digital. All rights reserved.
       </footer>
     </div>
   );
