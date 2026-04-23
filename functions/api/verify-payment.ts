@@ -1,4 +1,4 @@
-// CF Pages Function: Verify Payment Status (Stripe API-based)
+// v2 -  CF Pages Function: Verify Payment Status (Stripe API-based)
 // GET /api/verify-payment?session_id=cs_xxx
 // POST /api/verify-payment  body: { sessionId: "cs_xxx" }
 // Calls Stripe API directly to verify payment. No KV dependency.
