@@ -25,7 +25,7 @@ const PAID_LIMIT = 500;
 const BATCH_MAX = 30;
 const STORAGE_KEY_COUNT = 'bg_remover_used_count';
 const STORAGE_KEY_PAID = 'bg_remover_is_paid';
-const BUY_LINK = 'https://letscraft.lemonsqueezy.com/checkout/buy/d23b818d-d505-4dc2-b258-b74368778bcc';
+const STORAGE_KEY_CLIENT_REF = 'bg_remover_client_ref';
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_DIMENSION = 4096;
 
@@ -43,16 +43,62 @@ function getUsedCount(): number {
 function setUsedCount(n: number): void { lsSet(STORAGE_KEY_COUNT, n.toString()); }
 function isPaidUser(): boolean { return lsGet(STORAGE_KEY_PAID) === 'true'; }
 
-function openCheckout(): void {
-  const w = 520;
-  const h = 720;
-  const left = (screen.width - w) / 2;
-  const top = (screen.height - h) / 2;
-  window.open(
-    BUY_LINK,
-    'lemon-squeezy-checkout',
-    `width=${w},height=${h},top=${top},left=${left},scrollbars=yes,resizable=yes`
-  );
+// Get or create a persistent client reference ID (UUID)
+function getClientRefId(): string {
+  let ref = lsGet(STORAGE_KEY_CLIENT_REF);
+  if (!ref) {
+    ref = crypto.randomUUID();
+    lsSet(STORAGE_KEY_CLIENT_REF, ref);
+  }
+  return ref;
+}
+
+// Create Stripe checkout session via CF Pages Function, then open popup
+async function openCheckout(): Promise<void> {
+  const clientRefId = getClientRefId();
+  try {
+    const resp = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientRefId }),
+    });
+    const data = await resp.json() as { url?: string; error?: string };
+    if (!resp.ok || !data.url) {
+      toast.error(data.error || 'Could not start checkout. Please try again.');
+      return;
+    }
+    const w = 520;
+    const h = 720;
+    const left = (screen.width - w) / 2;
+    const top = (screen.height - h) / 2;
+    window.open(
+      data.url,
+      'stripe-checkout',
+      `width=${w},height=${h},top=${top},left=${left},scrollbars=yes,resizable=yes`
+    );
+  } catch {
+    toast.error('Network error. Please check your connection and try again.');
+  }
+}
+
+// Verify payment status via CF Pages Function (server-validated)
+async function verifyPaymentStatus(): Promise<boolean> {
+  const clientRefId = getClientRefId();
+  try {
+    const resp = await fetch('/api/verify-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientRefId }),
+    });
+    const data = await resp.json() as { paid?: boolean };
+    if (data.paid) {
+      lsSet(STORAGE_KEY_PAID, 'true');
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 // ── Types ───────────────────────────────────────────────
@@ -77,10 +123,47 @@ export default function Home() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [showUpgradeInfo, setShowUpgradeInfo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const verifyingRef = useRef(false);
 
+  // On mount: check localStorage first, then verify with server
   useEffect(() => {
-    setPaid(isPaidUser());
-    setUsedCountState(getUsedCount());
+    const init = async () => {
+      const lsPaid = isPaidUser();
+      setUsedCountState(getUsedCount());
+      if (lsPaid) {
+        setPaid(true);
+      } else {
+        // Server-verified check (catches payments made in other tabs/devices)
+        const serverPaid = await verifyPaymentStatus();
+        if (serverPaid) {
+          setPaid(true);
+          toast.success('Payment verified! 500 images unlocked.');
+        } else {
+          setPaid(false);
+        }
+      }
+      // Check if user just returned from Stripe success
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('payment') === 'success') {
+        window.history.replaceState({}, '', window.location.pathname);
+        if (!verifyingRef.current) {
+          verifyingRef.current = true;
+          toast.success('Processing payment...');
+          // Poll a few times since webhook might take a second
+          for (let i = 0; i < 5; i++) {
+            await new Promise((r) => setTimeout(r, 2000));
+            const verified = await verifyPaymentStatus();
+            if (verified) {
+              setPaid(true);
+              toast.success('Payment confirmed! 500 images unlocked.');
+              break;
+            }
+          }
+          verifyingRef.current = false;
+        }
+      }
+    };
+    init();
   }, []);
 
   const limit = paid ? PAID_LIMIT : FREE_LIMIT;
@@ -320,10 +403,10 @@ export default function Home() {
 
   const doneCount = images.filter((i) => i.status === 'done').length;
 
-  const handleBuyClick = useCallback(() => {
-    openCheckout();
+  const handleBuyClick = useCallback(async () => {
     setShowPaywall(false);
     setShowUpgradeInfo(false);
+    await openCheckout();
   }, []);
 
   return (
@@ -408,6 +491,7 @@ export default function Home() {
         {!paid && images.length === 0 && (
           <button
             onClick={openCheckout}
+            disabled={false}
             className="mt-5 inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-lg text-sm sm:text-base"
           >
             <Sparkles className="w-4 h-4" />
