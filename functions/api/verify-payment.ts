@@ -61,13 +61,33 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const session = await resp.json() as Record<string, unknown>;
 
     if (session.payment_status === 'paid') {
+      // Security: Verify this session belongs to OUR product (not cross-account spoofing)
+      const metadata = session.metadata as Record<string, string> | undefined;
+      const product = metadata?.product || '';
+      const expectedAmount = 900; // $9.00 in cents
+      const actualAmount = (session.amount_total as number) || 0;
+
+      if (product !== 'bg-remover-pro') {
+        console.warn(`verify-payment: Rejected session ${sessionId} — wrong product: ${product}`);
+        return new Response(JSON.stringify({ paid: false, error: 'Invalid session' }), {
+          status: 200, headers: corsHeaders,
+        });
+      }
+
+      if (actualAmount < expectedAmount) {
+        console.warn(`verify-payment: Rejected session ${sessionId} — wrong amount: ${actualAmount} (expected ${expectedAmount})`);
+        return new Response(JSON.stringify({ paid: false, error: 'Invalid session' }), {
+          status: 200, headers: corsHeaders,
+        });
+      }
+
       return new Response(JSON.stringify({
         paid: true,
         sessionId: session.id,
         email: session.customer_details
           ? (session.customer_details as Record<string, string>).email || null
           : (session.customer_email as string) || null,
-        amount: session.amount_total ? Math.round((session.amount_total as number) / 100 * 100) / 100 : 9,
+        amount: Math.round(actualAmount / 100 * 100) / 100,
         images: 500,
       }), { status: 200, headers: corsHeaders });
     }

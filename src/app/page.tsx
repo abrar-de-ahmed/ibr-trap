@@ -179,12 +179,13 @@ export default function Home() {
   const hasAnyProcessing = images.some((i) => i.status === 'processing');
   const hasAnyPending = images.some((i) => i.status === 'pending');
 
+  // Cleanup object URLs when images change or component unmounts
   useEffect(() => {
     const urls = images.flatMap((i) =>
       [i.originalUrl, i.resultUrl].filter(Boolean) as string[]
     );
     return () => urls.forEach((u) => URL.revokeObjectURL(u));
-  }, []);
+  }, [images]);
 
   const validateAndNormalize = useCallback(
     async (file: File): Promise<Blob> => {

@@ -111,11 +111,6 @@ const jsonLd = {
       },
     ],
   },
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "4.8",
-    ratingCount: "127",
-  },
   featureList: [
     "AI-powered background removal",
     "Free tier with 2 images",
@@ -126,9 +121,7 @@ const jsonLd = {
   ],
 };
 
-// TODO: Replace with your actual Google Site Verification code
-// Get it from: https://search.google.com/search-console > Add property > HTML tag
-const GOOGLE_SITE_VERIFICATION = ""; // e.g., "abcdefghijklmnopqrst"
+// GSC verified via HTML file: public/googlec9fe8dd65678b590.html
 
 export default function RootLayout({
   children,
@@ -138,14 +131,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Google Search Console verification — replace value when you get it */}
-        {GOOGLE_SITE_VERIFICATION && (
-          <meta
-            name="google-site-verification"
-            content={GOOGLE_SITE_VERIFICATION}
-          />
-        )}
-
         {/* JSON-LD Structured Data */}
         <script
           type="application/ld+json"

@@ -48,16 +48,6 @@ function checkRateLimit(ip: string, endpoint: string): { allowed: boolean; remai
   return { allowed: true, remaining: max - entry.count, resetIn: Math.ceil((entry.resetAt - now) / 1000) };
 }
 
-// Disposable email domain list (common ones)
-const DISPOSABLE_DOMAINS = new Set([
-  'guerrillamail.com', 'guerrillamailblock.com', 'sharklasers.com', 'guerrillamail.net',
-  'guerrillamail.org', 'grr.la', 'dispostable.com', 'throwaway.email', 'yopmail.com',
-  'yopmail.fr', 'yopmail.net', 'jetable.org', 'mailinator.com', 'maildrop.cc',
-  'mailnesia.com', 'tempail.com', 'tempmail.com', 'temp-mail.org', 'fakeinbox.com',
-  'trashmail.com', 'trash-mail.com', 'mohmal.com', 'harakirimail.com', 'tempinbox.com',
-  '10minutemail.com', 'discard.email', 'mailcatch.com', 'mailscrap.com', 'filzmail.com',
-]);
-
 export const onRequest: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const ip = getClientIP(context.request);
