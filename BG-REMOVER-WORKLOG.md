@@ -13,6 +13,7 @@
   - webhook: 100 req/min/IP
   - clientRefId UUID format validation
   - Suspicious activity logging
+  - Rate limit headers (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
 - Created `_headers` — Cloudflare Pages security headers
   - X-Frame-Options: DENY
   - X-Content-Type-Options: nosniff
@@ -60,19 +61,22 @@
 
 ### Documentation
 - Created `BG-REMOVER-MASTER-PROMPT.md` — Complete project documentation
-  - All agent definitions and schedules
-  - File structure
-  - Environment variables and secrets
-  - Stripe configuration
-  - Architecture decisions
-  - Pending tasks and phases
-- Created `BG-REMOVER-SEO-STRATEGY.md` — SEO strategy document
-  - Phase A: Technical SEO (current)
-  - Phase B: Content & On-Page (10+15 pages plan)
-  - Phase C: Authority building
-  - Sandbox-friendly pacing guidelines
-  - KPI targets for 3 months
+- Created `BG-REMOVER-SEO-STRATEGY.md` — SEO strategy document (3-phase plan)
 - Created `BG-REMOVER-WORKLOG.md` — This file
+
+### Deployment Verification
+- Pushed 14 files (1768 insertions) to GitHub
+- CF Pages built and deployed successfully
+- Verified live:
+  - ✅ Site: HTTP 200, 12KB, 246ms load time
+  - ✅ robots.txt: Serving custom file correctly
+  - ✅ sitemap.xml: HTTP 200 with correct content
+  - ✅ JSON-LD: Application/LD+JSON present on homepage
+  - ✅ OG tags: og:title, og:description, og:image present
+  - ✅ Twitter Card: summary_large_image present
+  - ✅ Rate limiting: X-RateLimit headers on API responses
+  - ✅ Security headers: X-Frame-Options, X-Content-Type-Options on API
+  - ✅ Webhook health: /api/webhook returns ok status
 
 ---
 
