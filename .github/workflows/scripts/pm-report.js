@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * IBR-Trap — PM Agent v2
+ * BG Remover Digital — PM Agent v2
  * Runs weekly (Friday 6:00 UTC) via GitHub Actions
  * INSTANT ALERT: If site DOWN or Stripe API failure → email immediately
  * SCHEDULED: If all clear → email on scheduled Friday only (skip on manual dispatch)
@@ -19,8 +19,8 @@ const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const EVENT_NAME = process.env.GITHUB_EVENT_NAME || 'schedule';
 
-const SITE_URL = 'https://ibr-trap.pages.dev';
-const CF_PROJECT = 'ibr-trap';
+const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const CF_PROJECT = 'bgremoverdigital';
 const GITHUB_REPO = 'abrar-de-ahmed/ibr-trap';
 
 function log(msg) {
@@ -50,9 +50,9 @@ async function sendEmail(subject, html) {
     auth: { user: GMAIL_USER, pass: GMAIL_APP_PASS },
   });
   await transporter.sendMail({
-    from: `"IBR-Trap PM" <${GMAIL_USER}>`,
+    from: `"BG Remover Digital PM" <${GMAIL_USER}>`,
     to: ALERT_EMAIL,
-    subject: `[IBR-Trap PM] ${subject}`,
+    subject: `[BG Remover Digital PM] ${subject}`,
     html,
   });
 }
@@ -281,7 +281,7 @@ async function main() {
 
   const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:700px;margin:0 auto;padding:20px">
 <div style="background:#6d28d9;color:white;padding:12px 16px;border-radius:8px 8px 0 0">
-  <h2 style="margin:0;font-size:18px">IBR-Trap - Weekly PM Report</h2>
+  <h2 style="margin:0;font-size:18px">BG Remover Digital - Weekly PM Report</h2>
   <p style="margin:4px 0 0;font-size:13px;opacity:0.9">${new Date().toISOString().split('T')[0]} | Automated Weekly Summary</p>
 </div>
 <div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px">
@@ -338,4 +338,5 @@ async function main() {
 }
 
 main().catch(e => { log(`Fatal: ${e.message}`); process.exit(1); });
+
 

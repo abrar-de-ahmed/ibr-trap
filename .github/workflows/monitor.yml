@@ -1,4 +1,4 @@
-name: IBR-Trap Site Monitor
+name: BG Remover Digital Site Monitor
 
 on:
   schedule:
@@ -32,3 +32,4 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: node .github/workflows/scripts/monitor.js
+
