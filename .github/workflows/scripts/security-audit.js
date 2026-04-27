@@ -193,8 +193,8 @@ async function main() {
   const vulnCount = Object.keys(audit.vulnerabilities || {}).length;
   if (vulnCount > 0) {
     for (const [pkg, info] of Object.entries(audit.vulnerabilities)) {
-      const via = (info.as any || {}).via || [];
-      const severity = (info.as any || {}).severity || 'unknown';
+      const via = info.via || [];
+      const severity = (info.severity) || 'unknown';
       allFindings.push({
         severity: severity === 'critical' ? 'CRITICAL' : severity === 'high' ? 'HIGH' : severity === 'moderate' ? 'MEDIUM' : 'LOW',
         type: `Vulnerable Package: ${pkg}`,
