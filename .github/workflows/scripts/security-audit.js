@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * BG Remover Digital — Security Agent v2
+ * IBR-Trap — Security Agent v2
  * Runs weekly (Monday 6:00 UTC) via GitHub Actions
  * INSTANT ALERT: If CRITICAL/HIGH found → email immediately
  * SCHEDULED: If all clear → email on scheduled Monday only (skip on manual dispatch)
@@ -14,8 +14,8 @@ const nodemailer = require('nodemailer');
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS;
 const ALERT_EMAIL = process.env.ALERT_EMAIL;
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
-const EVENT_NAME = process.env.GITHUB_EVENT_NAME || 'schedule'; // "schedule" or "workflow_dispatch"
+const SITE_URL = 'https://ibr-trap.pages.dev';
+const EVENT_NAME = process.env.GITHUB_EVENT_NAME || 'schedule';
 
 function log(msg) {
   console.log(`[SecurityAgent v2 ${new Date().toISOString()}] ${msg}`);
@@ -128,7 +128,7 @@ function checkDependencies() {
   return findings;
 }
 
-// ── Check Cloudflare Functions security headers ──
+// ── Check Cloudflare Pages security headers ──
 function checkSecurityHeaders() {
   log('Checking security headers via live site...');
   return new Promise((resolve) => {
@@ -168,9 +168,9 @@ async function sendEmail(subject, html) {
     auth: { user: GMAIL_USER, pass: GMAIL_APP_PASS },
   });
   await transporter.sendMail({
-    from: `"BG Remover Digital Security" <${GMAIL_USER}>`,
+    from: `"IBR-Trap Security" <${GMAIL_USER}>`,
     to: ALERT_EMAIL,
-    subject: `[BG Remover Security] ${subject}`,
+    subject: `[IBR-Trap Security] ${subject}`,
     html,
   });
 }
