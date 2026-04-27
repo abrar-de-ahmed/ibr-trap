@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * BG Remover Digital Smart Monitor — GitHub Actions Version
+ * IBR-Trap Smart Monitor — GitHub Actions Version
  * Runs every 12 hours permanently on GitHub's servers
  * Checks site, diagnoses, auto-fixes, emails alerts
  */
@@ -9,11 +9,11 @@ const https = require('https');
 const http = require('http');
 const nodemailer = require('nodemailer');
 
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://ibr-trap.pages.dev';
 const GITHUB_REPO = 'https://github.com/abrar-de-ahmed/ibr-trap';
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CF_API_TOKEN = process.env.CF_API_TOKEN;
-const CF_PROJECT = 'bgremoverdigital';
+const CF_PROJECT = 'ibr-trap';
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS;
 const ALERT_EMAIL = process.env.ALERT_EMAIL;
@@ -69,9 +69,9 @@ async function sendEmail(subject, html) {
     auth: { user: GMAIL_USER, pass: GMAIL_APP_PASS },
   });
   await transporter.sendMail({
-    from: `"BG Remover Digital Monitor" <${GMAIL_USER}>`,
+    from: `"IBR-Trap Monitor" <${GMAIL_USER}>`,
     to: ALERT_EMAIL,
-    subject: `[BG Remover Digital Monitor] ${subject}`,
+    subject: `[IBR-Trap Monitor] ${subject}`,
     html,
   });
 }
@@ -90,7 +90,7 @@ function diagnose(failedChecks) {
           diagnosis.push({ severity: 'HIGH', issue: 'Page not found (404)', explanation: 'Deployment may have been deleted or domain misconfigured.', autoFix: 'Triggering fresh deployment...', fixAction: 'redeploy' });
         } else if (check.detail.includes('Error:')) {
           diagnosis.push({ severity: 'CRITICAL', issue: 'Site unreachable', explanation: 'Could not connect. DNS may be down or Cloudflare having outage.', autoFix: 'Will retry next cycle. No auto-fix for network issues.', fixAction: 'none', needsOwner: true });
-          needsOwner.push('Site is completely unreachable. Check Cloudflare dashboard for bgremoverdigital.pages.dev status.');
+          needsOwner.push('Site is completely unreachable. Check Cloudflare dashboard for ibr-trap.pages.dev status.');
         }
         break;
       case 'Content - Title':
@@ -111,7 +111,7 @@ function diagnose(failedChecks) {
         break;
       case 'SSL/HTTPS':
         diagnosis.push({ severity: 'CRITICAL', issue: 'SSL failure', explanation: 'Site unreachable over HTTPS. Visitors see security warnings.', autoFix: 'Check CF SSL settings — needs dashboard access.', fixAction: 'none', needsOwner: true });
-        needsOwner.push('Check SSL/TLS in Cloudflare dashboard for bgremoverdigital.pages.dev. Set SSL mode to "Full".');
+        needsOwner.push('Check SSL/TLS in Cloudflare dashboard for ibr-trap.pages.dev. Set SSL mode to "Full".');
         break;
     }
   }
@@ -213,7 +213,7 @@ async function runChecks() {
 
 // ── Main ──
 async function main() {
-  log('=== BG Remover Digital Monitor Started ===');
+  log('=== IBR-Trap Monitor Started ===');
 
   // Validate env
   if (!GMAIL_USER || !GMAIL_APP_PASS || !ALERT_EMAIL) {
@@ -273,7 +273,7 @@ async function main() {
 
     const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:640px;margin:0 auto;padding:20px">
 <div style="background:#dc2626;color:white;padding:12px 16px;border-radius:8px 8px 0 0">
-<h2 style="margin:0;font-size:18px">BG Remover Digital Monitor Alert</h2>
+<h2 style="margin:0;font-size:18px">IBR-Trap Monitor Alert</h2>
 <p style="margin:4px 0 0;font-size:13px;opacity:0.9">${failed.length} of ${checks.length} checks failed at ${new Date().toISOString()}</p>
 </div>
 <div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px">
@@ -304,13 +304,14 @@ ${needsOwner.length ? `<div style="background:#fef2f2;border:1px solid #fca5a5;b
     // Weekly OK on Sunday
     if (new Date().getDay() === 0) {
       try {
-        await sendEmail('Weekly Status - All OK', `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px"><div style="background:#16a34a;color:white;padding:12px 16px;border-radius:8px 8px 0 0"><h2 style="margin:0;font-size:18px">BG Remover Digital Weekly Health Report</h2></div><div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px"><p style="margin:0 0 8px">All <strong>${checks.length}</strong> checks passed at <strong>${new Date().toISOString()}</strong></p><p style="margin:0;font-size:13px;color:#6b7280">Site: <a href="${SITE_URL}">${SITE_URL}</a></p></div></div>`);
+        await sendEmail('Weekly Status - All OK', `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px"><div style="background:#16a34a;color:white;padding:12px 16px;border-radius:8px 8px 0 0"><h2 style="margin:0;font-size:18px">IBR-Trap Weekly Health Report</h2></div><div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px"><p style="margin:0 0 8px">All <strong>${checks.length}</strong> checks passed at <strong>${new Date().toISOString()}</strong></p><p style="margin:0;font-size:13px;color:#6b7280">Site: <a href="${SITE_URL}">${SITE_URL}</a></p></div></div>`);
         log('Weekly OK email sent.');
       } catch (e) { log(`Weekly email error: ${e.message}`); }
     }
   }
 
-  log('=== BG Remover Digital Monitor Finished ===');
+  log('=== IBR-Trap Monitor Finished ===');
 }
 
 main().catch(e => { log(`Fatal: ${e.message}`); process.exit(1); });
+

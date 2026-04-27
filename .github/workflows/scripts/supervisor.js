@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * BG Remover Digital — Supervisor Agent v1
+ * IBR-Trap — Supervisor Agent v1
  * Runs daily (7:00 UTC) via GitHub Actions
  * LIGHTWEIGHT: Pings all other agents, checks schedule compliance, monitors patterns
  *
@@ -29,7 +29,7 @@ const CF_API_TOKEN = process.env.CF_API_TOKEN;
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://ibr-trap.pages.dev';
 
 function log(msg) {
   console.log(`[Supervisor v1 ${new Date().toISOString()}] ${msg}`);
@@ -59,9 +59,9 @@ async function sendEmail(subject, html) {
     auth: { user: GMAIL_USER, pass: GMAIL_APP_PASS },
   });
   await transporter.sendMail({
-    from: `"BG Remover Digital Supervisor" <${GMAIL_USER}>`,
+    from: `"IBR-Trap Supervisor" <${GMAIL_USER}>`,
     to: ALERT_EMAIL,
-    subject: `[BG Remover Supervisor] ${subject}`,
+    subject: `[IBR-Trap Supervisor] ${subject}`,
     html,
   });
 }
@@ -124,7 +124,7 @@ async function checkAgentStatus(agent) {
     const result = await fetchUrl(url, {
       'Authorization': `Bearer ${GITHUB_TOKEN}`,
       'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'BG-Remover-Supervisor',
+      'User-Agent': 'IBR-Trap-Supervisor',
     });
 
     if (result.status !== 200) {
@@ -400,7 +400,7 @@ async function main() {
 
   const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:700px;margin:0 auto;padding:20px">
 <div style="background:${headerColor};color:white;padding:12px 16px;border-radius:8px 8px 0 0">
-  <h2 style="margin:0;font-size:18px">BG Remover Digital - Supervisor Daily Report</h2>
+  <h2 style="margin:0;font-size:18px">IBR-Trap - Supervisor Daily Report</h2>
   <p style="margin:4px 0 0;font-size:13px;opacity:0.9">${new Date().toISOString().split('T')[0]} | ${headerText}</p>
 </div>
 <div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px">
@@ -472,3 +472,4 @@ async function main() {
 }
 
 main().catch(e => { log(`Fatal: ${e.message}`); process.exit(1); });
+

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * BG Remover Digital — SEO Agent v2
+ * IBR-Trap — SEO Agent v2
  * Runs weekly (Wednesday 6:00 UTC) via GitHub Actions
  * INSTANT ALERT: If CRITICAL/HIGH found → email immediately
  * SCHEDULED: If all clear → email on scheduled Wednesday only (skip on manual dispatch)
@@ -13,7 +13,7 @@ const nodemailer = require('nodemailer');
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS;
 const ALERT_EMAIL = process.env.ALERT_EMAIL;
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://ibr-trap.pages.dev';
 const EVENT_NAME = process.env.GITHUB_EVENT_NAME || 'schedule';
 
 function log(msg) {
@@ -40,9 +40,9 @@ async function sendEmail(subject, html) {
     auth: { user: GMAIL_USER, pass: GMAIL_APP_PASS },
   });
   await transporter.sendMail({
-    from: `"BG Remover Digital SEO" <${GMAIL_USER}>`,
+    from: `"IBR-Trap SEO" <${GMAIL_USER}>`,
     to: ALERT_EMAIL,
-    subject: `[BG Remover SEO] ${subject}`,
+    subject: `[IBR-Trap SEO] ${subject}`,
     html,
   });
 }
@@ -144,7 +144,7 @@ async function checkSitemap() {
       } else {
         findings.push({ severity: 'OK', check: 'Sitemap', message: `Sitemap contains ${urlCount} URL(s).` });
       }
-      if (!body.includes('bgremoverdigital.pages.dev')) {
+      if (!body.includes('ibr-trap.pages.dev')) {
         findings.push({ severity: 'MEDIUM', check: 'Sitemap', message: 'Sitemap URLs may not match live domain.' });
       }
     }
@@ -311,3 +311,4 @@ async function main() {
 }
 
 main().catch(e => { log(`Fatal: ${e.message}`); process.exit(1); });
+
