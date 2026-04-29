@@ -117,7 +117,7 @@ async function checkRobotsTxt() {
       if (!body.includes('Sitemap:')) {
         findings.push({ severity: 'MEDIUM', check: 'robots.txt', message: 'robots.txt does not declare sitemap location.' });
       }
-      if (body.includes('Disallow: /')) {
+      if (/^Disallow:\s*\/\s*$/m.test(body)) {
         findings.push({ severity: 'CRITICAL', check: 'robots.txt', message: 'robots.txt has "Disallow: /" — entire site is blocked from crawlers!' });
       }
       if (body.includes('User-agent: *') && body.includes('Allow: /')) {
@@ -311,5 +311,6 @@ async function main() {
 }
 
 main().catch(e => { log(`Fatal: ${e.message}`); process.exit(1); });
+
 
 
