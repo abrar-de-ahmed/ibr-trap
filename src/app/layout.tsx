@@ -125,6 +125,30 @@ const jsonLd = {
   ],
 };
 
+// JSON-LD Structured Data: WebApplication schema
+const jsonLdWebApp = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "BG Remover Digital",
+  url: SITE_URL,
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Any",
+  browserRequirements: "Requires JavaScript",
+  offers: {
+    "@type": "AggregateOffer",
+    lowPrice: "0",
+    highPrice: "9.00",
+    priceCurrency: "USD",
+  },
+  screenshot: `${SITE_URL}/og-image.png`,
+  featureList: [
+    "AI background removal",
+    "Free tier",
+    "Batch processing",
+    "No signup required",
+  ],
+};
+
 // GSC verified via HTML file: public/googlec9fe8dd65678b590.html
 
 export default function RootLayout({
@@ -135,10 +159,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* JSON-LD Structured Data */}
+        {/* JSON-LD Structured Data: SoftwareApplication */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+
+        {/* JSON-LD Structured Data: WebApplication */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebApp) }}
         />
 
         {/* Google Analytics */}
