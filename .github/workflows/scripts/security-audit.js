@@ -14,7 +14,7 @@ const nodemailer = require('nodemailer');
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS;
 const ALERT_EMAIL = process.env.ALERT_EMAIL;
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
 const EVENT_NAME = process.env.GITHUB_EVENT_NAME || 'schedule';
 
 function log(msg) {

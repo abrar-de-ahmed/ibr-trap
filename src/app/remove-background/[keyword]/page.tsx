@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import BackgroundRemover from '@/components/BackgroundRemover';
 import keywordsData from '../../../../data/keywords.json';
 
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
 
 type KeywordEntry = {
   slug: string;

@@ -28,7 +28,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-xl font-semibold text-slate-900 mt-0">1. Acceptance of Terms</h2>
             <p className="text-slate-600 leading-relaxed">
-              By accessing or using the BG Remover Digital website at bgremoverdigital.pages.dev (the
+              By accessing or using the BG Remover Digital website at bgremoverdigital.craftedmindss.com (the
               &quot;Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not
               agree to all of these Terms, do not use the Service. These Terms apply to all visitors, users, and others
               who access or use the Service. We reserve the right to modify or replace these Terms at any time. Material

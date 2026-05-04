@@ -22,7 +22,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const stripeKey = context.env.STRIPE_SECRET_KEY;
     const priceId = context.env.STRIPE_PRICE_ID;
-    const siteUrl = context.env.SITE_URL || 'https://bgremoverdigital.pages.dev';
+    const siteUrl = context.env.SITE_URL || 'https://bgremoverdigital.craftedmindss.com';
 
     if (!stripeKey || !priceId) {
       return new Response(JSON.stringify({ error: 'Server misconfigured' }), {

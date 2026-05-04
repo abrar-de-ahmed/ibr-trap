@@ -13,7 +13,7 @@ const nodemailer = require('nodemailer');
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS;
 const ALERT_EMAIL = process.env.ALERT_EMAIL;
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
 const EVENT_NAME = process.env.GITHUB_EVENT_NAME || 'schedule';
 
 function log(msg) {
@@ -144,7 +144,7 @@ async function checkSitemap() {
       } else {
         findings.push({ severity: 'OK', check: 'Sitemap', message: `Sitemap contains ${urlCount} URL(s).` });
       }
-      if (!body.includes('bgremoverdigital.pages.dev')) {
+      if (!body.includes('bgremoverdigital.craftedmindss.com')) {
         findings.push({ severity: 'MEDIUM', check: 'Sitemap', message: 'Sitemap URLs may not match live domain.' });
       }
     }

@@ -19,7 +19,7 @@ const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const EVENT_NAME = process.env.GITHUB_EVENT_NAME || 'schedule';
 
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
 const CF_PROJECT = 'bgremoverdigital';
 const GITHUB_REPO = 'abrar-de-ahmed/ibr-trap';
 

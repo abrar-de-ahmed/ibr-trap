@@ -1,12 +1,12 @@
 # BG Remover Digital - robots.txt
-# https://bgremoverdigital.pages.dev
+# https://bgremoverdigital.craftedmindss.com
 
 User-agent: *
 Allow: /
 Disallow: /api/
 
 # Sitemap location
-Sitemap: https://bgremoverdigital.pages.dev/sitemap.xml
+Sitemap: https://bgremoverdigital.craftedmindss.com/sitemap.xml
 
 # Crawl-delay for polite crawlers
 Crawl-delay: 1

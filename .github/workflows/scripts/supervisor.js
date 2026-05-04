@@ -29,7 +29,7 @@ const CF_API_TOKEN = process.env.CF_API_TOKEN;
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
 
 function log(msg) {
   console.log(`[Supervisor v1 ${new Date().toISOString()}] ${msg}`);

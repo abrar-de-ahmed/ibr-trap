@@ -3,7 +3,7 @@ import keywordsData from '../../data/keywords.json';
 
 export const dynamic = 'force-static';
 
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
 
 type KeywordEntry = {
   slug: string;

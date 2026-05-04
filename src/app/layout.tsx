@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://bgremoverdigital.pages.dev";
+const SITE_URL = "https://bgremoverdigital.craftedmindss.com";
 const SITE_NAME = "BG Remover Digital";
 const SITE_TITLE = "BG Remover — Remove Image Backgrounds Free | AI-Powered";
 const SITE_DESCRIPTION =

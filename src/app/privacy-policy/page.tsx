@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const SITE_URL = "https://bgremoverdigital.pages.dev";
+const SITE_URL = "https://bgremoverdigital.craftedmindss.com";
 
 export const metadata: Metadata = {
   title: "Privacy Policy - BG Remover Digital",
@@ -30,7 +30,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-semibold text-slate-900 mt-0">1. Introduction</h2>
             <p className="text-slate-600 leading-relaxed">
-              BG Remover Digital (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) operates the website bgremoverdigital.pages.dev
+              BG Remover Digital (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) operates the website bgremoverdigital.craftedmindss.com
               (the &quot;Service&quot;). This Privacy Policy explains how we collect, use, disclose, and safeguard your
               information when you visit our website and use our background removal tool. By accessing or using the
               Service, you agree to the collection and use of information in accordance with this policy. If you do not

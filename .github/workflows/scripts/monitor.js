@@ -9,7 +9,7 @@ const https = require('https');
 const http = require('http');
 const nodemailer = require('nodemailer');
 
-const SITE_URL = 'https://bgremoverdigital.pages.dev';
+const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
 const GITHUB_REPO = 'https://github.com/abrar-de-ahmed/ibr-trap';
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CF_API_TOKEN = process.env.CF_API_TOKEN;
@@ -90,7 +90,7 @@ function diagnose(failedChecks) {
           diagnosis.push({ severity: 'HIGH', issue: 'Page not found (404)', explanation: 'Deployment may have been deleted or domain misconfigured.', autoFix: 'Triggering fresh deployment...', fixAction: 'redeploy' });
         } else if (check.detail.includes('Error:')) {
           diagnosis.push({ severity: 'CRITICAL', issue: 'Site unreachable', explanation: 'Could not connect. DNS may be down or Cloudflare having outage.', autoFix: 'Will retry next cycle. No auto-fix for network issues.', fixAction: 'none', needsOwner: true });
-          needsOwner.push('Site is completely unreachable. Check Cloudflare dashboard for bgremoverdigital.pages.dev status.');
+          needsOwner.push('Site is completely unreachable. Check Cloudflare dashboard for bgremoverdigital.craftedmindss.com status.');
         }
         break;
       case 'Content - Title':
@@ -111,7 +111,7 @@ function diagnose(failedChecks) {
         break;
       case 'SSL/HTTPS':
         diagnosis.push({ severity: 'CRITICAL', issue: 'SSL failure', explanation: 'Site unreachable over HTTPS. Visitors see security warnings.', autoFix: 'Check CF SSL settings — needs dashboard access.', fixAction: 'none', needsOwner: true });
-        needsOwner.push('Check SSL/TLS in Cloudflare dashboard for bgremoverdigital.pages.dev. Set SSL mode to "Full".');
+        needsOwner.push('Check SSL/TLS in Cloudflare dashboard for bgremoverdigital.craftedmindss.com. Set SSL mode to "Full".');
         break;
     }
   }
