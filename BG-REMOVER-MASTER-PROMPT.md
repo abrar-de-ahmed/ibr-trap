@@ -1,7 +1,7 @@
 # BG Remover Digital — MASTER PROMPT (Complete Project Reference)
 
-> **Last Updated:** April 24, 2026
-> **Version:** 3.0 — All 5 Agents Live + Legal + Branding Complete
+> **Last Updated:** May 5, 2026
+> **Version:** 4.0 — Custom Domain + Webhook Removed + SEO Pages Live + Security Fixes
 > **Project Owner:** Abrar Ahmed
 > **Contact Email:** craftedminds3@gmail.com
 > **Project:** BG Remover Digital (formerly IBR-Trap)
@@ -243,15 +243,13 @@ ibr-deploy/
 │   ├── _middleware.ts                        # Rate limiting + UUID validation
 │   └── api/
 │       ├── create-checkout.ts                # POST /api/create-checkout
-│       ├── verify-payment.ts                 # GET/POST /api/verify-payment
-│       └── webhook.ts                        # POST/GET /api/webhook
+│       └── verify-payment.ts                 # GET/POST /api/verify-payment
 ├── public/
 │   ├── favicon.ico                           # Custom branded favicon (16/32/48/64px)
 │   ├── favicon.png                           # Custom branded favicon (1024x1024)
 │   ├── apple-touch-icon.png                  # iOS home screen icon
 │   ├── og-image.png                          # Social media preview (1344x768)
 │   ├── robots.txt                            # Search engine rules
-│   ├── sitemap.xml                           # XML sitemap
 │   └── googlec9fe8dd65678b590.html          # GSC verification file
 ├── src/
 │   ├── app/
@@ -288,7 +286,6 @@ ibr-deploy/
 | `STRIPE_SECRET_KEY` | `sk_live_****...****` (set in CF Dashboard) | Stripe API authentication |
 | `STRIPE_PRICE_ID` | `price_1QxGOHP7H2Dn9RlR6KBFM1Ko` | Stripe product price ID |
 | `STRIPE_PRODUCT_ID` | `prod_Qw6lTBYWqRxMRy` | Stripe product ID |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_****...****` (set in CF Dashboard) | Webhook signature verification |
 
 ### GitHub Actions Secrets (set in GitHub Settings)
 
@@ -308,7 +305,7 @@ ibr-deploy/
 |---------|--------|---------|
 | **Google Search Console** | ✅ Verified | URL prefix: bgremoverdigital.craftedmindss.com, HTML file verification |
 | **Google Analytics** | ✅ Active | ID: G-K1QRPR8ZL9, Timezone: Asia/Karachi, Currency: USD, Industry: Technology |
-| **Stripe** | ✅ LIVE | Product: 500 images for $9, Webhook: checkout.session.completed only |
+| **Stripe** | ✅ LIVE | Product: 500 images for $9, Webhook: REMOVED (payments verified via polling) |
 | **Cloudflare Pages** | ✅ LIVE | Project: bgremoverdigital, Account: a5dff0139652af1d62f80ae1c6f1e9f5 |
 
 ---
@@ -328,11 +325,9 @@ Frontend: Opens popup window (520x720, centered)
     ↓
 User pays on Stripe's secure checkout page
     ↓
-Stripe sends webhook → POST /api/webhook (signature verified via HMAC-SHA256)
-    ↓
 Stripe redirects user → /?payment=success&session_id=cs_...
     ↓
-Frontend: Polls verify-payment (up to 5 times, 2s intervals)
+Frontend: Polls /api/verify-payment (up to 5 times, 2s intervals)
     ↓
 CF Function: verify-payment.ts → Stripe API → checks payment_status === 'paid'
     ↓
@@ -377,7 +372,8 @@ All times in UTC. Pakistan = UTC+5.
 |----------|-----------|
 | Static export (`output: "export"`) | FREE hosting on CF Pages, no server costs |
 | CF Pages Functions (not external backend) | Same platform, FREE, no cold start issues |
-| No KV for payment verification | v2 design — calls Stripe API directly, simpler |
+| No KV for payment verification | Calls Stripe API directly, simpler |
+| Webhook removed (May 2025) | Missing STRIPE_WEBHOOK_SECRET in CF env; polling works fine without it |
 | `reactStrictMode: false` | img.ly runs twice in strict mode — known bug |
 | Client-side AI (img.ly) | $0 API costs, privacy (images never leave device) |
 | IP rate limiting in middleware | Basic protection; CF WAF for advanced rules |
@@ -426,34 +422,37 @@ All times in UTC. Pakistan = UTC+5.
 
 ### ✅ Phase 1: Foundation (COMPLETED)
 - [x] Core app (upload, process, download, free/paid tiers)
-- [x] Stripe integration (checkout, verification, webhook)
+- [x] Stripe integration (checkout + polling verification, webhook REMOVED)
 - [x] Rebranding (IBR-Trap → BG Remover Digital)
 - [x] CF Pages deployment (bgremoverdigital.craftedmindss.com)
 - [x] Monitor Agent (12h cron, 7 checks, auto-redeploy)
-- [x] Security Agent v2 (instant alerts, weekly audit)
+- [x] Security Agent v2 (instant alerts, weekly audit, false-positive fixes)
 - [x] SEO Agent v2 (instant alerts, weekly audit)
 - [x] PM Agent v2 (instant alerts, revenue tracking, 5-agent dashboard)
 - [x] Supervisor Agent v1 (daily health, agent compliance, learning patterns)
 - [x] Security headers (CSP with GA + img.ly domains)
-- [x] Google Search Console verified (HTML file)
+- [x] Google Search Console verified (URL prefix: bgremoverdigital.craftedmindss.com)
 - [x] Google Analytics integrated (G-K1QRPR8ZL9, CSP fixed)
-- [x] Stripe webhook configured (checkout.session.completed)
 - [x] Custom favicon + OG image + apple-touch-icon
 - [x] Privacy Policy + Terms of Service pages
 - [x] Footer with legal links
+- [x] Custom domain migration (.pages.dev → .craftedmindss.com)
+- [x] 10 programmatic SEO keyword pages (data/keywords.json + dynamic [keyword] route)
 
-### 🔲 Phase 2: Growth (COOKING — Week 1-2)
-- [ ] System cooks for 1-2 weeks, all agents run on schedule
-- [ ] Verify all emails arriving correctly
+### 🔲 Phase 2: Growth (COOKING — Week 2)
+- [x] System cooks for 1-2 weeks, all agents run on schedule
+- [x] Verify all emails arriving correctly
+- [x] GSC property created + sitemap submitted (new domain)
 - [ ] Collect baseline GA data (traffic, bounce rate, sessions)
-- [ ] GSC starts showing indexation data
-- [ ] Submit sitemap to GSC manually (if not auto-discovered)
+- [ ] GSC starts showing indexation data (10 keyword pages being indexed manually)
+- [ ] Week 2 checkpoint: 80%+ of submitted pages indexed
 - [ ] Custom 404 page
 
-### 🔲 Phase 3: Content & SEO (Week 3+)
-- [ ] First blog post (Week 3 — "Best Free Background Remover 2026")
+### 🔲 Phase 3: Content & SEO (Week 3+ — CONDITIONAL on Phase 2 checkpoint)
+- [ ] First blog post ("Best Free Background Remover 2026")
 - [ ] GA conversion events (full funnel tracking: upload → process → download → paywall → checkout → success)
-- [ ] Programmatic SEO pages Wave 1 (10 keyword-targeted pages)
+- [x] Programmatic SEO pages Wave 1 (10 keyword-targeted pages LIVE)
+- [ ] Programmatic SEO pages Wave 2 (10 more keywords if checkpoint passes)
 - [ ] Social proof elements ("X images processed", testimonials)
 - [ ] Email capture mechanism (lead generation)
 
@@ -478,6 +477,7 @@ All times in UTC. Pakistan = UTC+5.
 | Issue | Severity | Status | Notes |
 |-------|----------|--------|-------|
 | Rate limiting is in-memory only | Medium | Known | Resets per CF worker cold start. CF WAF for advanced |
+| No webhook (removed May 2025) | Low | By design | Payments verified via polling /api/verify-payment |
 | Agents are rule-based (not ML) | Low | By design | Supervisor monitors patterns, agents act on rules |
 | No GA conversion events yet | Medium | Phase 3 | Only pageviews tracked, full funnel tracking planned |
 | No custom 404 page | Low | Phase 2 | CF default 404 shows on wrong URLs |
@@ -493,11 +493,12 @@ All times in UTC. Pakistan = UTC+5.
 1. Create new GitHub repo
 2. Create new CF Pages project
 3. Create new Stripe product + price (get new Price ID)
-4. Create new Stripe webhook (get new whsec secret)
-5. Create new GSC property + GA property
-6. Copy all code, change branding
-7. Set new CF env vars (STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET)
-8. Set new GitHub secrets (GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, CF_API_TOKEN, CF_ACCOUNT_ID, STRIPE_SECRET_KEY)
-9. Deploy
+4. Create new GSC property + GA property
+5. Copy all code, change branding + domain references
+6. Set new CF env vars (STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_PRODUCT_ID)
+7. Set new GitHub secrets (GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, CF_API_TOKEN, CF_ACCOUNT_ID, STRIPE_SECRET_KEY)
+8. Deploy
 
 **Estimated time: 30 minutes** — all code is ready, just rebrand + reconfigure.
+
+**NOTE:** No webhook needed. Payments use polling verification only.

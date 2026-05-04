@@ -4,16 +4,54 @@
 
 ---
 
-## May 5, 2025 — Custom Domain Migration
+## May 5, 2025 — Custom Domain Migration + Master Prompt Overhaul
 
+### Domain Migration
 - Migrated all domain references from `bgremoverdigital.pages.dev` to `bgremoverdigital.craftedmindss.com`
 - Cloudflare Pages custom domain configured via CNAME + Pages dashboard (both active)
 - Old `.pages.dev` domain still works as automatic redirect/fallback
 - Code files (`layout.tsx`, `sitemap.ts`) were already updated in a prior session
-- Updated `BG-REMOVER-MASTER-PROMPT.md` — 4 references (live URL, setup step, GSC entry, checklist)
-- Verified zero `.pages.dev` references remain across entire codebase
 - All 5 GitHub agent scripts already pointing to new domain
-- **Next step:** User needs to add `https://bgremoverdigital.craftedmindss.com/` as URL Prefix in GSC
+- Verified zero `.pages.dev` references remain across entire codebase
+- Updated `BG-REMOVER-MASTER-PROMPT.md` — domain references
+
+### GSC Setup on New Domain
+- User added URL prefix `https://bgremoverdigital.craftedmindss.com/` in GSC
+- Submitted sitemap: `https://bgremoverdigital.craftedmindss.com/sitemap.xml`
+- Sitemap status "Couldn't fetch" — normal for new domain, will resolve in 3-7 days
+
+### Documentation Overhaul
+- Updated all 3 MD files to reflect current project state:
+  - `BG-REMOVER-MASTER-PROMPT.md` v4.0: removed webhook references, updated payment flow, updated file structure, added SEO pages status, updated phases
+  - `BG-REMOVER-SEO-STRATEGY.md`: Phase A marked COMPLETE, Wave 1 (10 pages) marked LIVE, added checkpoint gate, updated GSC status
+  - `BG-REMOVER-WORKLOG.md`: added full history including prior session work
+- Committed and pushed to GitHub
+
+---
+
+## May 4, 2025 — Prior Session Work (from context summary)
+
+### Stripe Webhook Removal
+- Diagnosed failing webhook at `/api/webhook` — missing `STRIPE_WEBHOOK_SECRET` env var in CF Pages
+- Decision: Remove webhook entirely since payments work via polling (`/api/verify-payment`)
+- Deleted `functions/api/webhook.ts` (commit d935497)
+- User deleted both webhook endpoints from Stripe Dashboard
+- Updated documentation to reflect webhook removal
+
+### Security Agent v2 — False Positive Fixes
+- Fixed 3 bugs in `.github/workflows/scripts/security-audit.js`:
+  - Gitignore glob pattern matching (`.env*` covers `.env.local`, `.env.production`)
+  - Header checks now read `_headers` file directly instead of live HTTP fetch (CF edge headers not visible to Node.js)
+  - Skip known unfixable npm vulns (postcss inside Next.js)
+- Result: 5 out of 7 findings were false positives — now resolved
+
+### Programmatic SEO Pages
+- Created `data/keywords.json` with 10 keyword entries
+- Created dynamic route `src/app/remove-background/[keyword]/page.tsx`
+- Created dynamic sitemap `src/app/sitemap.ts` (13 URLs total)
+- 10 keyword pages deployed: product-photos, shoes, jewelry, clothing, watches, electronics, amazon-listings, etsy-shop, ebay-photos, shopify-store
+- Each page has unique H1, intro, why_matters, how_to_steps, FAQs, related keyword links
+- User manually indexing pages in GSC (2-3/day)
 
 ---
 

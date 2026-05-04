@@ -1,82 +1,101 @@
 # BG Remover Digital — SEO Strategy
 
-> **Last Updated:** April 24, 2025
-> **Status:** Phase A (Technical SEO Foundation) — IN PROGRESS
+> **Last Updated:** May 5, 2026
+> **Status:** Phase A COMPLETE — Phase B IN PROGRESS (indexing phase)
+> **Live URL:** https://bgremoverdigital.craftedmindss.com
 > **Target Keywords:** background remover, remove background, free background remover
 
 ---
 
-## Phase A: Technical SEO Foundation (Week 1) — CURRENT
+## Phase A: Technical SEO Foundation — COMPLETE ✅
 
-### Completed
 - [x] robots.txt with sitemap declaration
-- [x] sitemap.xml with canonical URLs
-- [x] JSON-LD structured data (SoftwareApplication schema)
+- [x] Dynamic sitemap (`src/app/sitemap.ts` — 13 URLs: homepage + 10 keyword pages + privacy + terms)
+- [x] JSON-LD structured data (SoftwareApplication + WebApplication schemas)
 - [x] Open Graph meta tags (og:title, og:description, og:image, og:url)
 - [x] Twitter Card meta tags (summary_large_image)
-- [x] Canonical URL on homepage
+- [x] Canonical URL on homepage (via metadataBase)
 - [x] Comprehensive meta description (120-155 chars)
 - [x] Title tag optimized (40-60 chars)
 - [x] Security headers (CSP, X-Frame-Options, etc.)
-- [x] SEO Agent cron for ongoing monitoring
-
-### Pending User Action
-- [ ] Google Search Console property setup
-- [ ] Google Analytics property setup
-- [ ] Submit sitemap to GSC
-
-### Pending
-- [ ] OG image (1200x630px) for social sharing
-- [ ] Core Web Vitals audit and optimization
-- [ ] Mobile responsiveness deep audit
+- [x] SEO Agent cron for ongoing monitoring (every Wednesday)
+- [x] Google Search Console verified (URL prefix: bgremoverdigital.craftedmindss.com)
+- [x] Google Analytics integrated (G-K1QRPR8ZL9)
+- [x] OG image (og-image.png)
+- [x] Custom domain live (bgremoverdigital.craftedmindss.com)
+- [x] Sitemap submitted to GSC (https://bgremoverdigital.craftedmindss.com/sitemap.xml)
 
 ---
 
-## Phase B: Content & On-Page SEO (Weeks 2-4)
+## Phase B: Content & On-Page SEO — IN PROGRESS
 
-### Wave 1: Core Pages (Week 2) — 10 Pages
-Target search-intent pages using programmatic generation:
+### Wave 1: Programmatic SEO Pages — 10 Pages LIVE ✅
 
-| Page | URL Slug | Target Keyword | Intent |
-|------|----------|---------------|--------|
-| How It Works | /how-it-works | how to remove background from image | Informational |
-| Free Tool | /free-background-remover | free background remover online | Transactional |
-| Bulk Tool | /bulk-background-remover | bulk background remover | Transactional |
-| Product Feature | /transparent-background-maker | transparent background maker | Transactional |
-| JPG Background | /remove-background-jpg | remove background from jpg | Transactional |
-| PNG Background | /remove-background-png | remove background from png | Transactional |
-| Logo Background | /remove-background-logo | remove background from logo | Transactional |
-| Product Photo | /remove-background-product-photo | product photo background remover | Transactional |
-| Passport Photo | /remove-background-passport-photo | passport photo background remover | Transactional |
-| No Signup | /background-remover-no-signup | background remover no signup | Transactional |
+All 10 keyword-targeted pages are deployed under `/remove-background/[keyword]` with:
+- Unique H1, intro, why_matters sections, how_to_steps, FAQs
+- Related keyword internal linking
+- Generated from `data/keywords.json` + dynamic route `src/app/remove-background/[keyword]/page.tsx`
 
-### Wave 2: Blog & Content (Week 3) — 5 Articles
-- "How to Remove Image Backgrounds Without Photoshop"
-- "Best Free Background Removers in 2025 (Compared)"
-- "AI Background Removal: How It Works Under the Hood"
-- "How to Make Product Photos with Transparent Backgrounds"
-- "Background Removal for E-commerce: Complete Guide"
+| # | Slug | Target Keyword | Status |
+|---|------|---------------|--------|
+| 1 | product-photos | background remover for product photos | ✅ Live, indexing |
+| 2 | shoes | remove background from shoes | ✅ Live, indexing |
+| 3 | jewelry | background remover for jewelry | ✅ Live, indexing |
+| 4 | clothing | remove background from clothing | ✅ Live, indexing |
+| 5 | watches | background remover for watches | ✅ Live, indexing |
+| 6 | electronics | remove background from electronics | ✅ Live, indexing |
+| 7 | amazon-listings | background remover for Amazon listings | ✅ Live, indexing |
+| 8 | etsy-shop | background remover for Etsy shop | ✅ Live, indexing |
+| 9 | ebay-photos | remove background for eBay photos | ✅ Live, indexing |
+| 10 | shopify-store | background remover for Shopify store | ✅ Live, indexing |
 
-### Wave 3: Expansion (Week 4) — 15 Pages
-- Additional keyword-targeted pages
-- FAQ pages with structured data
-- Comparison pages (vs competitors)
-- Tool-specific pages
+### GSC Indexing Progress
+- User is manually indexing 2-3 pages per day in GSC (Request Indexing)
+- Indexed through jewelry (first ~6 keywords as of May 5)
+- Remaining 3-4 keywords being submitted this week
+- Sitemap status: "Couldn't fetch" — normal for new domain, will resolve in 3-7 days
+
+### Week 2 Checkpoint (CRITICAL GATE)
+- **Trigger:** After all 10 pages submitted + 5-7 days wait
+- **Pass criteria:** 80%+ of pages indexed in GSC
+- **If PASS:** Proceed to Phase C (Wave 2 keywords + blog #1)
+- **If FAIL:** Wait longer, diagnose issues, re-submit
 
 ---
 
-## Phase C: Authority Building (Month 2+)
+## Phase C: Content Scaling (Week 3+ — CONDITIONAL)
+
+### Wave 2: 10 More Keyword Pages (if checkpoint passes)
+- Additional ecommerce/product-related keywords
+- Generated same way via keywords.json expansion
+
+### Blog Content
+- [ ] Blog #1: "Best Free Background Remover 2026"
+- [ ] Blog #2: "How to Remove Image Backgrounds Without Photoshop"
+- [ ] Blog #3: "AI Background Removal for E-commerce: Complete Guide"
+- Target: 1-2 blog posts per week after checkpoint passes
+
+### GA Conversion Events (full funnel)
+- Upload → Process → Download → Paywall → Checkout → Success
+
+### Social Proof & Lead Gen
+- [ ] "X images processed" counter
+- [ ] Testimonials section
+- [ ] Email capture mechanism
+
+---
+
+## Phase D: Authority Building (Month 2+)
 
 ### Backlink Strategy
 - Submit to tool directories (Product Hunt, There's A Tool For That, etc.)
 - Guest posts on design/photography blogs
-- Community engagement (Reddit, forums)
+- Community engagement (Reddit, forums — monitor mentions)
 - Resource page link building
 
 ### Technical SEO Advancement
-- Implement Brotli compression via CF
+- Brotli compression via CF
 - Advanced caching headers
-- Image optimization (WebP, lazy loading)
 - Core Web Vitals monitoring via CrUX API
 
 ### Content Scaling
@@ -89,7 +108,7 @@ Target search-intent pages using programmatic generation:
 ## Sandbox-Friendly Pacing
 
 To avoid Google's sandbox penalty for new domains:
-- Month 1: 1-2 pages per week (slow and natural)
+- Month 1: 1-2 pages per week (slow and natural) — CURRENT
 - Month 2: 2-3 pages per week
 - Month 3+: Scale up based on GSC data
 
