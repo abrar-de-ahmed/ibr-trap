@@ -5,7 +5,7 @@
 > **Project Owner:** Abrar Ahmed
 > **Contact Email:** craftedminds3@gmail.com
 > **Project:** BG Remover Digital (formerly IBR-Trap)
-> **Live URL:** https://bgremoverdigital.pages.dev
+> **Live URL:** https://bgremoverdigital.craftedmindss.com
 > **Future Domain:** https://bgremoverdigital.com (planned, not purchased yet)
 > **GitHub:** https://github.com/abrar-de-ahmed/ibr-trap
 > **Branch:** main (only branch)
@@ -17,7 +17,7 @@
 If this is a new chat session, the AI assistant should:
 
 1. Read this entire file to understand the full project context
-2. Check the live site at https://bgremoverdigital.pages.dev to verify it's working
+2. Check the live site at https://bgremoverdigital.craftedmindss.com to verify it's working
 3. Read BG-REMOVER-SEO-STRATEGY.md for SEO plans
 4. Read BG-REMOVER-WORKLOG.md for chronological history
 5. Ask the user what they need help with before making any changes
@@ -306,7 +306,7 @@ ibr-deploy/
 
 | Service | Status | Details |
 |---------|--------|---------|
-| **Google Search Console** | ✅ Verified | URL prefix: bgremoverdigital.pages.dev, HTML file verification |
+| **Google Search Console** | ✅ Verified | URL prefix: bgremoverdigital.craftedmindss.com, HTML file verification |
 | **Google Analytics** | ✅ Active | ID: G-K1QRPR8ZL9, Timezone: Asia/Karachi, Currency: USD, Industry: Technology |
 | **Stripe** | ✅ LIVE | Product: 500 images for $9, Webhook: checkout.session.completed only |
 | **Cloudflare Pages** | ✅ LIVE | Project: bgremoverdigital, Account: a5dff0139652af1d62f80ae1c6f1e9f5 |
@@ -428,7 +428,7 @@ All times in UTC. Pakistan = UTC+5.
 - [x] Core app (upload, process, download, free/paid tiers)
 - [x] Stripe integration (checkout, verification, webhook)
 - [x] Rebranding (IBR-Trap → BG Remover Digital)
-- [x] CF Pages deployment (bgremoverdigital.pages.dev)
+- [x] CF Pages deployment (bgremoverdigital.craftedmindss.com)
 - [x] Monitor Agent (12h cron, 7 checks, auto-redeploy)
 - [x] Security Agent v2 (instant alerts, weekly audit)
 - [x] SEO Agent v2 (instant alerts, weekly audit)

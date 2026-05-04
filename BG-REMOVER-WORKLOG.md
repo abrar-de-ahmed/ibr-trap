@@ -4,6 +4,19 @@
 
 ---
 
+## May 5, 2025 — Custom Domain Migration
+
+- Migrated all domain references from `bgremoverdigital.pages.dev` to `bgremoverdigital.craftedmindss.com`
+- Cloudflare Pages custom domain configured via CNAME + Pages dashboard (both active)
+- Old `.pages.dev` domain still works as automatic redirect/fallback
+- Code files (`layout.tsx`, `sitemap.ts`) were already updated in a prior session
+- Updated `BG-REMOVER-MASTER-PROMPT.md` — 4 references (live URL, setup step, GSC entry, checklist)
+- Verified zero `.pages.dev` references remain across entire codebase
+- All 5 GitHub agent scripts already pointing to new domain
+- **Next step:** User needs to add `https://bgremoverdigital.craftedmindss.com/` as URL Prefix in GSC
+
+---
+
 ## April 24, 2025 — Agent Deployment Day
 
 ### Security Agent v1
