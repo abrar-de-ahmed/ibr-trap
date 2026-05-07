@@ -3,15 +3,45 @@
     "paid_users": 5,
     "target_date": "2026-05-31",
     "start_date": "2026-05-08",
-    "price_per_user": 9.00,
+    "price_per_user": 9,
     "status": "in_progress"
   },
   "milestones": {
-    "first_sale": null,
-    "half_target": null,
+    "first_sale": "1970-01-20",
+    "half_target": "2026-05-07",
     "target_reached": null
   },
-  "daily_snapshots": [],
-  "recommendations_log": [],
+  "daily_snapshots": [
+    {
+      "date": "2026-05-07",
+      "totalPaidUsers": 3,
+      "totalRevenue": 1503,
+      "revenue7d": 0,
+      "revenue30d": 0,
+      "uniqueCustomers": 3,
+      "firstSaleDate": "1970-01-20",
+      "pagesTotal": 22,
+      "pagesOk": 13,
+      "avgResponse": 144,
+      "daysSinceStart": 0,
+      "daysRemaining": 25,
+      "usersPerDayNeeded": 0.08,
+      "recommendationsCount": 5,
+      "hasCritical": false
+    }
+  ],
+  "recommendations_log": [
+    {
+      "date": "2026-05-07",
+      "count": 5,
+      "priorities": [
+        "HIGH",
+        "MEDIUM",
+        "MEDIUM",
+        "MILESTONE",
+        "MILESTONE"
+      ]
+    }
+  ],
   "learning_notes": []
 }
