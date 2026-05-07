@@ -1,7 +1,7 @@
 # BG Remover Digital — MASTER PROMPT (Complete Project Reference)
 
-> **Last Updated:** May 5, 2026
-> **Version:** 4.0 — Custom Domain + Webhook Removed + SEO Pages Live + Security Fixes
+> **Last Updated:** May 8, 2026
+> **Version:** 5.0 — Growth Agent Live + 20 SEO Keyword Pages + Supervisor Updated
 > **Project Owner:** Abrar Ahmed
 > **Contact Email:** craftedminds3@gmail.com
 > **Project:** BG Remover Digital (formerly IBR-Trap)
@@ -155,7 +155,41 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-### Agent 5: Supervisor Agent v1 ✅ LIVE
+### Agent 5: Growth Agent v1 ✅ LIVE
+
+| Detail | Value |
+|--------|-------|
+| **Workflow File** | `.github/workflows/growth-agent.yml` |
+| **Script File** | `.github/workflows/scripts/growth-agent.js` |
+| **Schedule** | Daily at 8:00 UTC (1:00 PM PKT) + manual trigger |
+| **Email Behavior** | ALWAYS sends daily report (it IS the growth tracker) |
+| **GitHub Secrets** | GITHUB_TOKEN (auto), GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, STRIPE_SECRET_KEY |
+| **Permissions** | `contents: write` (commits daily metrics to repo) |
+
+**Target:** 5 paid users before May 31, 2026
+
+**Daily Report Contains:**
+1. Target tracker (progress bar, days remaining, users/day needed)
+2. KPI cards (paid users, total revenue, 7-day revenue, pages live)
+3. Week-over-week trend analysis (revenue, users, response time, uptime)
+4. Smart recommendations engine (CRITICAL/HIGH/MEDIUM/LOW priorities)
+5. Milestone tracking (first sale, half target, target reached)
+6. Failed pages alert
+
+**Smart Recommendations (rules-based, adapts to data):**
+- Zero sales + >10 days remaining → CRITICAL: urgent action needed
+- Zero sales + >14 days → CRITICAL: share on social platforms
+- Low conversion rate → HIGH: accelerate distribution
+- All pages healthy → LOW: focus on distribution
+- First sale achieved → MILESTONE: analyze and double down
+
+**Data Storage:**
+- `data/growth-metrics.json` — daily snapshots, milestones, recommendations log, learning notes
+- Auto-commits daily to repo (creates visible history)
+
+---
+
+### Agent 6: Supervisor Agent v2 ✅ LIVE
 
 | Detail | Value |
 |--------|-------|
@@ -187,6 +221,7 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 | SEO | Wednesday 6:00 UTC | 170 hours |
 | PM | Friday 6:00 UTC | 170 hours |
 | Supervisor | Daily 7:00 UTC | 26 hours |
+| Growth | Daily 8:00 UTC | 26 hours |
 
 ---
 
@@ -232,13 +267,15 @@ ibr-deploy/
 │       ├── security-agent.yml                # Security Agent v2 (weekly Monday)
 │       ├── seo-agent.yml                     # SEO Agent v2 (weekly Wednesday)
 │       ├── pm-agent.yml                      # PM Agent v2 (weekly Friday)
-│       ├── supervisor-agent.yml              # Supervisor Agent v1 (daily 7:00 UTC)
+│       ├── growth-agent.yml                  # Growth Agent v1 (daily 8:00 UTC)
+│       ├── supervisor-agent.yml              # Supervisor Agent v2 (daily 7:00 UTC)
 │       └── scripts/
 │           ├── monitor.js                    # Site monitoring + auto-redeploy
 │           ├── security-audit.js             # v2: npm audit, secrets, headers + instant alert
 │           ├── seo-check.js                  # v2: meta, sitemap, JSON-LD + instant alert
-│           ├── pm-report.js                  # v2: revenue, 5-agent dashboard + instant alert
-│           └── supervisor.js                 # v1: agent compliance + learning patterns
+│           ├── pm-report.js                  # v2: revenue, 6-agent dashboard + instant alert
+│           ├── growth-agent.js               # v1: daily growth tracker, Stripe, recommendations
+│           └── supervisor.js                 # v2: agent compliance + learning patterns
 ├── functions/
 │   ├── _middleware.ts                        # Rate limiting + UUID validation
 │   └── api/
@@ -255,7 +292,8 @@ ibr-deploy/
 │   ├── app/
 │   │   ├── globals.css                       # Tailwind 4 + shadcn theme
 │   │   ├── layout.tsx                        # Root layout + SEO + GA + JSON-LD + favicon
-│   │   ├── page.tsx                          # Main app (~650 lines, all-in-one) + footer with legal links
+│   │   ├── page.tsx                          # Main app + footer with legal links
+│   │   ├── sitemap.ts                        # Dynamic sitemap (all keyword pages + static)
 │   │   ├── privacy-policy/
 │   │   │   └── page.tsx                      # Privacy Policy page (craftedminds3@gmail.com)
 │   │   └── terms-of-service/

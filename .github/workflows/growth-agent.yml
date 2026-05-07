@@ -1,20 +1,25 @@
-name: SEO Agent - Weekly Audit
+name: Growth Agent - Daily Growth Report
 
 on:
   schedule:
-    # Every Wednesday at 6:00 UTC
-    - cron: '0 6 * * 3'
+    # Daily at 8:00 UTC (1:00 PM PKT)
+    - cron: '0 8 * * *'
   # Allow manual trigger
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  seo-audit:
+  growth-report:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -24,9 +29,12 @@ jobs:
       - name: Install nodemailer
         run: npm install nodemailer
 
-      - name: Run SEO Agent
+      - name: Run Growth Agent
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
-        run: node .github/workflows/scripts/seo-check.js
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        run: node .github/workflows/scripts/growth-agent.js

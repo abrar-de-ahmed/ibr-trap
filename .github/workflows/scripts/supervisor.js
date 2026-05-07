@@ -105,9 +105,17 @@ const AGENT_SCHEDULES = [
     name: 'Supervisor Agent',
     workflowFile: 'supervisor-agent.yml',
     schedule: 'Daily 7:00 UTC',
-    maxAgeHours: 26, // Should run daily, allow 26h grace
+    maxAgeHours: 26,
     cronExpression: '0 7 * * *',
-    dayOfWeek: null, // Every day
+    dayOfWeek: null,
+  },
+  {
+    name: 'Growth Agent',
+    workflowFile: 'growth-agent.yml',
+    schedule: 'Daily 8:00 UTC',
+    maxAgeHours: 26,
+    cronExpression: '0 8 * * *',
+    dayOfWeek: null,
   },
 ];
 
@@ -212,7 +220,7 @@ async function quickSiteHealth() {
 async function quickApiChecks() {
   log('Quick API endpoint checks...');
   const endpoints = [
-    { name: '/api/webhook (health)', url: `${SITE_URL}/api/webhook` },
+    { name: '/api/verify-payment (health)', url: `${SITE_URL}/api/verify-payment` },
   ];
   const results = [];
 
@@ -316,7 +324,7 @@ function analyzePatterns(agentResults, siteHealth, apiResults, stripeData) {
     insights.push({
       type: 'SYSTEM_HEALTH',
       severity: 'POSITIVE',
-      message: 'All 5 agents running on schedule. System is fully operational.',
+      message: 'All 6 agents running on schedule. System is fully operational.',
       agentAction: 'Continue monitoring. No action needed. First blog can be planned once Week 2 data is available.',
     });
   }
@@ -413,7 +421,7 @@ async function main() {
       <div style="font-size:10px;color:#9ca3af">${siteHealth.loadTime || '?'}ms</div>
     </div>
     <div style="flex:1;background:#f0fdf4;padding:12px;border-radius:6px;text-align:center;border:1px solid #bbf7d0">
-      <div style="font-size:22px;font-weight:bold;color:#16a34a">${agentResults.filter(a => a.status === 'OK').length}/5</div>
+      <div style="font-size:22px;font-weight:bold;color:#16a34a">${agentResults.filter(a => a.status === 'OK').length}/6</div>
       <div style="font-size:11px;color:#6b7280">Agents OK</div>
     </div>
     <div style="flex:1;background:#eff6ff;padding:12px;border-radius:6px;text-align:center;border:1px solid #bfdbfe">

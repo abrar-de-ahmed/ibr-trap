@@ -4,6 +4,40 @@
 
 ---
 
+## May 8, 2025 — Growth Agent + Wave 2 Keywords
+
+### Growth Agent v1 — Created
+- Created `.github/workflows/growth-agent.yml` — Daily at 8:00 UTC (1:00 PM PKT) + manual trigger
+- Created `.github/workflows/scripts/growth-agent.js` — Full growth tracking agent
+  - **Target:** 5 paid users before May 31, 2026
+  - Stripe API integration: total users, revenue, 7d/30d revenue, unique customers, first sale date
+  - Site health check: all 23 pages (homepage + 20 keyword pages + privacy + terms)
+  - Trend analysis: week-over-week revenue, users, response time, uptime consistency
+  - Smart recommendations engine: CRITICAL/HIGH/MEDIUM/LOW/MILESTONE priorities
+  - Milestone tracking: first sale, half target, target reached
+  - Data storage: `data/growth-metrics.json` with daily snapshots, auto-commits to repo
+  - Daily HTML email report with progress bar, KPI cards, trends, action items
+- Permissions: `contents: write` for auto-committing metrics
+
+### Wave 2 Keywords — 10 New SEO Pages (ZERO Competition)
+- Generated 10 new keyword entries via AI (each with unique intro, why_matters, how_to_steps, FAQs)
+- Added to `data/keywords.json` — now 20 total keywords
+- New slugs: furniture, bags, cosmetics, car-photos, food, toys, sports-equipment, books, pets, real-estate
+- All based on keyword gap research — ZERO competitors have dedicated pages for these
+- Dynamic sitemap now generates 23 URLs (homepage + 20 keywords + privacy + terms)
+
+### Supervisor v2 Update
+- Added Growth Agent to supervisor's monitoring (6 agents now)
+- Changed webhook health check to verify-payment (webhook was deleted)
+- Updated agent count references (5 → 6)
+
+### GSC Progress
+- Sitemap status: "Success" with 13 discovered pages (before Wave 2)
+- User started indexing pages via URL Inspection → Request Indexing
+- Homepage indexed, remaining pages being submitted 2-3/day
+
+---
+
 ## May 5, 2025 — Custom Domain Migration + Master Prompt Overhaul
 
 ### Domain Migration

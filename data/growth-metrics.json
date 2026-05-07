@@ -1,0 +1,17 @@
+{
+  "target": {
+    "paid_users": 5,
+    "target_date": "2026-05-31",
+    "start_date": "2026-05-08",
+    "price_per_user": 9.00,
+    "status": "in_progress"
+  },
+  "milestones": {
+    "first_sale": null,
+    "half_target": null,
+    "target_reached": null
+  },
+  "daily_snapshots": [],
+  "recommendations_log": [],
+  "learning_notes": []
+}
