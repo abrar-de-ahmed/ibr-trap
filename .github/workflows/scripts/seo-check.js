@@ -117,8 +117,27 @@ async function checkRobotsTxt() {
       if (!body.includes('Sitemap:')) {
         findings.push({ severity: 'MEDIUM', check: 'robots.txt', message: 'robots.txt does not declare sitemap location.' });
       }
-      if (/^Disallow:\s*\/\s*$/m.test(body)) {
-        findings.push({ severity: 'CRITICAL', check: 'robots.txt', message: 'robots.txt has "Disallow: /" — entire site is blocked from crawlers!' });
+      // Only flag "Disallow: /" as CRITICAL if it applies to wildcard (*) or Googlebot
+      // Cloudflare injects "Disallow: /" for AI bots (GPTBot, ClaudeBot, etc.) — that's fine
+      const lines = body.split('\n');
+      let currentAgent = '';
+      let hasWildcardDisallowRoot = false;
+      let hasGooglebotDisallowRoot = false;
+      for (const line of lines) {
+        const agentMatch = line.match(/^User-agent:\s*(.+)/i);
+        if (agentMatch) currentAgent = agentMatch[1].trim().toLowerCase();
+        if (/^Disallow:\s*\/\s*$/i.test(line.trim())) {
+          if (currentAgent === '*' || currentAgent === 'googlebot') {
+            if (currentAgent === '*') hasWildcardDisallowRoot = true;
+            if (currentAgent === 'googlebot') hasGooglebotDisallowRoot = true;
+          }
+        }
+      }
+      if (hasWildcardDisallowRoot || hasGooglebotDisallowRoot) {
+        const blockedAgents = [];
+        if (hasWildcardDisallowRoot) blockedAgents.push('User-agent: *');
+        if (hasGooglebotDisallowRoot) blockedAgents.push('Googlebot');
+        findings.push({ severity: 'CRITICAL', check: 'robots.txt', message: `robots.txt has "Disallow: /" for ${blockedAgents.join(' and ')} — entire site is blocked from crawlers!` });
       }
       if (body.includes('User-agent: *') && body.includes('Allow: /')) {
         findings.push({ severity: 'OK', check: 'robots.txt', message: 'robots.txt properly allows crawling.' });
