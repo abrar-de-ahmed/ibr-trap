@@ -32,7 +32,7 @@ const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
 
 function log(msg) {
-  console.log(`[Supervisor v1 ${new Date().toISOString()}] ${msg}`);
+  console.log(`[Supervisor v2 ${new Date().toISOString()}] ${msg}`);
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -110,12 +110,36 @@ const AGENT_SCHEDULES = [
     dayOfWeek: null,
   },
   {
-    name: 'Growth Agent',
+    name: 'Growth Agent v2',
     workflowFile: 'growth-agent.yml',
     schedule: 'Daily 8:00 UTC',
     maxAgeHours: 26,
     cronExpression: '0 8 * * *',
     dayOfWeek: null,
+  },
+  {
+    name: 'Content Agent',
+    workflowFile: 'content-agent.yml',
+    schedule: 'Mon/Wed/Fri 9:00 UTC',
+    maxAgeHours: 72, // 3 days grace
+    cronExpression: '0 9 * * 1,3,5',
+    dayOfWeek: null, // runs 3x/week
+  },
+  {
+    name: 'Social Agent',
+    workflowFile: 'social-agent.yml',
+    schedule: 'Daily 10:00 UTC',
+    maxAgeHours: 26,
+    cronExpression: '0 10 * * *',
+    dayOfWeek: null,
+  },
+  {
+    name: 'Directory Agent',
+    workflowFile: 'directory-agent.yml',
+    schedule: 'Weekly Sunday 11:00 UTC',
+    maxAgeHours: 170, // weekly
+    cronExpression: '0 11 * * 0',
+    dayOfWeek: 0, // Sunday
   },
 ];
 
@@ -324,7 +348,7 @@ function analyzePatterns(agentResults, siteHealth, apiResults, stripeData) {
     insights.push({
       type: 'SYSTEM_HEALTH',
       severity: 'POSITIVE',
-      message: 'All 6 agents running on schedule. System is fully operational.',
+      message: 'All 10 agents running on schedule. System is fully operational.',
       agentAction: 'Continue monitoring. No action needed. First blog can be planned once Week 2 data is available.',
     });
   }
@@ -334,7 +358,7 @@ function analyzePatterns(agentResults, siteHealth, apiResults, stripeData) {
 
 // ── Main ──
 async function main() {
-  log('=== Supervisor Agent v1 Started ===');
+  log('=== Supervisor Agent v2 Started ===');
 
   if (!GMAIL_USER || !GMAIL_APP_PASS || !ALERT_EMAIL) {
     log('ERROR: Missing email credentials');
@@ -421,7 +445,7 @@ async function main() {
       <div style="font-size:10px;color:#9ca3af">${siteHealth.loadTime || '?'}ms</div>
     </div>
     <div style="flex:1;background:#f0fdf4;padding:12px;border-radius:6px;text-align:center;border:1px solid #bbf7d0">
-      <div style="font-size:22px;font-weight:bold;color:#16a34a">${agentResults.filter(a => a.status === 'OK').length}/6</div>
+      <div style="font-size:22px;font-weight:bold;color:#16a34a">${agentResults.filter(a => a.status === 'OK').length}/10</div>
       <div style="font-size:11px;color:#6b7280">Agents OK</div>
     </div>
     <div style="flex:1;background:#eff6ff;padding:12px;border-radius:6px;text-align:center;border:1px solid #bfdbfe">
@@ -468,7 +492,7 @@ async function main() {
     await sendEmail(
       hasAlerts
         ? `DAILY ALERT: ${missedAgents.length} missed, ${failedAgents.length} failed`
-        : `Daily Supervisor Report - ${agentResults.filter(a => a.status === 'OK').length}/5 agents OK`,
+        : `Daily Supervisor Report - ${agentResults.filter(a => a.status === 'OK').length}/10 agents OK`,
       html
     );
     log('Supervisor report email sent.');
@@ -476,7 +500,7 @@ async function main() {
     log(`Email error: ${e.message}`);
   }
 
-  log('=== Supervisor Agent v1 Finished ===');
+  log('=== Supervisor Agent v2 Finished ===');
 }
 
 main().catch(e => { log(`Fatal: ${e.message}`); process.exit(1); });

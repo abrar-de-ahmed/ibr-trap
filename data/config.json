@@ -1,0 +1,153 @@
+{
+  "version": "1.0",
+  "created": "2026-05-09",
+  "last_evolution": "2026-05-09",
+
+  "site": {
+    "url": "https://bgremoverdigital.craftedmindss.com",
+    "brand_name": "BG Remover Digital",
+    "brand_voice": "friendly-professional"
+  },
+
+  "growth": {
+    "target_paid_users": 5,
+    "target_date": "2026-05-31",
+    "start_date": "2026-05-09",
+    "price_per_user": 9,
+    "current_paid_users": 0,
+    "current_week": 1,
+    "current_phase": "week1_baby_steps"
+  },
+
+  "mitigation": {
+    "week1": {
+      "daily_new_pages": 2,
+      "daily_backlinks": 1,
+      "daily_social_posts": 1,
+      "blog_frequency_days": 2,
+      "description": "Baby Steps - Maximum 2 new pages, 1 backlink, 1 social post per day"
+    },
+    "week2": {
+      "daily_new_pages": 3,
+      "daily_backlinks": 2,
+      "daily_social_posts": 2,
+      "blog_frequency_days": 3,
+      "description": "Walking - Only if Week 1 shows positive indexing",
+      "condition": "week1_indexing_positive"
+    },
+    "week3": {
+      "daily_new_pages": 5,
+      "daily_backlinks": 3,
+      "daily_social_posts": 3,
+      "blog_frequency_days": 2,
+      "description": "Running - Only if Week 2 shows rankings improving",
+      "condition": "week2_rankings_improving"
+    },
+    "week4": {
+      "daily_new_pages": 7,
+      "daily_backlinks": 5,
+      "daily_social_posts": 5,
+      "blog_frequency_days": 2,
+      "description": "Sprinting - Only if no Google penalties detected",
+      "condition": "no_penalties"
+    },
+    "emergency_brake": {
+      "deindexed_threshold": 3,
+      "time_window_hours": 48,
+      "action": "SHUTDOWN all creation + alert email",
+      "traffic_drop_threshold": 50
+    }
+  },
+
+  "budget": {
+    "ads_enabled": false,
+    "ads_start_after_users": 2,
+    "scaling": [
+      { "users": 2, "monthly_budget": 5 },
+      { "users": 4, "monthly_budget": 10 },
+      { "users": 8, "monthly_budget": 15 },
+      { "users": 16, "monthly_budget": 20 },
+      { "users": 32, "monthly_budget": 40 }
+    ]
+  },
+
+  "seo": {
+    "title_strategy": "format_B",
+    "blog_word_count": 1200,
+    "title_formats": {
+      "format_A": "Remove [keyword] Background - Free Online Tool",
+      "format_B": "Free [keyword] Background Remover | No Signup",
+      "format_C": "Background Remover for [keyword] - Try Free Now"
+    }
+  },
+
+  "social": {
+    "platforms": ["reddit", "twitter", "pinterest", "medium"],
+    "best_platform": "reddit",
+    "best_time_utc": "14:00",
+    "skip_platforms": [],
+    "subreddits": ["r/Entrepreneur", "r/shopify", "r/Etsy", "r/ecommerce", "r/smallbusiness", "r/photography", "r/SideProject"],
+    "account_status": {
+      "reddit": { "created": false, "username": null },
+      "twitter": { "created": false, "username": null },
+      "pinterest": { "created": false, "username": null },
+      "medium": { "created": false, "username": null }
+    }
+  },
+
+  "backlinks": {
+    "active_platforms": ["medium", "blogger", "tumblr", "devto"],
+    "skip_platforms": [],
+    "max_per_day": 1,
+    "rotate_platforms": true,
+    "directories_queue": [
+      "alternativeto.net",
+      "producthunt.com",
+      "theresafontthat.com",
+      "toolfinder.co",
+      "saashub.com",
+      "capterra.com",
+      "getapp.com",
+      "softwaresuggest.com",
+      "g2.com",
+      "trustpilot.com",
+      "slashdot.org",
+      "lifewire.com",
+      "makeuseof.com",
+      "pcmag.com",
+      "techradar.com",
+      "zdnet.com",
+      "wowpreneur.com",
+      "startupbase.io",
+      "betalist.com",
+      "launching.page"
+    ],
+    "web20_platforms": ["medium.com", "wordpress.com", "blogger.com", "tumblr.com", "dev.to", "hashnode.dev"]
+  },
+
+  "experiment_rate": 0.2,
+  "risk_level": "normal",
+
+  "keyword_candidates": [
+    { "slug": "furniture", "keyword": "background remover for furniture", "status": "candidate" },
+    { "slug": "bags", "keyword": "remove background from bags", "status": "candidate" },
+    { "slug": "cosmetics", "keyword": "background remover for cosmetics", "status": "candidate" },
+    { "slug": "car-photos", "keyword": "remove background from car photos", "status": "candidate" },
+    { "slug": "food", "keyword": "background remover for food photography", "status": "candidate" },
+    { "slug": "toys", "keyword": "remove background from toys", "status": "candidate" },
+    { "slug": "sports-equipment", "keyword": "background remover for sports equipment", "status": "candidate" },
+    { "slug": "books", "keyword": "remove background from book covers", "status": "candidate" },
+    { "slug": "pets", "keyword": "remove background from pet photos", "status": "candidate" },
+    { "slug": "real-estate", "keyword": "background remover for real estate photos", "status": "candidate" },
+    { "slug": "id-photos", "keyword": "background remover for ID photos passport", "status": "candidate" },
+    { "slug": "logos", "keyword": "remove background from logo", "status": "candidate" },
+    { "slug": "transparent", "keyword": "transparent background maker", "status": "candidate" },
+    { "slug": "white-background", "keyword": "white background maker online", "status": "candidate" },
+    { "slug": "free-online", "keyword": "free online background remover", "status": "candidate" },
+    { "slug": "how-to-remove", "keyword": "how to remove background from image", "status": "candidate" },
+    { "slug": "bulk-images", "keyword": "bulk background remover", "status": "candidate" },
+    { "slug": "png", "keyword": "remove background from png", "status": "candidate" },
+    { "slug": "jpg", "keyword": "remove background from jpg", "status": "candidate" },
+    { "slug": "no-signup", "keyword": "background remover no signup", "status": "candidate" }
+  ]
+}

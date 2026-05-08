@@ -1,16 +1,16 @@
-name: Growth Agent v2 - SEO Intelligence Engine
+name: Directory Agent - Backlink Builder
 
 on:
   schedule:
-    # Daily at 8:00 UTC (1:00 PM PKT)
-    - cron: '0 8 * * *'
+    # Weekly Sunday at 11:00 UTC (4:00 PM PKT)
+    - cron: '0 11 * * 0'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  growth-engine:
+  directory-submission:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -28,12 +28,11 @@ jobs:
       - name: Install dependencies
         run: npm install nodemailer
 
-      - name: Run Growth Agent v2
+      - name: Run Directory Agent
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-        run: node .github/workflows/scripts/growth-agent.js
+        run: node .github/workflows/scripts/directory-agent.js

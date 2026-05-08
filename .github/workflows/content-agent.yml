@@ -1,16 +1,16 @@
-name: Growth Agent v2 - SEO Intelligence Engine
+name: Content Agent - Blog Article Generator
 
 on:
   schedule:
-    # Daily at 8:00 UTC (1:00 PM PKT)
-    - cron: '0 8 * * *'
+    # Mon, Wed, Fri at 9:00 UTC (2:00 PM PKT)
+    - cron: '0 9 * * 1,3,5'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  growth-engine:
+  content-creator:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -28,12 +28,11 @@ jobs:
       - name: Install dependencies
         run: npm install nodemailer
 
-      - name: Run Growth Agent v2
+      - name: Run Content Agent
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-        run: node .github/workflows/scripts/growth-agent.js
+        run: node .github/workflows/scripts/content-agent.js
