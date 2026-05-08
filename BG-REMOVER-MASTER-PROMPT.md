@@ -59,7 +59,7 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-## 2. ALL 5 AGENTS — COMPLETE STATUS
+## 2. ALL 8 AGENTS — COMPLETE STATUS
 
 ### Agent 1: Monitor Agent ✅ LIVE
 
@@ -189,7 +189,53 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-### Agent 6: Supervisor Agent v2 ✅ LIVE
+### Agent 6: Charlie Agent (Lightweight) ✅ LIVE
+
+| Detail | Value |
+|--------|-------|
+| **Workflow File** | `.github/workflows/charlie-agent.yml` |
+| **Script File** | `.github/workflows/scripts/charlie.js` |
+| **Schedule** | Every 6 hours (0:00, 6:00, 12:00, 18:00 UTC) + manual trigger |
+| **Email Behavior** | INSTANT alert on CRITICAL/HIGH findings |
+| **GitHub Secrets** | GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL |
+| **Future Upgrade** | Cloudflare Worker at edge (Revenue gate: $50/month) |
+
+**The Reactive Phenotype — Frontline Security Monitor:**
+1. Content integrity check — SHA-256 hash comparison of homepage
+2. Response time anomaly detection — DDoS early warning
+3. Ghost page detection — unexpected error pages or hijacked content
+4. Suspicious code injection detection (scripts, iframes, eval, document.write)
+5. Meta redirect detection — possible compromise indicator
+6. Multi-page availability check (homepage + keyword page + sitemap)
+7. State saved to `data/charlie-state.json`
+
+**Bravo can sandbox Charlie** if malfunction detected.
+
+### Agent 7: Bravo Agent (Lightweight) ✅ LIVE
+
+| Detail | Value |
+|--------|-------|
+| **Workflow File** | `.github/workflows/bravo-agent.yml` |
+| **Script File** | `.github/workflows/scripts/bravo.js` |
+| **Schedule** | Daily at 7:30 UTC (30 min after Supervisor) + manual trigger |
+| **Email Behavior** | Always emails daily sentinel report |
+| **GitHub Secrets** | GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL |
+| **Future Upgrade** | GA Pattern Recognition (Revenue gate: $200/month) |
+
+**The Sentinel Heuristic — Watches the Watchers:**
+1. Evaluates Charlie's state — checks for stale data, sandbox mode, poisoning
+2. Alert fatigue detection — if Charlie sends too many false alarms
+3. Repeated finding detection — flags persistent false positives
+4. Independent site check — cross-validates WITHOUT relying on Charlie
+5. Data integrity verification — checks all JSON state files for corruption
+6. Override authority — can set Charlie to "sandbox" mode if malfunction
+7. State saved to `data/bravo-state.json`
+
+**Future: ALPHA (Out-of-Band Overlord)** — See SECURITY-ROADMAP.md (Revenue gate: $500/month, requires physical hardware).
+
+---
+
+### Agent 8: Supervisor Agent v2 ✅ LIVE
 
 | Detail | Value |
 |--------|-------|
