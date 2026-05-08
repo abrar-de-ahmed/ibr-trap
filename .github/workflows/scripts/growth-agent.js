@@ -50,11 +50,13 @@ function writeJSON(file, data) {
 // ═══════════════════════════════════════════════════════
 // HTTP HELPER
 // ═══════════════════════════════════════════════════════
-function fetchUrl(url, timeout = 15000) {
+function fetchUrl(url, opts = {}) {
+  const timeout = typeof opts === 'number' ? opts : (opts.timeout || 15000);
+  const headers = (typeof opts === 'object' && opts.headers) ? opts.headers : {};
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { timeout }, (res) => {
+    const req = https.get(url, { timeout, headers }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        fetchUrl(res.headers.location).then(resolve).catch(reject);
+        fetchUrl(res.headers.location, opts).then(resolve).catch(reject);
         return;
       }
       let body = '';

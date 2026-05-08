@@ -1,9 +1,32 @@
 # BG Remover Digital — SEO Strategy
 
-> **Last Updated:** May 5, 2026
-> **Status:** Phase A COMPLETE — Phase B IN PROGRESS (indexing phase)
+> **Last Updated:** May 9, 2026
+> **Status:** Phase A COMPLETE — Phase B IN PROGRESS (indexing phase) — **GA Growth Agents ACTIVE**
 > **Live URL:** https://bgremoverdigital.craftedmindss.com
 > **Target Keywords:** background remover, remove background, free background remover
+
+---
+
+## GA Growth Agent Army — ACTIVE ✅
+
+4 GA-powered agents deployed May 9, 2026 to automate SEO growth:
+
+| Agent | Schedule | File | Role |
+|-------|----------|------|------|
+| **Growth Agent v2** | Daily 8:00 UTC | `growth-agent.yml` | SEO intelligence, keyword pages, competitor analysis, Sunday evolution |
+| **Content Agent** | Mon/Wed/Fri 9:00 UTC | `content-agent.yml` | Blog articles (800-1500 words), title A/B testing, FAQ content |
+| **Social Agent** | Daily 10:00 UTC | `social-agent.yml` | Content for Reddit, Twitter/X, Pinterest, Medium |
+| **Directory Agent** | Weekly Sunday 11:00 UTC | `directory-agent.yml` | Directory submissions, profile backlinks, Web 2.0 content |
+
+**Shared Intelligence:**
+- `data/brain.json` — All agents read/write shared performance memory
+- `data/config.json` — Behavior config with mitigation rules (Week 1-4 speed limits)
+
+**Safety:**
+- Emergency brake: 3+ deindexed pages → all creation stops + email alert
+- Mitigation: Week 1 (2 pages/day) → Week 2 (3) → Week 3 (5) → Week 4 (7)
+- 80/20 rule: 80% proven strategies, 20% experiments
+- Sunday evolution: Growth Agent reviews data, rewrites config.json
 
 ---
 
