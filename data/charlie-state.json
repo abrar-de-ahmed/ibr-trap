@@ -1,0 +1,27 @@
+{
+  "status": "active",
+  "mode": "monitor",
+  "lastKnownHashes": {
+    "homepage": "4ca76f66e08245ab5aebc9efce7af406489035834eb47ce00bf3322a52beab48"
+  },
+  "responseTimeHistory": [
+    {
+      "time": "2026-05-08T19:39:26.313Z",
+      "ms": 484
+    }
+  ],
+  "alerts": [
+    {
+      "date": "2026-05-08",
+      "time": "2026-05-08T19:39:26.313Z",
+      "findings": [
+        "Injected Code",
+        "Site Unreachable"
+      ]
+    }
+  ],
+  "checkCount": 1,
+  "firstCheck": "2026-05-08",
+  "bravoOverride": null,
+  "lastCheck": "2026-05-08"
+}
