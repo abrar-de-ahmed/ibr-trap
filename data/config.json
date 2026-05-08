@@ -82,16 +82,28 @@
   },
 
   "social": {
-    "platforms": ["reddit", "twitter", "pinterest", "medium"],
+    "platforms": ["reddit", "twitter", "pinterest"],
     "best_platform": "reddit",
     "best_time_utc": "14:00",
     "skip_platforms": [],
+    "posting_method": "puppeteer",
+    "agent_version": "2.0",
     "subreddits": ["r/Entrepreneur", "r/shopify", "r/Etsy", "r/ecommerce", "r/smallbusiness", "r/photography", "r/SideProject"],
     "account_status": {
-      "reddit": { "created": false, "username": null },
-      "twitter": { "created": false, "username": null },
-      "pinterest": { "created": false, "username": null },
+      "reddit": { "created": true, "username": "AbrardeAhmed", "auth_method": "puppeteer" },
+      "twitter": { "created": true, "username": "bg_remover", "auth_method": "puppeteer" },
+      "pinterest": { "created": true, "username": "BGRemoverPro", "auth_method": "puppeteer", "followers": 32 },
       "medium": { "created": false, "username": null }
+    },
+    "engagement_config": {
+      "daily_likes_max": 15,
+      "daily_comments_max": 2,
+      "weekly_follows_min": 3,
+      "weekly_follows_max": 5,
+      "follow_day": "monday",
+      "human_like_delays": true,
+      "random_scroll": true,
+      "anti_detection": true
     }
   },
 

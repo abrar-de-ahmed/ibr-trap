@@ -31,11 +31,20 @@
   },
 
   "social": {
-    "reddit": { "posts": 0, "avg_engagement": 0, "best_subreddit": null, "status": "active" },
-    "twitter": { "posts": 0, "avg_engagement": 0, "best_time": null, "status": "active" },
-    "pinterest": { "pins": 0, "avg_clicks": 0, "best_type": null, "status": "active" },
-    "medium": { "posts": 0, "avg_reads": 0, "status": "active" },
-    "total_posts": 0
+    "reddit": { "posts": 0, "avg_engagement": 0, "best_subreddit": null, "status": "active", "posted_count": 0 },
+    "twitter": { "posts": 0, "avg_engagement": 0, "best_time": null, "status": "active", "posted_count": 0 },
+    "pinterest": { "pins": 0, "avg_clicks": 0, "best_type": null, "status": "active", "posted_count": 0 },
+    "medium": { "posts": 0, "avg_reads": 0, "status": "paused" },
+    "total_posts": 0,
+    "recent_posts": {},
+    "engagement": {},
+    "weekly_follows": [],
+    "account_status": {
+      "reddit": { "created": true, "username": "AbrardeAhmed", "auth_method": "puppeteer" },
+      "twitter": { "created": true, "username": "bg_remover", "auth_method": "puppeteer" },
+      "pinterest": { "created": true, "username": "BGRemoverPro", "auth_method": "puppeteer", "followers": 32 },
+      "medium": { "created": false, "username": null }
+    }
   },
 
   "backlinks": {
