@@ -23,6 +23,7 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const https = require('https');
 
 // ── Constants ──
 const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
@@ -50,6 +51,42 @@ function readJSON(filePath) {
 
 function writeJSON(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
+
+// ── HTTP Helpers (for auto-posting APIs) ──
+function httpRequest(url, options, body) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const reqOptions = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || 443,
+      path: urlObj.pathname + urlObj.search,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+    };
+    const req = https.request(reqOptions, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        resolve({ status: res.statusCode, data });
+      });
+    });
+    req.on('error', reject);
+    if (body) req.write(typeof body === 'string' ? body : JSON.stringify(body));
+    req.end();
+  });
+}
+
+function httpPost(url, body, headers) {
+  return httpRequest(url, { method: 'POST', headers }, body);
+}
+
+function httpPostJSON(url, json, headers) {
+  const mergedHeaders = {
+    'Content-Type': 'application/json',
+    ...(headers || {}),
+  };
+  return httpPost(url, JSON.stringify(json), mergedHeaders);
 }
 
 // ── Pseudo-random seeded by date (deterministic per day) ──
@@ -540,6 +577,213 @@ function generateMediumContent(brain) {
   };
 }
 
+// ── Auto-Posting API Functions ──
+
+async function postToReddit(post) {
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  const username = process.env.REDDIT_USERNAME;
+  const password = process.env.REDDIT_PASSWORD;
+  if (!clientId || !clientSecret || !username || !password) {
+    return { success: false, reason: 'No API credentials' };
+  }
+
+  try {
+    // Step 1: Get OAuth2 access token
+    const tokenAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const tokenRes = await httpPost(
+      'https://www.reddit.com/api/v1/access_token',
+      `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+      {
+        'Authorization': `Basic ${tokenAuth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'BGRemoverDigital/1.0',
+      }
+    );
+
+    if (tokenRes.status !== 200) {
+      return { success: false, error: `Reddit auth failed: ${tokenRes.status}` };
+    }
+
+    const tokenData = JSON.parse(tokenRes.data);
+    const accessToken = tokenData.access_token;
+
+    // Step 2: Submit the post
+    const subreddit = post.subreddit || 'Entrepreneur';
+    const postBody = `${post.body}\n\n${post.link}`;
+    const submitRes = await httpPost(
+      'https://oauth.reddit.com/api/submit',
+      `sr=${encodeURIComponent(subreddit)}&kind=self&title=${encodeURIComponent(post.title)}&text=${encodeURIComponent(postBody)}`,
+      {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'BGRemoverDigital/1.0',
+      }
+    );
+
+    if (submitRes.status === 200) {
+      const submitData = JSON.parse(submitRes.data);
+      if (submitData.json?.data?.url) {
+        return { success: true, post_url: submitData.json.data.url };
+      }
+      // Reddit sometimes returns success with the data in a different shape
+      return { success: true, post_url: `https://reddit.com/r/${subreddit}` };
+    }
+
+    return { success: false, error: `Reddit submit failed: ${submitRes.status} — ${submitRes.data.substring(0, 200)}` };
+  } catch (e) {
+    return { success: false, error: `Reddit error: ${e.message}` };
+  }
+}
+
+async function postToMedium(post) {
+  const token = process.env.MEDIUM_INTEGRATION_TOKEN;
+  if (!token) {
+    return { success: false, reason: 'No API credentials' };
+  }
+
+  try {
+    // Build markdown article from outline
+    const title = post.article_title || post.title || 'Untitled';
+    const outline = post.article_outline || [];
+    const keywords = post.target_keywords || [];
+
+    let markdown = `# ${title}\n\n`;
+    for (const section of outline) {
+      markdown += `## ${section}\n\n`;
+    }
+    markdown += `---\n\nTry [${BRAND}](${SITE_URL}) — a free, browser-based background remover that runs entirely on client-side AI. No signup, no watermarks, no limits.\n\n`;
+    markdown += `*Tags: ${keywords.join(', ')}*\n`;
+
+    const body = {
+      title,
+      contentFormat: 'markdown',
+      content: markdown,
+      tags: keywords.slice(0, 5).map(k => k.toLowerCase()),
+      publishStatus: 'draft',
+    };
+
+    const res = await httpPostJSON(
+      'https://api.medium.com/v1/me/posts',
+      body,
+      { 'Authorization': `Bearer ${token}` }
+    );
+
+    if (res.status === 201 || res.status === 200) {
+      const data = JSON.parse(res.data);
+      return { success: true, post_url: data.url || data.data?.url || 'Draft created' };
+    }
+
+    return { success: false, error: `Medium post failed: ${res.status} — ${res.data.substring(0, 200)}` };
+  } catch (e) {
+    return { success: false, error: `Medium error: ${e.message}` };
+  }
+}
+
+async function postToPinterest(post) {
+  const token = process.env.PINTEREST_ACCESS_TOKEN;
+  if (!token) {
+    return { success: false, reason: 'No API credentials' };
+  }
+
+  // Pinterest requires a board_id (numeric). Skip if not configured.
+  const boardId = post.board_id || process.env.PINTEREST_BOARD_ID;
+  if (!boardId) {
+    return { success: false, reason: 'PINTEREST_BOARD_ID not configured' };
+  }
+
+  try {
+    const body = {
+      board_id: boardId,
+      title: post.pin_title || post.title || 'Untitled Pin',
+      description: post.pin_description || post.description || '',
+      link: post.link || SITE_URL,
+      media_source: {
+        type: 'image_url',
+        url: SITE_URL + '/og-image.png',
+      },
+    };
+
+    const res = await httpPostJSON(
+      'https://api.pinterest.com/v5/pins',
+      body,
+      { 'Authorization': `Bearer ${token}` }
+    );
+
+    if (res.status === 201 || res.status === 200) {
+      const data = JSON.parse(res.data);
+      return { success: true, pin_id: data.id || 'Created' };
+    }
+
+    return { success: false, error: `Pinterest pin failed: ${res.status} — ${res.data.substring(0, 200)}` };
+  } catch (e) {
+    return { success: false, error: `Pinterest error: ${e.message}` };
+  }
+}
+
+async function postToTwitter(post) {
+  const token = process.env.TWITTER_BEARER_TOKEN;
+  if (!token) {
+    return { success: false, reason: 'No API credentials' };
+  }
+
+  try {
+    const body = {
+      text: post.text,
+    };
+
+    const res = await httpPostJSON(
+      'https://api.twitter.com/2/tweets',
+      body,
+      { 'Authorization': `Bearer ${token}` }
+    );
+
+    if (res.status === 201 || res.status === 200) {
+      const data = JSON.parse(res.data);
+      return { success: true, tweet_id: data.data?.id || 'Posted' };
+    }
+
+    return { success: false, error: `Twitter post failed: ${res.status} — ${res.data.substring(0, 200)}` };
+  } catch (e) {
+    return { success: false, error: `Twitter error: ${e.message}` };
+  }
+}
+
+// ── Auto-Post Dispatcher ──
+async function tryAutoPost(post) {
+  try {
+    let result;
+    switch (post.type) {
+      case 'reddit':
+        result = await postToReddit(post);
+        break;
+      case 'twitter':
+        result = await postToTwitter(post);
+        break;
+      case 'pinterest':
+        result = await postToPinterest(post);
+        break;
+      case 'medium':
+        result = await postToMedium(post);
+        break;
+      default:
+        return { success: false, reason: `Unknown post type: ${post.type}` };
+    }
+
+    if (result.success) {
+      post.status = 'posted';
+      if (result.post_url) post.post_url = result.post_url;
+      if (result.tweet_id) post.tweet_id = result.tweet_id;
+      if (result.pin_id) post.pin_id = result.pin_id;
+    }
+
+    return result;
+  } catch (e) {
+    log(`  AUTO-POST ERROR (${post.type}): ${e.message}`);
+    return { success: false, error: e.message };
+  }
+}
+
 // ── Update brain.json ──
 function updateBrain(brain, preparedPosts) {
   // Ensure social section has all needed fields
@@ -560,12 +804,24 @@ function updateBrain(brain, preparedPosts) {
     if (post.type === 'reddit') {
       brain.social.reddit.prepared_posts[TODAY] = post;
       brain.social.reddit.posts = (brain.social.reddit.posts || 0) + 1;
+      if (post.status === 'posted') {
+        brain.social.reddit.auto_posted = (brain.social.reddit.auto_posted || 0) + 1;
+      }
     } else if (post.type === 'twitter') {
       brain.social.twitter.posts = (brain.social.twitter.posts || 0) + 1;
+      if (post.status === 'posted') {
+        brain.social.twitter.auto_posted = (brain.social.twitter.auto_posted || 0) + 1;
+      }
     } else if (post.type === 'pinterest') {
       brain.social.pinterest.pins = (brain.social.pinterest.pins || 0) + 1;
+      if (post.status === 'posted') {
+        brain.social.pinterest.auto_posted = (brain.social.pinterest.auto_posted || 0) + 1;
+      }
     } else if (post.type === 'medium') {
       brain.social.medium.posts = (brain.social.medium.posts || 0) + 1;
+      if (post.status === 'posted') {
+        brain.social.medium.auto_posted = (brain.social.medium.auto_posted || 0) + 1;
+      }
     }
 
     // Add to recent_posts for rotation tracking
@@ -574,6 +830,7 @@ function updateBrain(brain, preparedPosts) {
       date: TODAY,
       title: post.title || post.text || post.pin_title || post.article_title || '',
       is_experiment: post.is_experiment || false,
+      status: post.status || 'prepared',
     });
   }
 
@@ -651,6 +908,20 @@ function buildEmailHTML(preparedPosts, brain, skipped) {
   platforms.sort((a, b) => b.engagement - a.engagement);
   const bestPlatform = platforms[0].name;
   const experimentsCount = preparedPosts.filter(p => p.is_experiment).length;
+  const autoPostedCount = preparedPosts.filter(p => p.status === 'posted').length;
+  const preparedOnlyCount = preparedPosts.filter(p => p.status !== 'posted').length;
+  const redditAutoPosted = social.reddit?.auto_posted || 0;
+  const twitterAutoPosted = social.twitter?.auto_posted || 0;
+  const pinterestAutoPosted = social.pinterest?.auto_posted || 0;
+  const mediumAutoPosted = social.medium?.auto_posted || 0;
+
+  // Helper: status badge HTML
+  function statusBadge(post) {
+    if (post.status === 'posted') {
+      return `<span style="display:inline-block;background:#DCFCE7;color:#166534;font-size:9px;font-weight:bold;padding:1px 6px;border-radius:4px;text-transform:uppercase;margin-left:6px">POSTED</span>`;
+    }
+    return `<span style="display:inline-block;background:#FEF9C3;color:#854D0E;font-size:9px;font-weight:bold;padding:1px 6px;border-radius:4px;text-transform:uppercase;margin-left:6px">PREPARED</span>`;
+  }
 
   // Build platform sections
   let platformSections = '';
@@ -660,17 +931,19 @@ function buildEmailHTML(preparedPosts, brain, skipped) {
     platformSections += `
       <div style="margin-bottom:20px">
         <h3 style="color:#FF4500;font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:6px">
-          <span style="font-size:18px">🔴</span> Reddit (${redditPosts_prepared.length} post${redditPosts_prepared.length > 1 ? 's' : ''} prepared)
+          <span style="font-size:18px">🔴</span> Reddit (${redditPosts_prepared.length} post${redditPosts_prepared.length > 1 ? 's' : ''})
         </h3>`;
     for (const post of redditPosts_prepared) {
+      const postedUrl = post.post_url ? `<div style="font-size:11px;color:#16a34a;margin-top:4px">View: <a href="${escapeHTML(post.post_url)}" style="color:#16a34a">${escapeHTML(post.post_url)}</a></div>` : '';
       platformSections += `
         <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:12px;margin-bottom:8px">
-          <div style="font-size:10px;color:#DC2626;font-weight:bold;text-transform:uppercase;margin-bottom:4px">
-            Subreddit: ${post.subreddit}${post.is_experiment ? ' | 🧪 Experiment' : ''}
+          <div style="font-size:10px;color:#DC2626;font-weight:bold;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:4px">
+            Subreddit: ${post.subreddit}${post.is_experiment ? ' | 🧪 Experiment' : ''}${statusBadge(post)}
           </div>
           <div style="font-weight:bold;font-size:13px;color:#1e293b;margin-bottom:6px">${escapeHTML(post.title)}</div>
           <div style="font-size:12px;color:#4b5563;white-space:pre-line;line-height:1.5">${escapeHTML(post.body)}</div>
           <div style="font-size:11px;color:#6b7280;margin-top:6px">Link: ${SITE_URL}</div>
+          ${postedUrl}
         </div>`;
     }
     platformSections += `</div>`;
@@ -681,15 +954,17 @@ function buildEmailHTML(preparedPosts, brain, skipped) {
     platformSections += `
       <div style="margin-bottom:20px">
         <h3 style="color:#1DA1F2;font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:6px">
-          <span style="font-size:18px">🐦</span> Twitter/X (${twitterPosts_prepared.length} tweet${twitterPosts_prepared.length > 1 ? 's' : ''} prepared)
+          <span style="font-size:18px">🐦</span> Twitter/X (${twitterPosts_prepared.length} tweet${twitterPosts_prepared.length > 1 ? 's' : ''})
         </h3>`;
     for (const post of twitterPosts_prepared) {
+      const postedInfo = post.tweet_id ? `<div style="font-size:11px;color:#16a34a;margin-top:4px">Tweet ID: ${escapeHTML(post.tweet_id)}</div>` : '';
       platformSections += `
         <div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:8px;padding:12px;margin-bottom:8px">
-          <div style="font-size:10px;color:#0284C7;font-weight:bold;text-transform:uppercase;margin-bottom:4px">
-            Category: ${post.category} | ${post.character_count}/280 chars${post.is_experiment ? ' | 🧪 Experiment' : ''}
+          <div style="font-size:10px;color:#0284C7;font-weight:bold;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:4px">
+            Category: ${post.category} | ${post.character_count}/280 chars${post.is_experiment ? ' | 🧪 Experiment' : ''}${statusBadge(post)}
           </div>
           <div style="font-size:13px;color:#1e293b;white-space:pre-line;line-height:1.5">${escapeHTML(post.text)}</div>
+          ${postedInfo}
         </div>`;
     }
     platformSections += `</div>`;
@@ -700,17 +975,19 @@ function buildEmailHTML(preparedPosts, brain, skipped) {
     platformSections += `
       <div style="margin-bottom:20px">
         <h3 style="color:#E60023;font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:6px">
-          <span style="font-size:18px">📌</span> Pinterest (${pinterestPosts_prepared.length} pin${pinterestPosts_prepared.length > 1 ? 's' : ''} prepared)
+          <span style="font-size:18px">📌</span> Pinterest (${pinterestPosts_prepared.length} pin${pinterestPosts_prepared.length > 1 ? 's' : ''})
         </h3>`;
     for (const post of pinterestPosts_prepared) {
+      const postedInfo = post.pin_id ? `<div style="font-size:11px;color:#16a34a;margin-top:4px">Pin ID: ${escapeHTML(post.pin_id)}</div>` : '';
       platformSections += `
         <div style="background:#FFF1F2;border:1px solid #FECDD3;border-radius:8px;padding:12px;margin-bottom:8px">
-          <div style="font-size:10px;color:#BE123C;font-weight:bold;text-transform:uppercase;margin-bottom:4px">
-            Board: ${post.target_board}${post.is_experiment ? ' | 🧪 Experiment' : ''}
+          <div style="font-size:10px;color:#BE123C;font-weight:bold;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:4px">
+            Board: ${post.target_board}${post.is_experiment ? ' | 🧪 Experiment' : ''}${statusBadge(post)}
           </div>
           <div style="font-weight:bold;font-size:13px;color:#1e293b;margin-bottom:4px">${escapeHTML(post.pin_title)}</div>
           <div style="font-size:12px;color:#4b5563;line-height:1.5">${escapeHTML(post.pin_description)}</div>
           <div style="font-size:11px;color:#6b7280;margin-top:6px">Link: ${escapeHTML(post.link)}</div>
+          ${postedInfo}
         </div>`;
     }
     platformSections += `</div>`;
@@ -721,20 +998,22 @@ function buildEmailHTML(preparedPosts, brain, skipped) {
     platformSections += `
       <div style="margin-bottom:20px">
         <h3 style="color:#000;font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:6px">
-          <span style="font-size:18px">📝</span> Medium (${mediumPosts_prepared.length} topic${mediumPosts_prepared.length > 1 ? 's' : ''} planned)
+          <span style="font-size:18px">📝</span> Medium (${mediumPosts_prepared.length} topic${mediumPosts_prepared.length > 1 ? 's' : ''})
         </h3>`;
     for (const post of mediumPosts_prepared) {
       const outlineHTML = post.article_outline.map((section, i) =>
         `<li style="font-size:12px;color:#4b5563;margin-bottom:2px">${i + 1}. ${escapeHTML(section)}</li>`
       ).join('');
+      const postedUrl = post.post_url ? `<div style="font-size:11px;color:#16a34a;margin-top:4px">Draft: <a href="${escapeHTML(post.post_url)}" style="color:#16a34a">${escapeHTML(post.post_url)}</a></div>` : '';
       platformSections += `
         <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px;margin-bottom:8px">
-          <div style="font-size:10px;color:#475569;font-weight:bold;text-transform:uppercase;margin-bottom:4px">
-            PLANNING ONLY — Content Agent writes the article${post.is_experiment ? ' | 🧪 Experiment' : ''}
+          <div style="font-size:10px;color:#475569;font-weight:bold;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:4px">
+            ${post.status === 'posted' ? 'Draft created via API' : 'PLANNING ONLY — Content Agent writes the article'}${post.is_experiment ? ' | 🧪 Experiment' : ''}${statusBadge(post)}
           </div>
           <div style="font-weight:bold;font-size:13px;color:#1e293b;margin-bottom:6px">${escapeHTML(post.article_title)}</div>
           <div style="font-size:11px;color:#6b7280;margin-bottom:4px">Target keywords: ${post.target_keywords.map(k => escapeHTML(k)).join(', ')}</div>
           <ol style="margin:6px 0 0;padding-left:18px">${outlineHTML}</ol>
+          ${postedUrl}
         </div>`;
     }
     platformSections += `</div>`;
@@ -807,16 +1086,27 @@ function buildEmailHTML(preparedPosts, brain, skipped) {
 
     ${platformSections}
 
-    <!-- Manual Posting Notice -->
+    <!-- Auto-Posting Status -->
     <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px;margin-top:18px">
-      <div style="font-weight:bold;font-size:13px;color:#1e40af;margin-bottom:4px">📋 How to Use These Posts</div>
-      <ol style="font-size:12px;color:#1e3a5f;margin:6px 0 0;padding-left:18px;line-height:1.8">
-        <li>Copy the content from each section above</li>
-        <li>Paste it into the respective platform (Reddit, Twitter, Pinterest, Medium)</li>
-        <li>All posts are also saved in <code style="background:#DBEAFE;padding:1px 4px;border-radius:3px;font-size:11px">data/brain.json</code> under <code style="background:#DBEAFE;padding:1px 4px;border-radius:3px;font-size:11px">social.prepared_posts</code></li>
-      </ol>
-      <div style="font-size:11px;color:#3b82f6;margin-top:8px;font-style:italic">
-        💡 To enable auto-posting, add API tokens to GitHub Secrets (REDDIT_*, TWITTER_*, PINTEREST_*, MEDIUM_*).
+      <div style="font-weight:bold;font-size:13px;color:#1e40af;margin-bottom:6px">📡 Auto-Posting Status</div>
+      <div style="font-size:12px;color:#1e3a5f;line-height:1.8">
+        <div style="margin-bottom:6px">
+          <span style="display:inline-block;background:#DCFCE7;color:#166534;font-size:10px;font-weight:bold;padding:1px 6px;border-radius:4px;margin-right:4px">POSTED</span> ${autoPostedCount} post${autoPostedCount !== 1 ? 's' : ''} auto-posted today
+          ${preparedOnlyCount > 0 ? `<span style="color:#854D0E">|</span> <span style="display:inline-block;background:#FEF9C3;color:#854D0E;font-size:10px;font-weight:bold;padding:1px 6px;border-radius:4px;margin-left:4px">PREPARED</span> ${preparedOnlyCount} post${preparedOnlyCount !== 1 ? 's' : ''} ready for manual posting` : ''}
+        </div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #DBEAFE">
+          <strong style="font-size:11px;color:#475569">Platform API status:</strong><br>
+          <span style="color:${process.env.REDDIT_CLIENT_ID ? '#16a34a' : '#9ca3af'}">🔴 Reddit: ${process.env.REDDIT_CLIENT_ID ? 'Configured (' + redditAutoPosted + ' auto-posted)' : 'Not configured'}</span><br>
+          <span style="color:${process.env.TWITTER_BEARER_TOKEN ? '#16a34a' : '#9ca3af'}">🐦 Twitter: ${process.env.TWITTER_BEARER_TOKEN ? 'Configured (' + twitterAutoPosted + ' auto-posted)' : 'Not configured'}</span><br>
+          <span style="color:${process.env.PINTEREST_ACCESS_TOKEN ? '#16a34a' : '#9ca3af'}">📌 Pinterest: ${process.env.PINTEREST_ACCESS_TOKEN ? 'Configured (' + pinterestAutoPosted + ' auto-posted)' : 'Not configured'}</span><br>
+          <span style="color:${process.env.MEDIUM_INTEGRATION_TOKEN ? '#16a34a' : '#9ca3af'}">📝 Medium: ${process.env.MEDIUM_INTEGRATION_TOKEN ? 'Configured (' + mediumAutoPosted + ' auto-posted)' : 'Not configured'}</span>
+        </div>
+        ${preparedOnlyCount > 0 ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #DBEAFE;font-size:11px;color:#475569">
+          <strong>For manual posts:</strong> Copy content from each section above and paste into the respective platform. All posts are saved in <code style="background:#DBEAFE;padding:1px 4px;border-radius:3px;font-size:10px">data/brain.json</code> under <code style="background:#DBEAFE;padding:1px 4px;border-radius:3px;font-size:10px">social.prepared_posts</code>
+        </div>` : ''}
+        <div style="font-size:11px;color:#3b82f6;margin-top:8px;font-style:italic">
+          💡 To enable auto-posting for a platform, add its API tokens to GitHub Secrets (e.g., REDDIT_CLIENT_ID, TWITTER_BEARER_TOKEN, PINTEREST_ACCESS_TOKEN, MEDIUM_INTEGRATION_TOKEN).
+        </div>
       </div>
     </div>
 
@@ -824,7 +1114,7 @@ function buildEmailHTML(preparedPosts, brain, skipped) {
     <div style="font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;margin-top:16px">
       <p style="margin:0">Social Agent | ${BRAND} | Week ${brain.week || 1} | ${brain.current_phase || 'baby_steps'}</p>
       <p style="margin:3px 0 0">Best performing platform: ${bestPlatform} | Experiments today: ${experimentsCount}/${preparedPosts.length}</p>
-      <p style="margin:3px 0 0">Posts prepared today: ${preparedPosts.length} | 80/20 rule: ${experimentsCount} experiment${experimentsCount !== 1 ? 's' : ''}, ${preparedPosts.length - experimentsCount} proven format${(preparedPosts.length - experimentsCount) !== 1 ? 's' : ''}</p>
+      <p style="margin:3px 0 0">Posts today: ${autoPostedCount} auto-posted, ${preparedOnlyCount} prepared | 80/20 rule: ${experimentsCount} experiment${experimentsCount !== 1 ? 's' : ''}, ${preparedPosts.length - experimentsCount} proven format${(preparedPosts.length - experimentsCount) !== 1 ? 's' : ''}</p>
     </div>
   </div>
 </div>`;
@@ -946,9 +1236,22 @@ async function main() {
     }
   }
 
+  // ── AUTO-POST (if API credentials available) ──
+  if (preparedPosts.length > 0) {
+    log(`Step 3.5: Attempting auto-post for ${preparedPosts.length} post(s)...`);
+    for (const post of preparedPosts) {
+      const result = await tryAutoPost(post);
+      if (result.success) {
+        log(`  AUTO-POSTED to ${post.type}: ${result.post_url || result.tweet_id || result.pin_id || 'OK'}`);
+      } else {
+        log(`  PREPARED ONLY (${post.type}): ${result.reason || result.error || 'API credentials not configured'}`);
+      }
+    }
+  }
+
   // Step 4: Update brain.json
   if (preparedPosts.length > 0) {
-    log(`Step 4: Updating brain.json with ${preparedPosts.length} prepared post(s)...`);
+    log(`Step 4: Updating brain.json with ${preparedPosts.length} post(s)...`);
     updateBrain(brain, preparedPosts);
   } else {
     log('Step 4: No new posts to save — brain.json unchanged.');
