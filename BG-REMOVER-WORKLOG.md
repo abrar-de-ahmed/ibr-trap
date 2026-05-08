@@ -75,3 +75,49 @@
 - No existing files modified (website untouched)
 
 ### Files Changed: 11 files, 3610 insertions
+
+---
+
+## May 9, 2026 — Social Agent v2.0 Puppeteer Upgrade
+
+### What Changed
+Social Agent upgraded from content-prep-only (email-based) to full **Puppeteer browser automation** that actually posts to social media platforms like a human.
+
+### Social Agent v2.0 Features
+- **Auto-login** to Reddit, Twitter/X, Pinterest via Puppeteer headless browser
+- **Auto-posting** with human-like typing delays (80-140ms per keystroke)
+- **Platform rotation** — doesn't post to same platform every day
+- **Engagement activities:**
+  - Daily: Like/save 5-15 posts per platform
+  - Daily: Occasional retweets (Twitter)
+  - Weekly (Mondays): Follow 3-5 relevant accounts per platform
+- **Anti-detection measures:**
+  - Random mouse movements before clicks
+  - Random scroll behavior
+  - navigator.webdriver flag hidden
+  - Realistic user agent (Chrome on Windows)
+  - Random typing speed variations
+- **Error handling:** Screenshots saved on failure for debugging
+- **Content templates:** Reddit (5 templates), Twitter (11 templates), Pinterest (8 templates)
+
+### Social Accounts Created
+| Platform | Username | Email | Type |
+|----------|----------|-------|------|
+| Reddit | AbrardeAhmed | craft@craftedmindss.com | Personal |
+| Twitter/X | @bg_remover | craft@craftedmindss.com | Brand |
+| Pinterest | BGRemoverPro | abrar_a@live.com | Business (32 followers) |
+
+### GitHub Secrets Added (9 social secrets)
+- REDDIT_USERNAME, REDDIT_PASSWORD, REDDIT_EMAIL
+- TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_EMAIL
+- PINTEREST_USERNAME, PINTEREST_PASSWORD, PINTEREST_EMAIL
+- Total secrets in repo: 15
+
+### Files Modified
+- `.github/workflows/social-agent.yml` — Added Puppeteer + Chrome dependencies, 9 secret env vars
+- `.github/workflows/scripts/social-agent.js` — Complete rewrite (1,366 lines)
+- `data/brain.json` — Added engagement tracking, account status, weekly follows
+- `data/config.json` — Added posting_method: "puppeteer", engagement_config
+
+### Commits
+- `4ae02b6` — social-agent v2.0: Puppeteer auto-posting + engagement engine

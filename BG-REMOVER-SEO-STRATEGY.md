@@ -1,7 +1,7 @@
 # BG Remover Digital — SEO Strategy
 
 > **Last Updated:** May 9, 2026
-> **Status:** Phase A COMPLETE — Phase B IN PROGRESS (indexing phase) — **GA Growth Agents ACTIVE**
+> **Status:** Phase A COMPLETE — Phase B IN PROGRESS — **GA Growth Agents ACTIVE** — **Social Agent v2.0 Puppeteer LIVE**
 > **Live URL:** https://bgremoverdigital.craftedmindss.com
 > **Target Keywords:** background remover, remove background, free background remover
 
@@ -15,7 +15,7 @@
 |-------|----------|------|------|
 | **Growth Agent v2** | Daily 8:00 UTC | `growth-agent.yml` | SEO intelligence, keyword pages, competitor analysis, Sunday evolution |
 | **Content Agent** | Mon/Wed/Fri 9:00 UTC | `content-agent.yml` | Blog articles (800-1500 words), title A/B testing, FAQ content |
-| **Social Agent** | Daily 10:00 UTC | `social-agent.yml` | Content for Reddit, Twitter/X, Pinterest, Medium |
+| **Social Agent v2.0** | Daily 10:00 UTC | `social-agent.yml` | **Puppeteer auto-posting** to Reddit, Twitter/X, Pinterest + engagement (likes, follows, retweets) |
 | **Directory Agent** | Weekly Sunday 11:00 UTC | `directory-agent.yml` | Directory submissions, profile backlinks, Web 2.0 content |
 
 **Shared Intelligence:**

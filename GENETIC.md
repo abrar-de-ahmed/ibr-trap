@@ -8,13 +8,31 @@
 > GROWTH AGENT ARMY — DEPLOYMENT STATUS:
 > - Growth Agent v2: ✅ ACTIVE — `.github/workflows/growth-agent.yml` (Daily 8:00 UTC)
 > - Content Agent: ✅ ACTIVE — `.github/workflows/content-agent.yml` (Mon/Wed/Fri 9:00 UTC)
-> - Social Agent: ✅ ACTIVE — `.github/workflows/social-agent.yml` (Daily 10:00 UTC)
+> - Social Agent v2.0: ✅ ACTIVE — `.github/workflows/social-agent.yml` (Daily 10:00 UTC) — **Puppeteer auto-posting + engagement**
 > - Directory Agent: ✅ ACTIVE — `.github/workflows/directory-agent.yml` (Weekly Sunday 11:00 UTC)
 > - Supervisor Agent v2: ✅ ACTIVE — Monitors all 10 agents (Daily 7:00 UTC)
+>
+> SOCIAL MEDIA ACCOUNTS (Puppeteer Automated):
+> - Reddit: u/AbrardeAhmed — Posts to r/Entrepreneur, r/shopify, r/Etsy, r/ecommerce, r/smallbusiness, r/photography
+> - Twitter/X: @bg_remover — Tweets + retweets + follows relevant accounts
+> - Pinterest: BGRemoverPro (Business, 32 followers) — Pins + saves + follows boards
+> - Auth Method: Puppeteer headless browser (human-like typing, delays, anti-detection)
+>
+> ENGAGEMENT ACTIVITIES (automated daily):
+> - Daily: Likes/saves (5-15 per platform), occasional retweets
+> - Weekly (Mondays): Follow 3-5 relevant accounts per platform
+> - Anti-detection: Random delays, mouse moves, scrolls, user agent spoofing
 >
 > SHARED INTELLIGENCE FILES:
 > - `data/brain.json` — Shared agent memory (performance data, evolution log, emergency state)
 > - `data/config.json` — Shared behavior config (mitigation rules, budget scaling, platform queues)
+>
+> GITHUB SECRETS CONFIGURED (15 total):
+> - Email: GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL
+> - Reddit: REDDIT_USERNAME, REDDIT_PASSWORD, REDDIT_EMAIL
+> - Twitter: TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_EMAIL
+> - Pinterest: PINTEREST_USERNAME, PINTEREST_PASSWORD, PINTEREST_EMAIL
+> - Infra: CF_ACCOUNT_ID, CF_API_TOKEN, STRIPE_SECRET_KEY
 >
 > SECURITY IMPLEMENTATION STATUS:
 > - Charlie (Lightweight): ✅ ACTIVE — `.github/workflows/charlie-agent.yml`
