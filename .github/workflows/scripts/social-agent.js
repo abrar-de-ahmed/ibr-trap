@@ -454,48 +454,119 @@ async function redditLogin(page) {
 
   try {
     log('Reddit: Logging in...');
-    await page.goto('https://www.reddit.com/login/', { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await humanDelay(2000, 3000);
+    await page.goto('https://www.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 30000 });
+    await humanDelay(3000, 5000);
 
-    // Click "Log In" if there's a button
-    const loginBtn = await page.$('button[type="submit"], a[href*="login"]');
-    if (loginBtn) {
-      // Fill username
-      await humanType(page, '#login-username, input[name="username"]', username);
-      await humanDelay(500, 1000);
+    // Try multiple selectors for username field
+    const usernameSelectors = [
+      '#login-username',
+      'input[name="username"]',
+      'input[autocomplete="username"]',
+      'input[id="username"]',
+      'input[placeholder*="username" i]',
+      'input[type="text"]'
+    ];
+    let usernameFilled = false;
+    for (const sel of usernameSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el) {
+          await el.click();
+          await humanDelay(300, 500);
+          await humanType(page, sel, username);
+          usernameFilled = true;
+          log(`Reddit: Username filled using selector: ${sel}`);
+          break;
+        }
+      } catch (e) { /* try next */ }
+    }
 
-      // Fill password
-      await humanType(page, '#login-password, input[name="password"]', password);
-      await humanDelay(500, 800);
+    if (!usernameFilled) {
+      log('Reddit: Could not find username field');
+      await takeScreenshot(page, 'reddit-no-username-field');
+      return false;
+    }
 
-      // Submit
-      await safeClick(page, 'button[type="submit"], button.login-button');
-      await waitForNav(page);
-      await humanDelay(3000, 5000);
+    await humanDelay(1000, 2000);
 
-      // Check if login succeeded
-      const url = page.url();
-      if (url.includes('login') && !url.includes('login/')) {
-        // Still on login page — might have failed
-        log('Reddit: Login may have failed (still on login page)');
-        await takeScreenshot(page, 'reddit-login-fail');
-        return false;
-      }
+    // Try multiple selectors for password field
+    const passwordSelectors = [
+      '#login-password',
+      'input[name="password"]',
+      'input[type="password"]'
+    ];
+    let passwordFilled = false;
+    for (const sel of passwordSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el) {
+          await el.click();
+          await humanDelay(300, 500);
+          await humanType(page, sel, password);
+          passwordFilled = true;
+          log(`Reddit: Password filled using selector: ${sel}`);
+          break;
+        }
+      } catch (e) { /* try next */ }
+    }
 
+    if (!passwordFilled) {
+      log('Reddit: Could not find password field');
+      await takeScreenshot(page, 'reddit-no-password-field');
+      return false;
+    }
+
+    await humanDelay(500, 1000);
+
+    // Submit login
+    const submitSelectors = [
+      'button[type="submit"]',
+      'button.login-button',
+      'button[class*="login" i]',
+      'button:has-text("Log In")',
+      'button:has-text("Sign In")'
+    ];
+    let submitted = false;
+    for (const sel of submitSelectors) {
+      try {
+        const btn = await page.$(sel);
+        if (btn) {
+          await btn.click();
+          submitted = true;
+          log(`Reddit: Submit clicked using selector: ${sel}`);
+          break;
+        }
+      } catch (e) { /* try next */ }
+    }
+
+    if (!submitted) {
+      // Fallback: press Enter
+      await page.keyboard.press('Enter');
+      log('Reddit: Submit via Enter key (no button found)');
+    }
+
+    await waitForNav(page);
+    await humanDelay(3000, 5000);
+
+    // Check login result
+    const currentUrl = page.url();
+    if (!currentUrl.includes('login')) {
       log('Reddit: Login successful!');
       return true;
     }
 
-    // Alternative login flow (new Reddit UI)
-    await humanType(page, 'input[name="username"], #username', username);
-    await humanDelay(500, 1000);
-    await humanType(page, 'input[name="password"], #password', password);
-    await humanDelay(500, 800);
-    await safeClick(page, 'button[type="submit"]');
-    await waitForNav(page);
-    await humanDelay(3000, 5000);
-    log('Reddit: Login attempt completed');
-    return true;
+    // Might need to handle consent/cookie page
+    const pageContent = await page.content();
+    if (pageContent.includes('consent') || pageContent.includes('Continue to Reddit')) {
+      log('Reddit: Consent page detected, clicking continue...');
+      try {
+        await safeClick(page, 'button:has-text("Continue"), button:has-text("Accept")');
+        await humanDelay(2000, 3000);
+      } catch (e) { /* proceed */ }
+    }
+
+    log('Reddit: Login completed (verifying...)');
+    return !page.url().includes('login');
   } catch (e) {
     log(`Reddit login error: ${e.message}`);
     await takeScreenshot(page, 'reddit-login-error');
