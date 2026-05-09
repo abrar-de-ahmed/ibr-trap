@@ -84,7 +84,8 @@ function getMitigationConfig(brain) {
 
 function getAlreadyPostedToday(brain) {
   const social = brain.social || {};
-  const recent = social.recent_posts || [];
+  const recentRaw = social.recent_posts || {};
+  const recent = Object.values(recentRaw).flat();
   return recent.filter(p => p.date === TODAY && p.status === 'posted').length;
 }
 
@@ -98,7 +99,8 @@ function getAlreadyEngagedToday(brain, type) {
 // ── Platform Rotation ──
 function getRecentPlatforms(brain) {
   const social = brain.social || {};
-  const recent = social.recent_posts || [];
+  const recentRaw = social.recent_posts || {};
+  const recent = Object.values(recentRaw).flat();
   const threeDaysAgo = new Date(NOW - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   return recent.filter(p => p.date >= threeDaysAgo).map(p => p.platform);
 }
