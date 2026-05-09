@@ -2,12 +2,16 @@
   "status": "active",
   "mode": "monitor",
   "lastKnownHashes": {
-    "homepage": "4ca76f66e08245ab5aebc9efce7af406489035834eb47ce00bf3322a52beab48"
+    "homepage": "e6ef874e526f2b55dbfacee0fab76668b6dd1d2d10fdd7743cf458471d783b6b"
   },
   "responseTimeHistory": [
     {
       "time": "2026-05-08T19:39:26.313Z",
       "ms": 484
+    },
+    {
+      "time": "2026-05-09T02:29:20.936Z",
+      "ms": 216
     }
   ],
   "alerts": [
@@ -18,10 +22,19 @@
         "Injected Code",
         "Site Unreachable"
       ]
+    },
+    {
+      "date": "2026-05-09",
+      "time": "2026-05-09T02:29:20.936Z",
+      "findings": [
+        "Content Tampering",
+        "Injected Code",
+        "Site Unreachable"
+      ]
     }
   ],
-  "checkCount": 1,
+  "checkCount": 2,
   "firstCheck": "2026-05-08",
   "bravoOverride": null,
-  "lastCheck": "2026-05-08"
+  "lastCheck": "2026-05-09"
 }
