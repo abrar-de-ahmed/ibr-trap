@@ -2,72 +2,297 @@
   "version": "1.0",
   "created": "2026-05-09",
   "last_updated": "2026-05-09",
-
   "seo": {
-    "keywords_tracked": [],
-    "keyword_rankings": {},
+    "keywords_tracked": [
+      {
+        "slug": "product-photos",
+        "keyword": "background remover for product photos"
+      },
+      {
+        "slug": "shoes",
+        "keyword": "remove background from shoes"
+      },
+      {
+        "slug": "jewelry",
+        "keyword": "background remover for jewelry"
+      },
+      {
+        "slug": "clothing",
+        "keyword": "remove background from clothing"
+      },
+      {
+        "slug": "watches",
+        "keyword": "background remover for watches"
+      },
+      {
+        "slug": "electronics",
+        "keyword": "remove background from electronics"
+      },
+      {
+        "slug": "amazon-listings",
+        "keyword": "background remover for Amazon listings"
+      },
+      {
+        "slug": "etsy-shop",
+        "keyword": "background remover for Etsy shop"
+      },
+      {
+        "slug": "ebay-photos",
+        "keyword": "remove background for eBay photos"
+      },
+      {
+        "slug": "shopify-store",
+        "keyword": "background remover for Shopify store"
+      },
+      {
+        "slug": "furniture",
+        "keyword": "background remover for furniture"
+      },
+      {
+        "slug": "bags",
+        "keyword": "remove background from bags"
+      },
+      {
+        "slug": "cosmetics",
+        "keyword": "background remover for cosmetics"
+      },
+      {
+        "slug": "car-photos",
+        "keyword": "background remover for car photos"
+      },
+      {
+        "slug": "food",
+        "keyword": "background remover for food photography"
+      },
+      {
+        "slug": "toys",
+        "keyword": "background remover for toys"
+      },
+      {
+        "slug": "sports-equipment",
+        "keyword": "background remover for sports equipment"
+      },
+      {
+        "slug": "books",
+        "keyword": "background remover for books"
+      },
+      {
+        "slug": "pets",
+        "keyword": "background remover for pet photos"
+      },
+      {
+        "slug": "real-estate",
+        "keyword": "background remover for real estate photos"
+      }
+    ],
+    "keyword_rankings": {
+      "product-photos": {
+        "keyword": "background remover for product photos",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      },
+      "shoes": {
+        "keyword": "remove background from shoes",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      },
+      "jewelry": {
+        "keyword": "background remover for jewelry",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      },
+      "clothing": {
+        "keyword": "remove background from clothing",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      },
+      "watches": {
+        "keyword": "background remover for watches",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      },
+      "electronics": {
+        "keyword": "remove background from electronics",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      },
+      "amazon-listings": {
+        "keyword": "background remover for Amazon listings",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      },
+      "etsy-shop": {
+        "keyword": "background remover for Etsy shop",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      },
+      "ebay-photos": {
+        "keyword": "remove background for eBay photos",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      },
+      "shopify-store": {
+        "keyword": "background remover for Shopify store",
+        "date": "2026-05-09",
+        "note": "GSC API pending - using baseline tracking"
+      }
+    },
     "indexed_pages": [],
     "deindexed_pages": [],
     "competitors": {},
     "title_strategies": {
-      "format_A": { "template": "Remove [keyword] Background - Free Online Tool", "used": 0, "avg_rank_change": 0, "status": "untested" },
-      "format_B": { "template": "Free [keyword] Background Remover | No Signup", "used": 0, "avg_rank_change": 0, "status": "untested" },
-      "format_C": { "template": "Background Remover for [keyword] - Try Free Now", "used": 0, "avg_rank_change": 0, "status": "untested" }
+      "format_A": {
+        "template": "Remove [keyword] Background - Free Online Tool",
+        "used": 0,
+        "avg_rank_change": 0,
+        "status": "untested"
+      },
+      "format_B": {
+        "template": "Free [keyword] Background Remover | No Signup",
+        "used": 2,
+        "avg_rank_change": 0,
+        "status": "untested"
+      },
+      "format_C": {
+        "template": "Background Remover for [keyword] - Try Free Now",
+        "used": 0,
+        "avg_rank_change": 0,
+        "status": "untested"
+      }
     },
     "best_title_format": "format_B",
-    "pages_created_total": 0
+    "pages_created_total": 2
   },
-
   "content": {
-    "blog_posts": { "total": 0, "ranking_keywords": 0, "best_topic": null },
+    "blog_posts": {
+      "total": 0,
+      "ranking_keywords": 0,
+      "best_topic": null
+    },
     "blog_lengths": {
-      "800": { "used": 0, "avg_index_days": 0, "status": "untested" },
-      "1200": { "used": 0, "avg_index_days": 0, "status": "default" },
-      "1500": { "used": 0, "avg_index_days": 0, "status": "untested" }
+      "800": {
+        "used": 0,
+        "avg_index_days": 0,
+        "status": "untested"
+      },
+      "1200": {
+        "used": 0,
+        "avg_index_days": 0,
+        "status": "default"
+      },
+      "1500": {
+        "used": 0,
+        "avg_index_days": 0,
+        "status": "untested"
+      }
     },
     "best_blog_length": "1200",
     "faq_sections_added": 0,
     "title_ab_tests": {}
   },
-
   "social": {
-    "reddit": { "posts": 0, "avg_engagement": 0, "best_subreddit": null, "status": "active", "posted_count": 0 },
-    "twitter": { "posts": 0, "avg_engagement": 0, "best_time": null, "status": "active", "posted_count": 0 },
-    "pinterest": { "pins": 0, "avg_clicks": 0, "best_type": null, "status": "active", "posted_count": 0 },
-    "medium": { "posts": 0, "avg_reads": 0, "status": "paused" },
+    "reddit": {
+      "posts": 0,
+      "avg_engagement": 0,
+      "best_subreddit": null,
+      "status": "active",
+      "posted_count": 0
+    },
+    "twitter": {
+      "posts": 0,
+      "avg_engagement": 0,
+      "best_time": null,
+      "status": "active",
+      "posted_count": 0
+    },
+    "pinterest": {
+      "pins": 0,
+      "avg_clicks": 0,
+      "best_type": null,
+      "status": "active",
+      "posted_count": 0
+    },
+    "medium": {
+      "posts": 0,
+      "avg_reads": 0,
+      "status": "paused"
+    },
     "total_posts": 0,
     "recent_posts": {},
     "engagement": {},
     "weekly_follows": [],
     "account_status": {
-      "reddit": { "created": true, "username": "AbrardeAhmed", "auth_method": "puppeteer" },
-      "twitter": { "created": true, "username": "bg_remover", "auth_method": "puppeteer" },
-      "pinterest": { "created": true, "username": "BGRemoverPro", "auth_method": "puppeteer", "followers": 32 },
-      "medium": { "created": false, "username": null }
+      "reddit": {
+        "created": true,
+        "username": "AbrardeAhmed",
+        "auth_method": "puppeteer"
+      },
+      "twitter": {
+        "created": true,
+        "username": "bg_remover",
+        "auth_method": "puppeteer"
+      },
+      "pinterest": {
+        "created": true,
+        "username": "BGRemoverPro",
+        "auth_method": "puppeteer",
+        "followers": 32
+      },
+      "medium": {
+        "created": false,
+        "username": null
+      }
     }
   },
-
   "backlinks": {
     "total_created": 0,
     "total_indexed": 0,
     "platforms": {
-      "medium": { "created": 0, "indexed": 0, "rank_impact": 0, "status": "active" },
-      "blogger": { "created": 0, "indexed": 0, "rank_impact": 0, "status": "active" },
-      "tumblr": { "created": 0, "indexed": 0, "rank_impact": 0, "status": "active" },
-      "devto": { "created": 0, "indexed": 0, "rank_impact": 0, "status": "active" },
-      "quora": { "created": 0, "indexed": 0, "rank_impact": 0, "status": "active" },
-      "reddit": { "created": 0, "indexed": 0, "rank_impact": 0, "status": "active" }
+      "medium": {
+        "created": 0,
+        "indexed": 0,
+        "rank_impact": 0,
+        "status": "active"
+      },
+      "blogger": {
+        "created": 0,
+        "indexed": 0,
+        "rank_impact": 0,
+        "status": "active"
+      },
+      "tumblr": {
+        "created": 0,
+        "indexed": 0,
+        "rank_impact": 0,
+        "status": "active"
+      },
+      "devto": {
+        "created": 0,
+        "indexed": 0,
+        "rank_impact": 0,
+        "status": "active"
+      },
+      "quora": {
+        "created": 0,
+        "indexed": 0,
+        "rank_impact": 0,
+        "status": "active"
+      },
+      "reddit": {
+        "created": 0,
+        "indexed": 0,
+        "rank_impact": 0,
+        "status": "active"
+      }
     },
     "directories_submitted": 0,
     "directories_approved": 0
   },
-
-  "paid_users": 0,
+  "paid_users": 3,
   "ads_budget": 0,
   "ads_keywords": [],
   "week": 1,
   "current_phase": "week1_baby_steps",
-
   "emergency": {
     "brake_active": false,
     "brake_reason": null,
@@ -75,8 +300,26 @@
     "deindexed_count": 0,
     "last_check": null
   },
-
   "weekly_summaries": [],
-
-  "evolution_log": []
+  "evolution_log": [],
+  "competitors": {
+    "https://www.remove.bg": {
+      "online": true,
+      "statusCode": 200,
+      "title": "N/A",
+      "checked": "2026-05-09"
+    },
+    "https://remover.io": {
+      "online": true,
+      "statusCode": 200,
+      "title": "N/A",
+      "checked": "2026-05-09"
+    },
+    "https://www.slazzer.com": {
+      "online": true,
+      "statusCode": 200,
+      "title": "Remove background from image for free - slazzer.com",
+      "checked": "2026-05-09"
+    }
+  }
 }

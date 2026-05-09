@@ -2,23 +2,20 @@
   "version": "1.0",
   "created": "2026-05-09",
   "last_evolution": "2026-05-09",
-
   "site": {
     "url": "https://bgremoverdigital.craftedmindss.com",
     "brand_name": "BG Remover Digital",
     "brand_voice": "friendly-professional"
   },
-
   "growth": {
     "target_paid_users": 5,
     "target_date": "2026-05-31",
     "start_date": "2026-05-09",
     "price_per_user": 9,
-    "current_paid_users": 0,
+    "current_paid_users": 3,
     "current_week": 1,
     "current_phase": "week1_baby_steps"
   },
-
   "mitigation": {
     "week1": {
       "daily_new_pages": 2,
@@ -58,19 +55,32 @@
       "traffic_drop_threshold": 50
     }
   },
-
   "budget": {
     "ads_enabled": false,
     "ads_start_after_users": 2,
     "scaling": [
-      { "users": 2, "monthly_budget": 5 },
-      { "users": 4, "monthly_budget": 10 },
-      { "users": 8, "monthly_budget": 15 },
-      { "users": 16, "monthly_budget": 20 },
-      { "users": 32, "monthly_budget": 40 }
+      {
+        "users": 2,
+        "monthly_budget": 5
+      },
+      {
+        "users": 4,
+        "monthly_budget": 10
+      },
+      {
+        "users": 8,
+        "monthly_budget": 15
+      },
+      {
+        "users": 16,
+        "monthly_budget": 20
+      },
+      {
+        "users": 32,
+        "monthly_budget": 40
+      }
     ]
   },
-
   "seo": {
     "title_strategy": "format_B",
     "blog_word_count": 1200,
@@ -80,20 +90,47 @@
       "format_C": "Background Remover for [keyword] - Try Free Now"
     }
   },
-
   "social": {
-    "platforms": ["reddit", "twitter", "pinterest"],
+    "platforms": [
+      "reddit",
+      "twitter",
+      "pinterest"
+    ],
     "best_platform": "reddit",
     "best_time_utc": "14:00",
     "skip_platforms": [],
     "posting_method": "puppeteer",
     "agent_version": "2.0",
-    "subreddits": ["r/Entrepreneur", "r/shopify", "r/Etsy", "r/ecommerce", "r/smallbusiness", "r/photography", "r/SideProject"],
+    "subreddits": [
+      "r/Entrepreneur",
+      "r/shopify",
+      "r/Etsy",
+      "r/ecommerce",
+      "r/smallbusiness",
+      "r/photography",
+      "r/SideProject"
+    ],
     "account_status": {
-      "reddit": { "created": true, "username": "AbrardeAhmed", "auth_method": "puppeteer" },
-      "twitter": { "created": true, "username": "bg_remover", "auth_method": "puppeteer" },
-      "pinterest": { "created": true, "username": "BGRemoverPro", "auth_method": "puppeteer", "followers": 32 },
-      "medium": { "created": false, "username": null }
+      "reddit": {
+        "created": true,
+        "username": "AbrardeAhmed",
+        "auth_method": "puppeteer"
+      },
+      "twitter": {
+        "created": true,
+        "username": "bg_remover",
+        "auth_method": "puppeteer"
+      },
+      "pinterest": {
+        "created": true,
+        "username": "BGRemoverPro",
+        "auth_method": "puppeteer",
+        "followers": 32
+      },
+      "medium": {
+        "created": false,
+        "username": null
+      }
     },
     "engagement_config": {
       "daily_likes_max": 15,
@@ -106,9 +143,13 @@
       "anti_detection": true
     }
   },
-
   "backlinks": {
-    "active_platforms": ["medium", "blogger", "tumblr", "devto"],
+    "active_platforms": [
+      "medium",
+      "blogger",
+      "tumblr",
+      "devto"
+    ],
     "skip_platforms": [],
     "max_per_day": 1,
     "rotate_platforms": true,
@@ -134,32 +175,117 @@
       "betalist.com",
       "launching.page"
     ],
-    "web20_platforms": ["medium.com", "wordpress.com", "blogger.com", "tumblr.com", "dev.to", "hashnode.dev"]
+    "web20_platforms": [
+      "medium.com",
+      "wordpress.com",
+      "blogger.com",
+      "tumblr.com",
+      "dev.to",
+      "hashnode.dev"
+    ]
   },
-
   "experiment_rate": 0.2,
   "risk_level": "normal",
-
   "keyword_candidates": [
-    { "slug": "furniture", "keyword": "background remover for furniture", "status": "candidate" },
-    { "slug": "bags", "keyword": "remove background from bags", "status": "candidate" },
-    { "slug": "cosmetics", "keyword": "background remover for cosmetics", "status": "candidate" },
-    { "slug": "car-photos", "keyword": "remove background from car photos", "status": "candidate" },
-    { "slug": "food", "keyword": "background remover for food photography", "status": "candidate" },
-    { "slug": "toys", "keyword": "remove background from toys", "status": "candidate" },
-    { "slug": "sports-equipment", "keyword": "background remover for sports equipment", "status": "candidate" },
-    { "slug": "books", "keyword": "remove background from book covers", "status": "candidate" },
-    { "slug": "pets", "keyword": "remove background from pet photos", "status": "candidate" },
-    { "slug": "real-estate", "keyword": "background remover for real estate photos", "status": "candidate" },
-    { "slug": "id-photos", "keyword": "background remover for ID photos passport", "status": "candidate" },
-    { "slug": "logos", "keyword": "remove background from logo", "status": "candidate" },
-    { "slug": "transparent", "keyword": "transparent background maker", "status": "candidate" },
-    { "slug": "white-background", "keyword": "white background maker online", "status": "candidate" },
-    { "slug": "free-online", "keyword": "free online background remover", "status": "candidate" },
-    { "slug": "how-to-remove", "keyword": "how to remove background from image", "status": "candidate" },
-    { "slug": "bulk-images", "keyword": "bulk background remover", "status": "candidate" },
-    { "slug": "png", "keyword": "remove background from png", "status": "candidate" },
-    { "slug": "jpg", "keyword": "remove background from jpg", "status": "candidate" },
-    { "slug": "no-signup", "keyword": "background remover no signup", "status": "candidate" }
+    {
+      "slug": "furniture",
+      "keyword": "background remover for furniture",
+      "status": "candidate"
+    },
+    {
+      "slug": "bags",
+      "keyword": "remove background from bags",
+      "status": "candidate"
+    },
+    {
+      "slug": "cosmetics",
+      "keyword": "background remover for cosmetics",
+      "status": "candidate"
+    },
+    {
+      "slug": "car-photos",
+      "keyword": "remove background from car photos",
+      "status": "candidate"
+    },
+    {
+      "slug": "food",
+      "keyword": "background remover for food photography",
+      "status": "candidate"
+    },
+    {
+      "slug": "toys",
+      "keyword": "remove background from toys",
+      "status": "candidate"
+    },
+    {
+      "slug": "sports-equipment",
+      "keyword": "background remover for sports equipment",
+      "status": "candidate"
+    },
+    {
+      "slug": "books",
+      "keyword": "remove background from book covers",
+      "status": "candidate"
+    },
+    {
+      "slug": "pets",
+      "keyword": "remove background from pet photos",
+      "status": "candidate"
+    },
+    {
+      "slug": "real-estate",
+      "keyword": "background remover for real estate photos",
+      "status": "candidate"
+    },
+    {
+      "slug": "id-photos",
+      "keyword": "background remover for ID photos passport",
+      "status": "created"
+    },
+    {
+      "slug": "logos",
+      "keyword": "remove background from logo",
+      "status": "created"
+    },
+    {
+      "slug": "transparent",
+      "keyword": "transparent background maker",
+      "status": "candidate"
+    },
+    {
+      "slug": "white-background",
+      "keyword": "white background maker online",
+      "status": "candidate"
+    },
+    {
+      "slug": "free-online",
+      "keyword": "free online background remover",
+      "status": "candidate"
+    },
+    {
+      "slug": "how-to-remove",
+      "keyword": "how to remove background from image",
+      "status": "candidate"
+    },
+    {
+      "slug": "bulk-images",
+      "keyword": "bulk background remover",
+      "status": "candidate"
+    },
+    {
+      "slug": "png",
+      "keyword": "remove background from png",
+      "status": "candidate"
+    },
+    {
+      "slug": "jpg",
+      "keyword": "remove background from jpg",
+      "status": "candidate"
+    },
+    {
+      "slug": "no-signup",
+      "keyword": "background remover no signup",
+      "status": "candidate"
+    }
   ]
 }
