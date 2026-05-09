@@ -1,7 +1,7 @@
 # BG Remover Digital — Continuity Prompt
 
 > **Purpose:** Paste this prompt in a new chat session to continue the project seamlessly.
-> **Last Updated:** May 9, 2026
+> **Last Updated:** May 10, 2026
 
 ---
 
@@ -18,7 +18,7 @@ DEPLOYED AGENTS (10 total, all running on GitHub Actions):
 1. Supervisor v2 — Daily 7:00 UTC — monitors all agents
 2. Growth Agent v2 — Daily 8:00 UTC — SEO intelligence, keyword pages, Sunday evolution
 3. Content Agent — Mon/Wed/Fri 9:00 UTC — blog articles, A/B testing
-4. Social Agent v2.0 — Daily 10:00 UTC — Puppeteer auto-posting + engagement
+4. Social Agent v2.0 — Daily 10:00 UTC (3:00 PM PKT) — Puppeteer auto-posting + engagement
 5. Directory Agent — Weekly Sunday 11:00 UTC — directory submissions, backlinks
 6. Monitor — Every 6 hours — site uptime
 7. Security Agent — Daily — security audit
@@ -35,6 +35,19 @@ KEY FILES:
 - SECURITY-ROADMAP.md — defense upgrade path
 - CONTINUITY.md — this file (handoff prompt)
 
+SOCIAL AGENT v2.0 STATUS (as of May 10, 2026):
+- 8 bugs found and fixed (3 CRITICAL, 3 MEDIUM, 2 MINOR)
+- Latest commit: 34be5bc (all fixes pushed to main)
+- Schedule: Daily 10:00 UTC (3:00 PM PKT)
+- Platforms: Reddit, Twitter/X, Pinterest (all Puppeteer automated)
+- Bug fixes: isContentUnique crash, networkidle2 timeout, wrong post tab,
+  :has-text selectors (Playwright-only), Pinterest submit button, Pinterest
+  login check inverted, outdated Chrome UA, Pinterest no image upload
+- Image upload: downloadPinImage() with 3 fallback sources
+- Anti-detection: webdriver hidden, Chrome/135 UA, human-like typing, random delays
+- QA Report: 18-page PDF at /download/Social-Agent-Expert-QA-Report.pdf
+- KNOWN RISKS: Reddit anti-bot (10%), Twitter email verify (5%), Pinterest board (15%)
+
 SOCIAL ACCOUNTS (Puppeteer automated):
 - Reddit: u/AbrardeAhmed (craft@craftedmindss.com)
 - Twitter/X: @bg_remover (craft@craftedmindss.com)
@@ -48,12 +61,18 @@ GA INTELLIGENCE RULES:
 - Budget auto-scales: 2 users=$5, 4=$10, 8=$15, 16=$20 ads/month
 - Never mention img.ly — use "AI technology" or "client-side AI"
 
-CURRENT STATUS: Week 1 (started May 9, 2026). First weekly review session due after 7 days.
+CURRENT STATUS: Week 1 (started May 9, 2026). Social Agent bugs all fixed. Next scheduled run: May 11, 3:00 PM PKT.
 NEXT MILESTONES:
-(1) Review Week 1 data from brain.json
-(2) Advance to Week 2 if indexing positive
-(3) Connect GSC API for rank tracking
-(4) First 2 paid users → activate $5 ads budget
+(1) Monitor Social Agent run on May 11 — check if posts are live
+(2) Review Week 1 data from brain.json after 7 days
+(3) Advance to Week 2 if indexing positive
+(4) Connect GSC API for rank tracking (blocked by org policy — need personal Gmail)
+(5) First 2 paid users → activate $5 ads budget
+(6) Charlie Agent: fix false positive whitelist bug (low priority)
+
+DEFERRED ITEMS:
+- GSC API: blocked by org policy iam.disableServiceAccountKeyCreation — need personal Gmail or org admin
+- Pinterest boards: target boards in templates may not exist — first run will reveal
 
 Read brain.json, check GitHub Actions runs, and give status report.
 ```

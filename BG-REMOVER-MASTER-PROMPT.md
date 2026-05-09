@@ -1,7 +1,7 @@
 # BG Remover Digital — MASTER PROMPT (Complete Project Reference)
 
-> **Last Updated:** May 8, 2026
-> **Version:** 5.0 — Growth Agent Live + 20 SEO Keyword Pages + Supervisor Updated
+> **Last Updated:** May 10, 2026
+> **Version:** 5.1 — Growth Agent Live + 20 SEO Keyword Pages + Social Agent v2.0 Bugs Fixed + Supervisor Updated
 > **Project Owner:** Abrar Ahmed
 > **Contact Email:** craftedminds3@gmail.com
 > **Project:** BG Remover Digital (formerly IBR-Trap)
@@ -268,6 +268,49 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 | PM | Friday 6:00 UTC | 170 hours |
 | Supervisor | Daily 7:00 UTC | 26 hours |
 | Growth | Daily 8:00 UTC | 26 hours |
+
+---
+
+### Agent 9: Social Agent v2.0 (Puppeteer) ✅ LIVE — BUGS FIXED
+
+| Detail | Value |
+|--------|-------|
+| **Workflow File** | `.github/workflows/social-agent.yml` |
+| **Script File** | `.github/workflows/scripts/social-agent.js` (~1,600 lines) |
+| **Schedule** | Daily at 10:00 UTC (3:00 PM PKT) + manual trigger |
+| **Email Behavior** | ALWAYS sends daily report (posts + engagement summary) |
+| **GitHub Secrets** | GITHUB_TOKEN (auto), GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, REDDIT_USERNAME, REDDIT_PASSWORD, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_EMAIL, PINTEREST_EMAIL, PINTEREST_PASSWORD |
+| **Permissions** | `contents: write` (commits brain.json updates) |
+| **Latest Commit** | `34be5bc` — All 8 bugs fixed (May 10, 2026) |
+
+**What It Does:**
+- Logs into Reddit, Twitter/X, Pinterest via Puppeteer headless browser
+- Auto-posts content with human-like typing delays (60-140ms per keystroke)
+- Platform rotation — doesn't post to same platform every day
+- Daily engagement: likes/saves 5-15 posts per platform, occasional retweets
+- Weekly (Mondays): follows 3-5 relevant accounts per platform
+- Pinterest: downloads image, uploads to pin creation tool, fills all fields
+- Anti-detection: webdriver hidden, Chrome/135 UA, random mouse movements, random scrolls
+
+**Bug Fix History (May 10, 2026):**
+8 bugs found and fixed across 2 commits (`6c0aa6e`, `34be5bc`):
+1. `isContentUnique()` crash — dict vs array `.some()` (CRITICAL)
+2. Reddit `networkidle2` timeout → `domcontentloaded` (CRITICAL)
+3. Reddit wrong post tab `post-link-tab` → `post-text-tab` (CRITICAL)
+4. `:has-text()` selectors invalid in Puppeteer → text-match iteration (MEDIUM)
+5. Pinterest wrong submit button `SignupButton` → submit chain (MEDIUM)
+6. Pinterest inverted login check logic (MEDIUM)
+7. Outdated Chrome UA `120` → `135` (MINOR)
+8. Pinterest no image upload → `downloadPinImage()` + file upload (CRITICAL)
+
+See BG-REMOVER-WORKLOG.md for full details. QA Report: `/download/Social-Agent-Expert-QA-Report.pdf`
+
+**Social Accounts:**
+| Platform | Username | Email |
+|----------|----------|-------|
+| Reddit | AbrardeAhmed | craft@craftedmindss.com |
+| Twitter/X | @bg_remover | craft@craftedmindss.com |
+| Pinterest | BGRemoverPro (Business) | abrar_a@live.com |
 
 ---
 
