@@ -131,7 +131,9 @@ function shouldExperiment() { return rand() < 0.2; }
 // ── Content Uniqueness Check ──
 function isContentUnique(brain, text) {
   const social = brain.social || {};
-  const recent = social.recent_posts || [];
+  const recentRaw = social.recent_posts || {};
+  // recent_posts is a dict keyed by date, flatten to array
+  const recent = Object.values(recentRaw).flat();
   const normalized = text.toLowerCase().trim().substring(0, 50);
   return !recent.some(p => {
     const existing = (p.title || p.text || p.description || '').toLowerCase().trim().substring(0, 50);
@@ -432,9 +434,9 @@ async function launchBrowser() {
     Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
   });
 
-  // Set a realistic user agent
+  // Set a realistic user agent (keep up to date)
   await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
   );
 
   return { browser, page };
@@ -454,7 +456,7 @@ async function redditLogin(page) {
 
   try {
     log('Reddit: Logging in...');
-    await page.goto('https://www.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.goto('https://www.reddit.com/login/', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await humanDelay(3000, 5000);
 
     // Try multiple selectors for username field
@@ -523,9 +525,9 @@ async function redditLogin(page) {
       'button[type="submit"]',
       'button.login-button',
       'button[class*="login" i]',
-      'button:has-text("Log In")',
-      'button:has-text("Sign In")'
     ];
+    // Fallback: look for button by text content (Puppeteer-compatible)
+    const textSubmitSelectors = ['Log In', 'Sign In'];
     let submitted = false;
     for (const sel of submitSelectors) {
       try {
@@ -537,6 +539,22 @@ async function redditLogin(page) {
           break;
         }
       } catch (e) { /* try next */ }
+    }
+
+    // Fallback: find button by text content (Puppeteer-compatible)
+    if (!submitted) {
+      try {
+        const buttons = await page.$$('button');
+        for (const btn of buttons) {
+          const btnText = await page.evaluate(el => el.textContent.trim(), btn);
+          if (textSubmitSelectors.some(t => btnText.includes(t))) {
+            await btn.click();
+            submitted = true;
+            log(`Reddit: Submit clicked via text match: "${btnText}"`);
+            break;
+          }
+        }
+      } catch (e) { /* ignore */ }
     }
 
     if (!submitted) {
@@ -560,7 +578,16 @@ async function redditLogin(page) {
     if (pageContent.includes('consent') || pageContent.includes('Continue to Reddit')) {
       log('Reddit: Consent page detected, clicking continue...');
       try {
-        await safeClick(page, 'button:has-text("Continue"), button:has-text("Accept")');
+        // Find consent button by text content (Puppeteer-compatible)
+        const buttons = await page.$$('button');
+        for (const btn of buttons) {
+          const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+          if (btnText.includes('continue') || btnText.includes('accept')) {
+            await btn.click();
+            log(`Reddit: Consent button clicked: "${btnText}"`);
+            break;
+          }
+        }
         await humanDelay(2000, 3000);
       } catch (e) { /* proceed */ }
     }
@@ -719,7 +746,22 @@ async function twitterLogin(page) {
     // Step 1: Enter username
     await humanType(page, 'input[autocomplete="username"], input[name="text"]', username, { delay: 100 });
     await humanDelay(1000, 2000);
-    await safeClick(page, 'button:has-text("Next"), button[class*="primary"]');
+    // Click Next button (Puppeteer-compatible)
+    let nextClicked = await safeClick(page, 'button[class*="primary"]');
+    if (!nextClicked) {
+      try {
+        const buttons = await page.$$('button');
+        for (const btn of buttons) {
+          const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+          if (btnText.includes('next')) {
+            await btn.click();
+            nextClicked = true;
+            log('Twitter: Next button clicked via text match');
+            break;
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
 
     // Wait for next step
     await humanDelay(2000, 4000);
@@ -912,7 +954,24 @@ async function pinterestLogin(page) {
     await humanDelay(800, 1500);
 
     // Click login button
-    await safeClick(page, 'button[type="submit"], button[class*="SignupButton"], div[class*="loginBtn"]');
+    let loginClicked = await safeClick(page, 'button[type="submit"]');
+    if (!loginClicked) {
+      loginClicked = await safeClick(page, 'button[data-testid="login-btn"]');
+    }
+    if (!loginClicked) {
+      // Fallback: find button by text content
+      try {
+        const buttons = await page.$$('button');
+        for (const btn of buttons) {
+          const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+          if (btnText.includes('log in') || btnText.includes('login')) {
+            await btn.click();
+            log(`Pinterest: Login button clicked via text match: "${btnText}"`);
+            break;
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
     await waitForNav(page);
     await humanDelay(3000, 5000);
 
