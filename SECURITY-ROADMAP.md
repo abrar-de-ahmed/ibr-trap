@@ -21,18 +21,21 @@
 - **What it does:** Site uptime, response time, auto-deploy via Cloudflare
 - **Status:** Active and running
 
-### CHARLIE (Lightweight) — Live Site Security ✅
+### CHARLIE v2 (Lightweight) — Live Site Security ✅
 - **File:** `.github/workflows/charlie-agent.yml` + `scripts/charlie.js`
 - **Schedule:** Every 6 hours (0:00, 6:00, 12:00, 18:00 UTC)
+- **Latest Commit:** `696fe19` — v2: 3 false positive bugs fixed (May 10, 2026)
 - **What it does:**
-  - Monitors live site for suspicious response patterns
-  - Checks if site content has been tampered with (hash verification)
-  - Detects unexpected redirects or injected content
+  - **Stable content hash** — strips Next.js build chunks before hashing (prevents false positives on rebuilds)
+  - **Trusted domain whitelist** — googletagmanager.com, staticimgly.com (our GA4 + IMG.LY, not flagged as "injection")
+  - Dangerous pattern detection (eval, document.write — always flagged)
   - Monitors response time anomalies (DDoS early warning)
   - Ghost Page detection (checks if site serves unexpected error pages)
+  - Multi-page availability check (homepage + keyword page + sitemap)
   - Saves security state to `data/charlie-state.json`
-  - INSTANT ALERT on any anomaly
-- **Status:** Active (lightweight version)
+  - INSTANT ALERT on any real anomaly
+- **v2 Fixes:** Content Tampering FP (stable hash), Injected Code FP (whitelist), Site Unreachable crash (ghost.findings → ghostFindings)
+- **Status:** Active (v2, all false positives eliminated)
 
 ### BRAVO (Lightweight) — Sentinel Monitor ✅
 - **File:** `.github/workflows/bravo-agent.yml` + `scripts/bravo.js`

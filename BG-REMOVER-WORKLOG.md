@@ -174,3 +174,50 @@ Social Agent v2.0 was deployed but had **8 bugs** (3 CRITICAL, 3 MEDIUM, 2 MINOR
 3. Pinterest board doesn't exist yet (15% probability) — Code falls back to default board
 4. Image download from site fails (10% probability) — 3 fallback sources including placehold.co
 5. GitHub Actions runner timeout (6-hour limit) — Agent completes in ~10-15 minutes
+
+---
+
+## May 10, 2026 — Charlie Agent v2 — 3 False Positive Bugs Fixed
+
+### Problem Statement
+Charlie Agent (security monitor running every 6 hours) sent 5 consecutive CRITICAL alert emails over 2 days (May 8-9). All 3 findings in every email were **false positives caused by bugs in Charlie's own code** — the site was never actually compromised.
+
+### Root Cause Analysis
+
+| # | Finding in Email | Root Cause | Why It Happened |
+|---|-----------------|------------|----------------|
+| 1 | **Content Tampering** — "Homepage content hash changed!" | Charlie hashed the ENTIRE HTML including Next.js chunk URLs like `/_next/static/chunks/05ynd69aob1p7.js` | Every Cloudflare Pages rebuild generates new chunk filenames with new hashes. Full HTML hash changes on every rebuild even if actual page content is identical. |
+| 2 | **Injected Code** — "Suspicious code pattern detected 2 time(s)" | Regex `src=["']https?:\/\/(?!bgremoverdigital\.craftedmindss\.com)` flagged ANY external script not from our domain | Our own Google Analytics (`googletagmanager.com`) and IMG.LY AI library (`staticimgly.com`) were flagged as "suspicious injection". The whitelist was too narrow. |
+| 3 | **Site Unreachable** — "ghost.findings is not iterable" | JavaScript crash in Charlie's code: `allFindings.push(...ghost.findings)` | `checkGhostPages()` returns an **array directly** (`return findings;`), but the caller treated it as an object with `.findings` property. `ghost.findings` was `undefined`, spreading `undefined` threw "not iterable". |
+
+### Site Verification
+Full security scan of bgremoverdigital.craftedmindss.com confirmed:
+- **ZERO** malicious code — no eval(), no document.write(), no iframes, no crypto miners
+- Only external script: Google Analytics GA4 (`G-K1QRPR8ZL9`) — our own tracking
+- Only external API: `staticimgly.com` — IMG.LY AI model download
+- No hidden iframes, no keyloggers, no data exfiltration
+- Hosted on Cloudflare with proper security headers
+- **Site is 100% clean**
+
+### Bugs Fixed
+
+| # | Bug | Fix | Severity |
+|---|-----|-----|----------|
+| 1 | Full HTML hash changes on every Next.js rebuild | New `getStableContentHash()` function strips `_next/static/` chunks and RSC payloads before hashing. Only actual page content changes trigger alerts. | CRITICAL FIX |
+| 2 | External scripts flagged as "injection" | Added `TRUSTED_EXTERNAL_DOMAINS` whitelist: `googletagmanager.com`, `staticimgly.com`. Only truly untrusted external sources trigger alerts. | CRITICAL FIX |
+| 3 | `ghost.findings is not iterable` crash | Changed `allFindings.push(...ghost.findings)` to `allFindings.push(...ghostFindings)` — the function returns array directly, not object. | CRITICAL FIX |
+
+### Additional Changes
+- Separated dangerous pattern checks (eval, document.write) from external source checks
+- Dangerous patterns always trigger alerts (no whitelist for those)
+- External source checks filter through trusted domain whitelist first
+- State file reset: all 5 previous alerts cleared (all were false positives)
+- Added `homepageStable` and `homepageFull` hash keys to state
+- Backward compat: `homepage` key points to stable hash
+
+### Files Modified
+- `.github/workflows/scripts/charlie.js` — Rewrote `checkContentIntegrity()`, added `getStableContentHash()`, `TRUSTED_EXTERNAL_DOMAINS`, `buildTrustedRegex()`, fixed ghost page caller
+- `data/charlie-state.json` — Reset with v2 migration note
+
+### Commits
+- `696fe19` — Charlie Agent v2: 3 false positive bugs fixed

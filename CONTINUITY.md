@@ -1,7 +1,7 @@
 # BG Remover Digital — Continuity Prompt
 
 > **Purpose:** Paste this prompt in a new chat session to continue the project seamlessly.
-> **Last Updated:** May 10, 2026
+> **Last Updated:** May 10, 2026 (Session 4 — Charlie v2 fix)
 
 ---
 
@@ -48,6 +48,14 @@ SOCIAL AGENT v2.0 STATUS (as of May 10, 2026):
 - QA Report: 18-page PDF at /download/Social-Agent-Expert-QA-Report.pdf
 - KNOWN RISKS: Reddit anti-bot (10%), Twitter email verify (5%), Pinterest board (15%)
 
+CHARLIE AGENT v2 STATUS (as of May 10, 2026):
+- 3 false positive bugs found and fixed (commit: 696fe19)
+- Content Tampering FP: Now uses stable hash (strips Next.js chunk URLs before hashing)
+- Injected Code FP: Added trusted domain whitelist (googletagmanager.com, staticimgly.com)
+- Site Unreachable crash: Fixed ghost.findings → ghostFindings (returns array, not object)
+- State file reset: all previous alerts were false positives
+- Site verified clean: no malicious code, no injection, no suspicious activity
+
 SOCIAL ACCOUNTS (Puppeteer automated):
 - Reddit: u/AbrardeAhmed (craft@craftedmindss.com)
 - Twitter/X: @bg_remover (craft@craftedmindss.com)
@@ -61,14 +69,14 @@ GA INTELLIGENCE RULES:
 - Budget auto-scales: 2 users=$5, 4=$10, 8=$15, 16=$20 ads/month
 - Never mention img.ly — use "AI technology" or "client-side AI"
 
-CURRENT STATUS: Week 1 (started May 9, 2026). Social Agent bugs all fixed. Next scheduled run: May 11, 3:00 PM PKT.
+CURRENT STATUS: Week 1 (started May 9, 2026). Social Agent bugs all fixed. Charlie Agent v2 fixed (3 false positive bugs). Next scheduled run: May 11, 3:00 PM PKT.
 NEXT MILESTONES:
 (1) Monitor Social Agent run on May 11 — check if posts are live
 (2) Review Week 1 data from brain.json after 7 days
 (3) Advance to Week 2 if indexing positive
 (4) Connect GSC API for rank tracking (blocked by org policy — need personal Gmail)
 (5) First 2 paid users → activate $5 ads budget
-(6) Charlie Agent: fix false positive whitelist bug (low priority)
+(6) Charlie Agent v2: first clean run expected within 6 hours — should report All Clear
 
 DEFERRED ITEMS:
 - GSC API: blocked by org policy iam.disableServiceAccountKeyCreation — need personal Gmail or org admin

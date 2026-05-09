@@ -189,7 +189,7 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-### Agent 6: Charlie Agent (Lightweight) ✅ LIVE
+### Agent 6: Charlie Agent v2 (Lightweight) ✅ LIVE — FALSE POSITIVE BUGS FIXED
 
 | Detail | Value |
 |--------|-------|
@@ -199,15 +199,22 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 | **Email Behavior** | INSTANT alert on CRITICAL/HIGH findings |
 | **GitHub Secrets** | GITHUB_TOKEN, GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL |
 | **Future Upgrade** | Cloudflare Worker at edge (Revenue gate: $50/month) |
+| **Latest Commit** | `696fe19` — v2: 3 false positive bugs fixed (May 10, 2026) |
 
 **The Reactive Phenotype — Frontline Security Monitor:**
-1. Content integrity check — SHA-256 hash comparison of homepage
-2. Response time anomaly detection — DDoS early warning
-3. Ghost page detection — unexpected error pages or hijacked content
-4. Suspicious code injection detection (scripts, iframes, eval, document.write)
-5. Meta redirect detection — possible compromise indicator
-6. Multi-page availability check (homepage + keyword page + sitemap)
-7. State saved to `data/charlie-state.json`
+1. Content integrity check — **Stable hash** (strips Next.js `_next/static/` chunk URLs before hashing, so rebuilds don't trigger false alerts)
+2. Trusted external domain whitelist (googletagmanager.com, staticimgly.com — our own GA4 + IMG.LY)
+3. Response time anomaly detection — DDoS early warning
+4. Ghost page detection — unexpected error pages or hijacked content (fixed crash bug: returns array, not object)
+5. Suspicious code injection detection (scripts, iframes from untrusted domains, eval, document.write)
+6. Meta redirect detection — possible compromise indicator
+7. Multi-page availability check (homepage + keyword page + sitemap)
+8. State saved to `data/charlie-state.json`
+
+**v2 Fixes (May 10, 2026):**
+- Content Tampering false positive: Stable hash ignores Next.js build changes
+- Injected Code false positive: Trusted domain whitelist for GA4 + IMG.LY
+- Site Unreachable crash: Fixed `ghost.findings` (was `undefined`, now correct array spread)
 
 **Bravo can sandbox Charlie** if malfunction detected.
 
