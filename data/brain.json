@@ -199,7 +199,7 @@
       "posted_count": 0
     },
     "twitter": {
-      "posts": 0,
+      "posts": 1,
       "avg_engagement": 0,
       "best_time": null,
       "status": "active",
@@ -222,6 +222,14 @@
       "2026-05-09": [
         {
           "platform": "reddit",
+          "date": "2026-05-09",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "twitter",
           "date": "2026-05-09",
           "title": "",
           "status": "failed",
