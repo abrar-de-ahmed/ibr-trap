@@ -2,7 +2,9 @@
   "status": "active",
   "mode": "monitor",
   "lastKnownHashes": {
-    "homepage": "bcb81e910ddc4502aace8d481ab3d46c06450b59db323c7aa0a56c40cdb1ef92"
+    "homepage": "placeholder-will-be-set-on-first-v2-run",
+    "homepageStable": null,
+    "homepageFull": null
   },
   "responseTimeHistory": [
     {
@@ -26,54 +28,11 @@
       "ms": 147
     }
   ],
-  "alerts": [
-    {
-      "date": "2026-05-08",
-      "time": "2026-05-08T19:39:26.313Z",
-      "findings": [
-        "Injected Code",
-        "Site Unreachable"
-      ]
-    },
-    {
-      "date": "2026-05-09",
-      "time": "2026-05-09T02:29:20.936Z",
-      "findings": [
-        "Content Tampering",
-        "Injected Code",
-        "Site Unreachable"
-      ]
-    },
-    {
-      "date": "2026-05-09",
-      "time": "2026-05-09T07:50:31.292Z",
-      "findings": [
-        "Content Tampering",
-        "Injected Code",
-        "Site Unreachable"
-      ]
-    },
-    {
-      "date": "2026-05-09",
-      "time": "2026-05-09T13:06:09.149Z",
-      "findings": [
-        "Content Tampering",
-        "Injected Code",
-        "Site Unreachable"
-      ]
-    },
-    {
-      "date": "2026-05-09",
-      "time": "2026-05-09T18:54:07.100Z",
-      "findings": [
-        "Content Tampering",
-        "Injected Code",
-        "Site Unreachable"
-      ]
-    }
-  ],
-  "checkCount": 5,
-  "firstCheck": "2026-05-08",
+  "alerts": [],
+  "checkCount": 0,
+  "firstCheck": "2026-05-10",
   "bravoOverride": null,
-  "lastCheck": "2026-05-09"
+  "lastCheck": null,
+  "v2MigrationDate": "2026-05-10",
+  "v2MigrationNote": "Reset from v1 — all previous alerts were false positives (Content Tampering: Next.js build hash changes, Injected Code: GA4 not whitelisted, Site Unreachable: ghost.findings crash bug). See commit for details."
 }

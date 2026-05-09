@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * BG Remover Digital — Charlie Agent (Lightweight)
+ * BG Remover Digital — Charlie Agent v2 (Lightweight)
  * The Reactive Phenotype — Frontline Security Monitor
  * Runs every 6 hours via GitHub Actions
  *
@@ -8,11 +8,17 @@
  * GENETIC ALGORITHM: Speed + Mutation (Phase 1 — monitoring only, no blocking)
  *
  * Checks:
- * - Site content integrity (hash comparison)
+ * - Site content integrity (stable hash — ignores Next.js build changes)
+ * - Injected code detection (with trusted domain whitelist)
  * - Response time anomalies (DDoS early warning)
  * - Unexpected redirects or injected content
  * - Ghost Page detection (unexpected error pages)
  * - Status code consistency
+ *
+ * v2 FIXES (2026-05-10):
+ * - Content hash now strips Next.js dynamic chunks before hashing (prevents false positive on rebuilds)
+ * - External script whitelist: googletagmanager.com, staticimgly.com (our own GA4 + IMG.LY)
+ * - Fixed ghost.findings crash — checkGhostPages returns array, not object
  *
  * Future Phase 2: Deploy as Cloudflare Worker with real-time blocking
  * See SECURITY-ROADMAP.md for full upgrade path
@@ -56,35 +62,87 @@ function fetchUrl(url, timeout = 15000) {
   });
 }
 
+// ── Trusted External Domains ──
+// These are OUR OWN integrations — NOT injected code
+const TRUSTED_EXTERNAL_DOMAINS = [
+  'googletagmanager.com',   // Google Analytics (GA4) — our own tracking
+  'www.googletagmanager.com',
+  'staticimgly.com',         // IMG.LY — background removal AI model library
+];
+
+function buildTrustedRegex() {
+  const escaped = TRUSTED_EXTERNAL_DOMAINS.map(d => d.replace(/\./g, '\\.')).join('|');
+  return new RegExp(`(bgremoverdigital\\.craftedmindss\\.com|${escaped})`, 'i');
+}
+
 // ── Content Integrity Check ──
+// Next.js embeds build-specific hashes in script/src URLs (_next/static/chunks/abc123.js),
+// so every rebuild changes the full HTML hash. We strip dynamic Next.js asset references
+// before hashing to detect REAL content changes only (text, structure, injected code).
+function getStableContentHash(html) {
+  // Strip Next.js dynamic chunk references (they change every build)
+  let stable = html.replace(/<script[^>]*src=["']\/_next\/static\/[^"']*["'][^>]*>/gi, '');
+  stable = stable.replace(/<link[^>]*href=["']\/_next\/static\/[^"']*["'][^>]*>/gi, '');
+  // Strip dynamic build IDs in RSC payloads
+  stable = stable.replace(/self\.__next_f\.push\([^)]*\)/g, '');
+  return crypto.createHash('sha256').update(stable).digest('hex');
+}
+
 function checkContentIntegrity(html, state) {
   const findings = [];
-  const hash = crypto.createHash('sha256').update(html).digest('hex');
+  const fullHash = crypto.createHash('sha256').update(html).digest('hex');
+  const stableHash = getStableContentHash(html);
 
-  const lastHash = state.lastKnownHashes?.homepage;
-  if (lastHash && lastHash !== hash) {
+  // Check stable content hash (ignores Next.js build changes)
+  const lastStableHash = state.lastKnownHashes?.homepageStable;
+  if (lastStableHash && lastStableHash !== stableHash) {
     findings.push({
       severity: 'CRITICAL',
       check: 'Content Tampering',
-      message: `Homepage content hash changed! Previous: ${lastHash.slice(0, 12)}... Current: ${hash.slice(0, 12)}... Possible injection or unauthorized modification.`,
+      message: `Homepage stable content changed! Previous: ${lastStableHash.slice(0, 12)}... Current: ${stableHash.slice(0, 12)}... Possible injection or unauthorized modification.`,
     });
+  } else if (lastStableHash === stableHash) {
+    log('  Content integrity: OK (stable hash matches, Next.js build change ignored)');
   }
 
-  // Check for injected scripts that shouldn't be there
-  const suspiciousPatterns = [
-    /<script[^>]*src=["']https?:\/\/(?!bgremoverdigital\.craftedmindss\.com)[^"']*["']/gi,
-    /<iframe[^>]*src=["']https?:\/\/(?!bgremoverdigital\.craftedmindss\.com)[^"']*["']/gi,
-    /eval\(/gi,
-    /document\.write\(/gi,
+  // Check for injected scripts from UNTRUSTED domains only
+  const trustedRegex = buildTrustedRegex();
+
+  const checks = [
+    { regex: /<script[^>]*src=["']https?:\/\/[^"']*["'][^>]*>/gi, type: 'script' },
+    { regex: /<iframe[^>]*src=["']https?:\/\/[^"']*["'][^>]*>/gi, type: 'iframe' },
   ];
 
-  for (const pattern of suspiciousPatterns) {
-    const matches = html.match(pattern);
+  for (const { regex, type } of checks) {
+    const matches = html.match(regex);
+    if (matches && matches.length > 0) {
+      // Filter out matches from trusted domains
+      const untrusted = matches.filter(m => !trustedRegex.test(m));
+      if (untrusted.length > 0) {
+        findings.push({
+          severity: 'CRITICAL',
+          check: 'Injected Code',
+          message: `Suspicious ${type} detected ${untrusted.length} time(s) from untrusted sources. Examples: ${untrusted.slice(0, 2).map(m => m.slice(0, 80)).join(' | ')}. Possible XSS or code injection.`,
+        });
+      } else {
+        log(`  External ${type} found but all from trusted domains — OK`);
+      }
+    }
+  }
+
+  // Check for dangerous JS patterns (always suspicious)
+  const dangerousPatterns = [
+    { regex: /eval\(/gi, type: 'eval()' },
+    { regex: /document\.write\(/gi, type: 'document.write()' },
+  ];
+
+  for (const { regex, type } of dangerousPatterns) {
+    const matches = html.match(regex);
     if (matches && matches.length > 0) {
       findings.push({
         severity: 'CRITICAL',
-        check: 'Injected Code',
-        message: `Suspicious code pattern detected ${matches.length} time(s): ${pattern.source}. Possible XSS or code injection.`,
+        check: 'Dangerous Code',
+        message: `${type} detected ${matches.length} time(s). Possible code injection.`,
       });
     }
   }
@@ -99,7 +157,7 @@ function checkContentIntegrity(html, state) {
     });
   }
 
-  return { hash, findings };
+  return { hash: fullHash, stableHash, findings };
 }
 
 // ── Response Time Analysis ──
@@ -109,7 +167,7 @@ function checkResponseTimes(responseTime, state) {
 
   // Add current reading
   history.push({ time: NOW.toISOString(), ms: responseTime });
-  if (history.length > 168) history.shift(); // Keep last 7 days (28 checks × 6hr)
+  if (history.length > 168) history.shift(); // Keep last 7 days (28 checks x 6hr)
 
   // Calculate baseline average (excluding current)
   const pastReadings = history.slice(0, -1).map(h => h.ms);
@@ -145,6 +203,7 @@ function checkResponseTimes(responseTime, state) {
 }
 
 // ── Ghost Page Detection ──
+// Returns findings array directly
 function checkGhostPages(html, status) {
   const findings = [];
 
@@ -293,7 +352,7 @@ async function sendEmail(subject, html) {
 
 // ── Main ──
 async function main() {
-  log('=== Charlie Agent Started ===');
+  log('=== Charlie Agent v2 Started ===');
 
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASS) {
     log('ERROR: Missing email credentials');
@@ -311,6 +370,7 @@ async function main() {
 
   const allFindings = [];
   let homepageHash = null;
+  let homepageStableHash = null;
 
   // 1. Fetch homepage
   log('Step 1: Fetching homepage...');
@@ -318,10 +378,11 @@ async function main() {
     const { status, body, responseTime } = await fetchUrl(SITE_URL);
     log(`  Status: ${status}, Size: ${body.length} bytes, Time: ${responseTime}ms`);
 
-    // 2. Content integrity
+    // 2. Content integrity (stable hash + trusted domain whitelist)
     log('Step 2: Content integrity check...');
     const integrity = checkContentIntegrity(body, state);
     homepageHash = integrity.hash;
+    homepageStableHash = integrity.stableHash;
     allFindings.push(...integrity.findings);
     if (integrity.findings.length === 0) log('  Content integrity: OK');
 
@@ -332,11 +393,11 @@ async function main() {
     allFindings.push(...timing.findings);
     if (timing.findings.length === 0) log(`  Response time: ${responseTime}ms — normal`);
 
-    // 4. Ghost page detection
+    // 4. Ghost page detection (returns array directly, NOT object)
     log('Step 4: Ghost page detection...');
-    const ghost = checkGhostPages(body, status);
-    allFindings.push(...ghost.findings);
-    if (ghost.findings.length === 0) log('  No ghost pages detected');
+    const ghostFindings = checkGhostPages(body, status);
+    allFindings.push(...ghostFindings);
+    if (ghostFindings.length === 0) log('  No ghost pages detected');
 
     // 5. Multi-page check
     log('Step 5: Multi-page check...');
@@ -358,8 +419,11 @@ async function main() {
     });
   }
 
-  // Update state
-  if (homepageHash) state.lastKnownHashes.homepage = homepageHash;
+  // Update state with stable hash (ignores Next.js build changes)
+  if (homepageStableHash) state.lastKnownHashes.homepageStable = homepageStableHash;
+  if (homepageHash) state.lastKnownHashes.homepageFull = homepageHash;
+  // Backward compat: keep old key pointing to stable hash
+  if (homepageStableHash) state.lastKnownHashes.homepage = homepageStableHash;
   state.checkCount++;
   state.lastCheck = TODAY;
 
@@ -399,7 +463,7 @@ async function main() {
 
   const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:650px;margin:0 auto;padding:20px">
 <div style="background:${hasAlert ? '#dc2626' : '#059669'};color:white;padding:12px 16px;border-radius:8px 8px 0 0">
-  <h2 style="margin:0;font-size:18px">CHARLIE — ${hasAlert ? 'SECURITY ALERT' : 'All Clear'}</h2>
+  <h2 style="margin:0;font-size:18px">CHARLIE v2 — ${hasAlert ? 'SECURITY ALERT' : 'All Clear'}</h2>
   <p style="margin:4px 0 0;font-size:13px;opacity:0.9">${TODAY} | Check #${state.checkCount} | Mode: ${state.mode.toUpperCase()}</p>
 </div>
 <div style="border:1px solid #e5e7eb;padding:16px;border-radius:0 0 8px 8px">
@@ -411,7 +475,7 @@ async function main() {
   <h3 style="font-size:13px;margin:0 0 8px;color:#1e293b">Findings</h3>
   ${rows}
   <div style="font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;margin-top:14px">
-    <p style="margin:0">Charlie Agent (Lightweight) | Reactive Phenotype | Next: Phase 2 Cloudflare Worker when revenue > $50/mo</p>
+    <p style="margin:0">Charlie Agent v2 (Lightweight) | Reactive Phenotype | Next: Phase 2 Cloudflare Worker when revenue > $50/mo</p>
     <p style="margin:3px 0 0">See SECURITY-ROADMAP.md for full Watchman Protocol upgrade path</p>
   </div>
 </div></div>`;
@@ -426,7 +490,7 @@ async function main() {
     log(`Email error: ${e.message}`);
   }
 
-  log('=== Charlie Agent Finished ===');
+  log('=== Charlie Agent v2 Finished ===');
 }
 
 main().catch(e => { log(`Fatal: ${e.message}`); process.exit(1); });
