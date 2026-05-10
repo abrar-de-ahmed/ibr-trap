@@ -226,42 +226,7 @@
       "status": "paused"
     },
     "total_posts": 0,
-    "recent_posts": {
-      "2026-05-10": [
-        {
-          "platform": "reddit",
-          "date": "2026-05-10",
-          "title": "I automated my product photo workflow with a free browser tool — no more manual background removal",
-          "status": "failed",
-          "is_experiment": true,
-          "post_url": null
-        },
-        {
-          "platform": "twitter",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "reddit",
-          "date": "2026-05-10",
-          "title": "Protip: You can remove backgrounds from any image for free directly in your browser",
-          "status": "failed",
-          "is_experiment": true,
-          "post_url": null
-        },
-        {
-          "platform": "pinterest",
-          "date": "2026-05-10",
-          "title": "How to Remove Backgrounds from Photos - Free Browser Tool",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        }
-      ]
-    },
+    "recent_posts": {},
     "engagement": {
       "2026-05-09": {
         "reddit": {
