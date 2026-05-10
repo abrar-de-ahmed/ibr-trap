@@ -30,6 +30,7 @@ const { execSync } = require('child_process');
 const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
 const BRAND = 'BG Remover Digital';
 const DATA_DIR = path.join(__dirname, '..', '..', '..', 'data');
+const COOKIES_DIR = path.join(DATA_DIR, 'cookies');
 const BRAIN_FILE = path.join(DATA_DIR, 'brain.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const TODAY = new Date().toISOString().split('T')[0];
@@ -49,6 +50,78 @@ function readJSON(filePath) {
 
 function writeJSON(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
+
+// ── Cookie Persistence ──
+function ensureCookiesDir() {
+  if (!fs.existsSync(COOKIES_DIR)) {
+    fs.mkdirSync(COOKIES_DIR, { recursive: true });
+  }
+}
+
+function saveCookies(platform, cookies) {
+  try {
+    ensureCookiesDir();
+    const filePath = path.join(COOKIES_DIR, `${platform}-cookies.json`);
+    writeJSON(filePath, { cookies, saved_at: new Date().toISOString() });
+    log(`${platform}: Saved ${cookies.length} cookies`);
+    return true;
+  } catch (e) {
+    log(`${platform}: Failed to save cookies: ${e.message}`);
+    return false;
+  }
+}
+
+function loadCookies(platform) {
+  try {
+    const filePath = path.join(COOKIES_DIR, `${platform}-cookies.json`);
+    const data = readJSON(filePath);
+    if (data && data.cookies && Array.isArray(data.cookies) && data.cookies.length > 0) {
+      log(`${platform}: Loaded ${data.cookies.length} cookies (saved: ${data.saved_at})`);
+      return data.cookies;
+    }
+    return null;
+  } catch (e) { return null; }
+}
+
+async function loadCookiesIntoPage(page, platform) {
+  const cookies = loadCookies(platform);
+  if (!cookies) return false;
+  try {
+    await page.setCookie(...cookies);
+    return true;
+  } catch (e) {
+    log(`${platform}: Failed to set cookies: ${e.message}`);
+    return false;
+  }
+}
+
+async function checkSessionValid(page, platform) {
+  try {
+    if (platform === 'reddit') {
+      await page.goto('https://www.reddit.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await humanDelay(2000, 3000);
+      const url = page.url();
+      const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
+      // If we see user menu or no login prompt, we're logged in
+      const isLoggedIn = bodyText.includes('home') && !bodyText.includes('log in') && !bodyText.includes('sign up');
+      // Also check URL — logged-in users get reddit.com/home, not a login redirect
+      log(`Reddit: Session check — URL: ${url}, logged in: ${isLoggedIn}`);
+      return isLoggedIn;
+    } else if (platform === 'twitter') {
+      await page.goto('https://x.com/home', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await humanDelay(2000, 3000);
+      const url = page.url();
+      // If we end up at /home without redirect to login, we're in
+      const isLoggedIn = !url.includes('login') && !url.includes('flow');
+      log(`Twitter: Session check — URL: ${url}, logged in: ${isLoggedIn}`);
+      return isLoggedIn;
+    }
+    return false;
+  } catch (e) {
+    log(`${platform}: Session check error: ${e.message}`);
+    return false;
+  }
 }
 
 // ── Pseudo-random seeded by date ──
@@ -442,6 +515,38 @@ async function launchBrowser() {
   return { browser, page };
 }
 
+// ── Login with cookie persistence ──
+async function loginWithCookies(platform, page, loginFn) {
+  // Step 1: Try loading saved cookies
+  const loaded = await loadCookiesIntoPage(page, platform);
+  if (loaded) {
+    log(`${platform}: Checking if saved session is still valid...`);
+    const valid = await checkSessionValid(page, platform);
+    if (valid) {
+      log(`${platform}: Session still valid via saved cookies!`);
+      return true;
+    }
+    log(`${platform}: Saved cookies expired, will attempt fresh login`);
+  }
+
+  // Step 2: Fresh login attempt
+  const loginOk = await loginFn(page);
+
+  // Step 3: If login succeeded, save cookies for next time
+  if (loginOk) {
+    try {
+      const cookies = await page.cookies();
+      if (cookies.length > 0) {
+        saveCookies(platform, cookies);
+      }
+    } catch (e) {
+      log(`${platform}: Could not save cookies after login: ${e.message}`);
+    }
+  }
+
+  return loginOk;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // REDDIT AUTOMATION
 // ═══════════════════════════════════════════════════════════════
@@ -456,7 +561,7 @@ async function redditLogin(page) {
 
   try {
     log('Reddit: Logging in...');
-    await page.goto('https://www.reddit.com/login/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.goto('https://www.reddit.com/login/', { waitUntil: 'networkidle0', timeout: 30000 });
     await humanDelay(3000, 5000);
 
     // Try multiple selectors for username field
@@ -807,7 +912,7 @@ async function twitterLogin(page) {
 
   try {
     log('Twitter: Logging in...');
-    await page.goto('https://x.com/i/flow/login', { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await page.goto('https://x.com/i/flow/login', { waitUntil: 'networkidle0', timeout: 30000 });
     await humanDelay(3000, 5000);
 
     // Step 1: Enter username
@@ -1658,9 +1763,9 @@ function commitAndPush() {
   try {
     execSync('git config user.name "Social Agent"', { stdio: 'pipe' });
     execSync('git config user.email "social-agent[bot]@users.noreply.github.com"', { stdio: 'pipe' });
-    execSync('git add data/brain.json data/config.json', { stdio: 'pipe' });
+    execSync('git add data/brain.json data/config.json data/cookies/', { stdio: 'pipe' });
 
-    const status = execSync('git status --porcelain data/brain.json data/config.json', { stdio: 'pipe' }).toString().trim();
+    const status = execSync('git status --porcelain data/brain.json data/config.json data/cookies/', { stdio: 'pipe' }).toString().trim();
     if (status) {
       execSync(`git commit -m "social-agent: ${TODAY} auto-post + engagement [skip ci]"`, { stdio: 'pipe' });
       execSync('git push', { stdio: 'pipe' });
@@ -1831,7 +1936,7 @@ async function main() {
 
     // ── REDDIT ──
     if (platformsToPost.includes('reddit')) {
-      const loggedIn = await redditLogin(page);
+      const loggedIn = await loginWithCookies('reddit', page, redditLogin);
       if (loggedIn) {
         const subreddits = config.social?.subreddits || ['r/Entrepreneur'];
         const sub = subreddits[Math.floor(rand() * subreddits.length)].replace('r/', '');
@@ -1859,7 +1964,7 @@ async function main() {
 
     // ── TWITTER/X ──
     if (platformsToPost.includes('twitter')) {
-      const loggedIn = await twitterLogin(page);
+      const loggedIn = await loginWithCookies('twitter', page, twitterLogin);
       if (loggedIn) {
         const content = generateTwitterContent(brain);
         if (content) {
@@ -1880,7 +1985,7 @@ async function main() {
 
     // ── PINTEREST ──
     if (platformsToPost.includes('pinterest')) {
-      const loggedIn = await pinterestLogin(page);
+      const loggedIn = await loginWithCookies('pinterest', page, pinterestLogin);
       if (loggedIn) {
         const content = generatePinterestContent(brain);
         if (content) {
