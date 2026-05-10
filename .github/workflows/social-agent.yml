@@ -25,14 +25,15 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Chrome dependencies
+      - name: Install Chrome dependencies + xvfb
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 \
             libxdamage1 libxrandr2 libgbm1 libasound2t64 \
             libpango-1.0-0 libcairo2 libatspi2.0-0 \
-            libxshmfence1 libx11-xcb1
+            libxshmfence1 libx11-xcb1 \
+            xvfb
 
       - name: Install Puppeteer + dependencies
         run: npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth nodemailer
@@ -56,4 +57,4 @@ jobs:
           PINTEREST_USERNAME: ${{ secrets.PINTEREST_USERNAME }}
           PINTEREST_PASSWORD: ${{ secrets.PINTEREST_PASSWORD }}
           PINTEREST_EMAIL: ${{ secrets.PINTEREST_EMAIL }}
-        run: node .github/workflows/scripts/social-agent.js
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1366x768x24" node .github/workflows/scripts/social-agent.js

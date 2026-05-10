@@ -511,7 +511,7 @@ async function launchBrowser() {
   // - iframe contentWindow
   // - media codecs
   const browser = await puppeteer.launch({
-    headless: 'new',
+    headless: false,  // Run headed with xvfb — bypasses headless detection
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
