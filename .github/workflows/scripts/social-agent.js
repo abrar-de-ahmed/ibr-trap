@@ -2349,9 +2349,9 @@ function commitAndPush() {
   try {
     execSync('git config user.name "Social Agent"', { stdio: 'pipe' });
     execSync('git config user.email "social-agent[bot]@users.noreply.github.com"', { stdio: 'pipe' });
-    execSync('mkdir -p data/cookies 2>/dev/null; git add data/brain.json data/config.json data/cookies/ 2>/dev/null', { stdio: 'pipe' });
+    execSync('mkdir -p data/cookies 2>/dev/null; git add data/brain.json data/cookies/ 2>/dev/null', { stdio: 'pipe' });
 
-    const status = execSync('git status --porcelain data/brain.json data/config.json data/cookies/ 2>/dev/null', { stdio: 'pipe' }).toString().trim();
+    const status = execSync('git status --porcelain data/brain.json data/cookies/ 2>/dev/null', { stdio: 'pipe' }).toString().trim();
     if (status) {
       execSync(`git commit -m "social-agent: ${TODAY} auto-post + engagement [skip ci]"`, { stdio: 'pipe' });
       execSync('git push', { stdio: 'pipe' });
