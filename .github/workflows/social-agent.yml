@@ -49,6 +49,7 @@ jobs:
           REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
           REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
           REDDIT_EMAIL: ${{ secrets.REDDIT_EMAIL }}
+          REDDIT_OAUTH_TOKEN: ${{ secrets.REDDIT_OAUTH_TOKEN }}
           # Twitter/X credentials
           TWITTER_USERNAME: ${{ secrets.TWITTER_USERNAME }}
           TWITTER_PASSWORD: ${{ secrets.TWITTER_PASSWORD }}

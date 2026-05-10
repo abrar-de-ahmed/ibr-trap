@@ -640,25 +640,94 @@ async function loginWithCookies(platform, page, loginFn) {
 // ═══════════════════════════════════════════════════════════════
 
 async function redditLogin(page) {
+  // ═══ STRATEGY 1: OAuth Bearer Token (works from ANY IP — no login page needed) ═══
+  const oauthToken = process.env.REDDIT_OAUTH_TOKEN;
+  if (oauthToken) {
+    log('Reddit: Attempting OAuth Bearer token login...');
+    try {
+      const result = await page.evaluate(async (token) => {
+        try {
+          const resp = await fetch('https://oauth.reddit.com/api/v1/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (resp.status === 200) {
+            const data = await resp.json();
+            return { ok: true, username: data.name, id: data.id };
+          }
+          return { ok: false, status: resp.status };
+        } catch (e) { return { ok: false, error: e.message }; }
+      }, oauthToken);
+
+      if (result.ok) {
+        log(`Reddit: OAuth login successful! User: ${result.username} (ID: ${result.id})`);
+        // Store token in localStorage so API calls from page context can use it
+        await page.evaluate((token) => {
+          localStorage.setItem('reddit_oauth_token', token);
+        }, oauthToken);
+        return true;
+      }
+      log(`Reddit: OAuth token failed (status: ${result.status}), falling back...`);
+    } catch (e) {
+      log(`Reddit: OAuth login error: ${e.message}`);
+    }
+  }
+
+  // ═══ STRATEGY 2: OAuth token from cookies file ═══
+  const cookiesFile = path.join(COOKIES_DIR, 'reddit-cookies.json');
+  if (fs.existsSync(cookiesFile)) {
+    try {
+      const cookieData = readJSON(cookiesFile);
+      if (cookieData && cookieData.oauth_token) {
+        const tokenExpiry = cookieData.oauth_expires || 0;
+        const now = Date.now();
+        if (now < tokenExpiry) {
+          log(`Reddit: Found OAuth token in cookies file (expires in ${Math.round((tokenExpiry - now) / 3600000)}h)`);
+          try {
+            const result = await page.evaluate(async (token) => {
+              try {
+                const resp = await fetch('https://oauth.reddit.com/api/v1/me', {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (resp.status === 200) {
+                  const data = await resp.json();
+                  return { ok: true, username: data.name, id: data.id };
+                }
+                return { ok: false, status: resp.status };
+              } catch (e) { return { ok: false, error: e.message }; }
+            }, cookieData.oauth_token);
+
+            if (result.ok) {
+              log(`Reddit: OAuth login via cookies file! User: ${result.username}`);
+              await page.evaluate((token) => {
+                localStorage.setItem('reddit_oauth_token', token);
+              }, cookieData.oauth_token);
+              return true;
+            }
+            log(`Reddit: Cookies file OAuth token expired (status: ${result.status})`);
+          } catch (e) {
+            log(`Reddit: Cookies file OAuth error: ${e.message}`);
+          }
+        } else {
+          log(`Reddit: OAuth token in cookies file expired ${(tokenExpiry - now) / 1000}s ago`);
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // ═══ STRATEGY 3: Username/password login (fallback) ═══
   const username = process.env.REDDIT_USERNAME;
   const password = process.env.REDDIT_PASSWORD;
   if (!username || !password) {
-    log('Reddit: No credentials, skipping');
+    log('Reddit: No credentials or valid token, skipping');
     return false;
   }
 
   try {
-    // ═══ STRATEGY 1: API-based login ═══
-    // Reddit's /api/login/ is a POST endpoint that returns session cookies.
-    // This completely bypasses the need for JavaScript rendering — it works
-    // even when Reddit blocks datacenter IPs from loading the React app.
     log('Reddit: Attempting API-based login (/api/login/)...');
-    
     let apiLoginOk = false;
     try {
       await page.goto('https://www.reddit.com/', { waitUntil: 'load', timeout: 20000 });
       await humanDelay(1000, 2000);
-      
       const apiResult = await page.evaluate(async (creds) => {
         try {
           const resp = await fetch('https://www.reddit.com/api/login/', {
@@ -671,7 +740,6 @@ async function redditLogin(page) {
           return { ok: data.json?.data !== undefined, errors: data.json?.errors };
         } catch (e) { return { ok: false, errors: [[e.message]] }; }
       }, { username, password });
-      
       if (apiResult.ok) {
         log('Reddit: API login succeeded!');
         apiLoginOk = true;
@@ -681,11 +749,7 @@ async function redditLogin(page) {
     } catch (e) {
       log(`Reddit: API login exception: ${e.message}`);
     }
-    
-    // If API login worked, verify session and return
     if (apiLoginOk) {
-      await humanDelay(2000, 3000);
-      await page.goto('https://www.reddit.com/', { waitUntil: 'domcontentloaded', timeout: 20000 });
       await humanDelay(2000, 3000);
       const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
       const hasUserMenu = await page.$('#header-profile--flyout, [data-testid="header-profile"]').catch(() => null);
@@ -693,14 +757,12 @@ async function redditLogin(page) {
         log('Reddit: Session verified via API login!');
         return true;
       }
-      log('Reddit: API login OK but session not verified, falling back to web login...');
     }
-    
-    // ═══ STRATEGY 2: Web login via old.reddit.com ═══
+
+    // ═══ STRATEGY 4: old.reddit.com web login ═══
     log('Reddit: Trying old.reddit.com web login...');
     await page.goto('https://old.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 45000 });
     await humanDelay(2000, 3000);
-    
     const formFound = await page.$('#user_login, input[name="username"], input[type="text"]').catch(() => null);
     if (!formFound) {
       log('Reddit: old.reddit.com form also not rendered — IP may be blocked');
@@ -708,19 +770,11 @@ async function redditLogin(page) {
       return false;
     }
     log('Reddit: old.reddit.com login form found!');
-
     await humanDelay(1000, 2000);
     await randomMouseMove(page);
     await humanDelay(500, 1000);
 
-    // Fill username (old.reddit.com uses #user_login)
-    const usernameSelectors = [
-      '#user_login',
-      '#login-username',
-      'input[name="username"]',
-      'input[autocomplete="username"]',
-      'input[type="text"]'
-    ];
+    const usernameSelectors = ['#user_login', '#login-username', 'input[name="username"]', 'input[autocomplete="username"]', 'input[type="text"]'];
     let usernameFilled = false;
     for (const sel of usernameSelectors) {
       try {
@@ -737,17 +791,14 @@ async function redditLogin(page) {
         }
       } catch (e) { /* next */ }
     }
-
     if (!usernameFilled) {
       log('Reddit: Could not find username field');
-      await takeScreenshot(page, 'reddit-no-username-field');
       return false;
     }
 
     await humanDelay(1500, 2500);
     await randomMouseMove(page);
 
-    // Fill password (old.reddit.com uses #passwd)
     const passwordSelectors = ['#passwd', '#login-password', 'input[name="password"]', 'input[type="password"]'];
     let passwordFilled = false;
     for (const sel of passwordSelectors) {
@@ -765,25 +816,16 @@ async function redditLogin(page) {
         }
       } catch (e) { /* next */ }
     }
-
     if (!passwordFilled) {
       log('Reddit: Could not find password field');
-      await takeScreenshot(page, 'reddit-no-password-field');
       return false;
     }
 
     await humanDelay(800, 1500);
     await randomMouseMove(page);
 
-    // Submit login
     let submitted = false;
-    // old.reddit.com uses a <button type="submit"> inside the login form
-    const submitSelectors = [
-      'button[type="submit"]',
-      'button.login-button',
-      'input[type="submit"]',
-      'button[class*="login" i]',
-    ];
+    const submitSelectors = ['button[type="submit"]', 'button.login-button', 'input[type="submit"]', 'button[class*="login" i]'];
     for (const sel of submitSelectors) {
       try {
         const btn = await page.$(sel);
@@ -798,15 +840,13 @@ async function redditLogin(page) {
       } catch (e) { /* next */ }
     }
     if (!submitted) {
-      // Text-match fallback
       try {
         const buttons = await page.$$('button');
         for (const btn of buttons) {
-          const t = await page.evaluate(el => el.textContent.trim(), btn);
-          if (t.toLowerCase().includes('log in') || t.toLowerCase().includes('sign in')) {
+          const t = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+          if (t.includes('log in') || t.includes('sign in')) {
             await btn.click();
             submitted = true;
-            log(`Reddit: Submit clicked via text: "${t}"`);
             break;
           }
         }
@@ -820,35 +860,26 @@ async function redditLogin(page) {
     try { await waitForNav(page, 15000); } catch (e) { /* ok */ }
     await humanDelay(3000, 5000);
 
-    // Verify login
     let loggedIn = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       const currentUrl = page.url();
       log(`Reddit: Verify attempt ${attempt + 1}, URL: ${currentUrl}`);
-      
       const hasAvatar = await page.$('#header-profile--flyout, button[aria-label*="User"]').catch(() => null);
       const isHome = currentUrl.includes('reddit.com/') && !currentUrl.includes('login') && !currentUrl.includes('consent');
-      
       if (isHome || hasAvatar) {
         log('Reddit: Login successful!');
         loggedIn = true;
         break;
       }
-      
       const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
-      
-      if (bodyText.includes('incorrect password') || bodyText.includes('wrong password') || bodyText.includes('invalid username') || bodyText.includes('that username doesn\'t exist')) {
-        log(`Reddit: Invalid credentials`);
-        await takeScreenshot(page, 'reddit-invalid-credentials');
+      if (bodyText.includes('incorrect password') || bodyText.includes('wrong password') || bodyText.includes('invalid username')) {
+        log('Reddit: Invalid credentials');
         break;
       }
-      
       if (bodyText.includes('verify your email') || bodyText.includes('two-factor') || bodyText.includes('unusual activity')) {
-        log(`Reddit: Additional verification required`);
-        await takeScreenshot(page, 'reddit-verification-required');
+        log('Reddit: Additional verification required');
         break;
       }
-      
       const isConsent = currentUrl.includes('consent') || currentUrl.includes('authorize') ||
         (bodyText.includes('continue to reddit') && bodyText.includes('allow'));
       if (isConsent) {
@@ -867,12 +898,10 @@ async function redditLogin(page) {
           continue;
         } catch (e) { /* proceed */ }
       }
-      
       log(`Reddit: Still on login page. Snippet: "${bodyText.substring(0, 200)}"`);
       await takeScreenshot(page, `reddit-stuck-${attempt}`);
       await humanDelay(4000, 6000);
     }
-
     if (!loggedIn) {
       log(`Reddit: Login failed. Final URL: ${page.url()}`);
       await takeScreenshot(page, 'reddit-login-failed-final');
@@ -890,20 +919,71 @@ async function redditPost(page, content) {
   try {
     log(`Reddit: Posting to r/${subreddit}...`);
 
-    // ═══ STRATEGY 1: API-based posting via page.evaluate fetch ═══
-    // This works even when Reddit's web UI is IP-blocked, as long as we have cookies
-    log('Reddit: Attempting API-based post...');
+    // ═══ STRATEGY 1: OAuth Bearer Token API posting (works from ANY IP) ═══
+    // Uses oauth.reddit.com which accepts Bearer tokens directly
+    const oauthToken = process.env.REDDIT_OAUTH_TOKEN || await page.evaluate(() => localStorage.getItem('reddit_oauth_token'));
+    if (oauthToken) {
+      log('Reddit: Attempting OAuth API post...');
+      const apiResult = await page.evaluate(async (params) => {
+        try {
+          // First, get the modhash using OAuth
+          const meResp = await fetch('https://oauth.reddit.com/api/v1/me', {
+            headers: { 'Authorization': `Bearer ${params.token}` }
+          });
+          if (meResp.status !== 200) {
+            return { ok: false, error: `OAuth check failed: ${meResp.status}` };
+          }
+
+          // Submit post using OAuth
+          const body = new URLSearchParams({
+            api_type: 'json',
+            kind: 'self',
+            sr: params.subreddit,
+            title: params.title,
+            text: params.body + '\n\n' + params.siteUrl,
+            // No uh (modhash) needed with OAuth — the Bearer token is the auth
+            submit: 'Submit',
+          });
+
+          const postResp = await fetch('https://oauth.reddit.com/api/submit/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Authorization': `Bearer ${params.token}`,
+            },
+            body: body.toString(),
+          });
+
+          const postData = await postResp.json();
+          if (postData.json && postData.json.data && postData.json.data.url) {
+            return { ok: true, url: 'https://www.reddit.com' + postData.json.data.url };
+          }
+          if (postData.json && postData.json.errors && postData.json.errors.length > 0) {
+            return { ok: false, error: JSON.stringify(postData.json.errors) };
+          }
+          return { ok: false, error: 'Unexpected OAuth response: ' + JSON.stringify(postData).substring(0, 300) };
+        } catch (e) {
+          return { ok: false, error: e.message };
+        }
+      }, { token: oauthToken, subreddit, title: content.title, body: content.body, siteUrl: SITE_URL });
+
+      if (apiResult.ok) {
+        log(`Reddit: Post created via OAuth API! URL: ${apiResult.url}`);
+        return { success: true, post_url: apiResult.url };
+      }
+      log(`Reddit: OAuth API post failed: ${apiResult.error} — trying regular API...`);
+    }
+
+    // ═══ STRATEGY 2: Regular API posting with cookies ═══
+    log('Reddit: Attempting regular API-based post...');
     const apiResult = await page.evaluate(async (postContent) => {
       try {
-        // First, get the CSRF/modhash token needed for posting
         const csrfResp = await fetch('https://www.reddit.com/api/me.json', { credentials: 'include' });
         const csrfData = await csrfResp.json();
         if (!csrfData.data || !csrfData.data.modhash) {
           return { ok: false, error: 'Could not get modhash — not logged in via API' };
         }
         const modhash = csrfData.data.modhash;
-
-        // Post via Reddit's API endpoint
         const body = new URLSearchParams({
           api_type: 'json',
           kind: 'self',
@@ -913,14 +993,12 @@ async function redditPost(page, content) {
           uh: modhash,
           submit: 'Submit',
         });
-
         const postResp = await fetch('https://www.reddit.com/api/submit/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: body.toString(),
           credentials: 'include',
         });
-
         const postData = await postResp.json();
         if (postData.json && postData.json.data && postData.json.data.url) {
           return { ok: true, url: 'https://www.reddit.com' + postData.json.data.url };
@@ -935,17 +1013,16 @@ async function redditPost(page, content) {
     }, { subreddit, title: content.title, body: content.body, siteUrl: SITE_URL });
 
     if (apiResult.ok) {
-      log(`Reddit: Post created via API! URL: ${apiResult.url}`);
+      log(`Reddit: Post created via regular API! URL: ${apiResult.url}`);
       return { success: true, post_url: apiResult.url };
     }
-    log(`Reddit: API post failed: ${apiResult.error} — trying web UI...`);
+    log(`Reddit: Regular API post failed: ${apiResult.error} — trying web UI...`);
 
-    // ═══ STRATEGY 2: Web UI posting via old.reddit.com ═══
+    // ═══ STRATEGY 3: Web UI posting via old.reddit.com ═══
     log('Reddit: Trying old.reddit.com web posting...');
     await page.goto(`https://old.reddit.com/r/${subreddit}/submit/`, { waitUntil: 'networkidle2', timeout: 30000 });
     await humanDelay(2000, 4000);
 
-    // Check if we're actually logged in on old.reddit.com
     const isLoggedInOld = await page.evaluate(() => {
       const userLink = document.querySelector('#header-bottom-right a[href*="/user/"], .user > a');
       return !!userLink;
@@ -956,44 +1033,31 @@ async function redditPost(page, content) {
       return { success: false, error: 'Not logged in on old.reddit.com' };
     }
 
-    // Fill the title (old.reddit.com uses #title)
     const titleFilled = await humanType(page, '#title, textarea[name="title"], input[name="title"]', content.title, { delay: 50 });
     if (!titleFilled) {
-      log('Reddit: Could not fill title on old.reddit.com');
       return { success: false, error: 'Title field not found on old.reddit.com' };
     }
-
     await humanDelay(800, 1500);
 
-    // Fill the body
     const bodyText = content.body + '\n\n' + SITE_URL;
     const bodyFilled = await humanType(page, '#text, textarea[name="text"], textarea#text-field', bodyText, { delay: 30 });
     if (!bodyFilled) {
-      log('Reddit: Could not fill body on old.reddit.com');
       return { success: false, error: 'Body field not found on old.reddit.com' };
     }
-
     await humanDelay(1000, 2000);
 
-    // Click submit button
     let submitted = await safeClick(page, 'button[name="submit"], input[type="submit"], button.btn');
-    if (!submitted) {
-      await page.keyboard.press('Enter');
-      log('Reddit: Submit via Enter');
-    }
+    if (!submitted) await page.keyboard.press('Enter');
 
     await waitForNav(page, 10000);
     await humanDelay(3000, 5000);
 
-    // Verify
     const pageUrl = page.url();
     if (pageUrl.includes('/comments/')) {
       log(`Reddit: Post created successfully via old.reddit.com!`);
       return { success: true, post_url: pageUrl };
     }
 
-    log(`Reddit: Post may have been created (URL: ${pageUrl})`);
-    // Check for error text
     const errorText = await page.evaluate(() => {
       const errEl = document.querySelector('.error, .form-error, [class*="error"]');
       return errEl ? errEl.textContent.trim() : null;
