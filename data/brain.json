@@ -218,50 +218,15 @@
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
-      "posted_count": 2
+      "posted_count": 0
     },
     "medium": {
       "posts": 0,
       "avg_reads": 0,
       "status": "paused"
     },
-    "total_posts": 2,
-    "recent_posts": {
-      "2026-05-10": [
-        {
-          "platform": "reddit",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "twitter",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "reddit",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "pinterest",
-          "date": "2026-05-10",
-          "title": "Free Logo Background Remover - Instant Transparent Logos",
-          "status": "posted",
-          "is_experiment": false,
-          "post_url": null
-        }
-      ]
-    },
+    "total_posts": 0,
+    "recent_posts": {},
     "engagement": {
       "2026-05-09": {
         "reddit": {

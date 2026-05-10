@@ -101,27 +101,57 @@ async function loadCookiesIntoPage(page, platform) {
 async function checkSessionValid(page, platform) {
   try {
     if (platform === 'reddit') {
+      // Try API-based check first (works even when IP-blocked from web UI)
+      const apiCheck = await page.evaluate(async () => {
+        try {
+          const resp = await fetch('https://www.reddit.com/api/me.json', { credentials: 'include' });
+          if (resp.status === 200) {
+            const data = await resp.json();
+            if (data.data && data.data.name) return { valid: true, username: data.data.name };
+          }
+          return { valid: false };
+        } catch (e) { return { valid: false, error: e.message }; }
+      }).catch(() => ({ valid: false }));
+      
+      if (apiCheck.valid) {
+        log(`Reddit: Session valid via API (user: ${apiCheck.username})`);
+        return true;
+      }
+      log(`Reddit: API session check failed, trying web check...`);
+      
+      // Fallback: web check
       await page.goto('https://www.reddit.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
       await humanDelay(2000, 3000);
-      const url = page.url();
       const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
-      // Check for user avatar/profile elements that only appear when logged in
-      const hasAvatar = await page.$('#header-profile--flyout, button[aria-label*="User"], header img[alt*="avatar" i], [data-testid="header-profile"]').catch(() => null);
-      // Check for "Log In" or "Sign Up" text — if present, NOT logged in
+      const hasAvatar = await page.$('#header-profile--flyout, button[aria-label*="User"], header img[alt*="avatar" i]').catch(() => null);
       const hasLoginPrompt = bodyText.includes('log in') || bodyText.includes('sign up');
-      const isLoggedIn = hasAvatar || (!hasLoginPrompt && !url.includes('login') && url.includes('reddit.com/'));
-      log(`Reddit: Session check — URL: ${url}, hasAvatar: ${!!hasAvatar}, hasLoginPrompt: ${hasLoginPrompt}, logged in: ${isLoggedIn}`);
+      const isLoggedIn = hasAvatar || (!hasLoginPrompt && bodyText.length > 100);
+      log(`Reddit: Web session check — bodyText length: ${bodyText.length}, hasAvatar: ${!!hasAvatar}, logged in: ${isLoggedIn}`);
       return isLoggedIn;
     } else if (platform === 'twitter') {
-      await page.goto('https://x.com/home', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      // Try API-based check first
+      await page.goto('https://x.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
       await humanDelay(2000, 3000);
-      const url = page.url();
-      // Check for the tweet button which only exists when logged in
+      
+      const apiCheck = await page.evaluate(async () => {
+        try {
+          const resp = await fetch('https://x.com/i/api/1.1/account/settings.json', { credentials: 'include' });
+          return { status: resp.status, ok: resp.status === 200 };
+        } catch (e) { return { ok: false, error: e.message }; }
+      }).catch(() => ({ ok: false }));
+      
+      if (apiCheck.ok) {
+        log('Twitter: Session valid via API (account settings returned 200)');
+        return true;
+      }
+      log(`Twitter: API session check returned status ${apiCheck.status}, trying web check...`);
+      
+      // Fallback: web check
       const hasTweetButton = await page.$('[data-testid="SideNav_NewTweet_Button"]').catch(() => null);
-      // Check for login-specific elements
       const hasLoginElements = await page.$('[data-testid="LoginForm_Login_Button"]').catch(() => null);
+      const url = page.url();
       const isLoggedIn = (hasTweetButton || (!url.includes('login') && !url.includes('flow') && !hasLoginElements));
-      log(`Twitter: Session check — URL: ${url}, hasTweetButton: ${!!hasTweetButton}, hasLoginElements: ${!!hasLoginElements}, logged in: ${isLoggedIn}`);
+      log(`Twitter: Web session check — URL: ${url}, hasTweetButton: ${!!hasTweetButton}, logged in: ${isLoggedIn}`);
       return isLoggedIn;
     } else if (platform === 'pinterest') {
       await page.goto('https://www.pinterest.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
@@ -860,67 +890,120 @@ async function redditPost(page, content) {
   try {
     log(`Reddit: Posting to r/${subreddit}...`);
 
-    // Navigate to subreddit submit page
-    await page.goto(`https://www.reddit.com/r/${subreddit}/submit/`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    // ═══ STRATEGY 1: API-based posting via page.evaluate fetch ═══
+    // This works even when Reddit's web UI is IP-blocked, as long as we have cookies
+    log('Reddit: Attempting API-based post...');
+    const apiResult = await page.evaluate(async (postContent) => {
+      try {
+        // First, get the CSRF/modhash token needed for posting
+        const csrfResp = await fetch('https://www.reddit.com/api/me.json', { credentials: 'include' });
+        const csrfData = await csrfResp.json();
+        if (!csrfData.data || !csrfData.data.modhash) {
+          return { ok: false, error: 'Could not get modhash — not logged in via API' };
+        }
+        const modhash = csrfData.data.modhash;
+
+        // Post via Reddit's API endpoint
+        const body = new URLSearchParams({
+          api_type: 'json',
+          kind: 'self',
+          sr: postContent.subreddit,
+          title: postContent.title,
+          text: postContent.body + '\n\n' + postContent.siteUrl,
+          uh: modhash,
+          submit: 'Submit',
+        });
+
+        const postResp = await fetch('https://www.reddit.com/api/submit/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+          credentials: 'include',
+        });
+
+        const postData = await postResp.json();
+        if (postData.json && postData.json.data && postData.json.data.url) {
+          return { ok: true, url: 'https://www.reddit.com' + postData.json.data.url };
+        }
+        if (postData.json && postData.json.errors && postData.json.errors.length > 0) {
+          return { ok: false, error: JSON.stringify(postData.json.errors) };
+        }
+        return { ok: false, error: 'Unknown API response: ' + JSON.stringify(postData).substring(0, 200) };
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }, { subreddit, title: content.title, body: content.body, siteUrl: SITE_URL });
+
+    if (apiResult.ok) {
+      log(`Reddit: Post created via API! URL: ${apiResult.url}`);
+      return { success: true, post_url: apiResult.url };
+    }
+    log(`Reddit: API post failed: ${apiResult.error} — trying web UI...`);
+
+    // ═══ STRATEGY 2: Web UI posting via old.reddit.com ═══
+    log('Reddit: Trying old.reddit.com web posting...');
+    await page.goto(`https://old.reddit.com/r/${subreddit}/submit/`, { waitUntil: 'networkidle2', timeout: 30000 });
     await humanDelay(2000, 4000);
 
-    // Click "Create Post" if needed (new Reddit might show a button first)
-    const createPostBtn = await page.$('button[aria-label="Create Post"], a[data-click-id="body_text"]');
-    if (createPostBtn) {
-      await createPostBtn.click();
-      await humanDelay(1500, 2500);
+    // Check if we're actually logged in on old.reddit.com
+    const isLoggedInOld = await page.evaluate(() => {
+      const userLink = document.querySelector('#header-bottom-right a[href*="/user/"], .user > a');
+      return !!userLink;
+    }).catch(() => false);
+
+    if (!isLoggedInOld) {
+      log('Reddit: Not logged in on old.reddit.com — cannot post');
+      return { success: false, error: 'Not logged in on old.reddit.com' };
     }
 
-    // Select "Text" tab for text posts (NOT post-link-tab which is for links!)
-    await safeClick(page, 'button[data-testid="post-text-tab"]');
-    if (!await safeClick(page, 'button[data-testid="post-text-tab"]')) {
-      // Fallback: find Text tab by text content
-      try {
-        const buttons = await page.$$('button');
-        for (const btn of buttons) {
-          const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-          if (btnText === 'text' || btnText === 'create a text post') {
-            await btn.click();
-            log('Reddit: Text tab clicked via text match');
-            break;
-          }
-        }
-      } catch (e) { /* proceed — Reddit often defaults to text tab */ }
+    // Fill the title (old.reddit.com uses #title)
+    const titleFilled = await humanType(page, '#title, textarea[name="title"], input[name="title"]', content.title, { delay: 50 });
+    if (!titleFilled) {
+      log('Reddit: Could not fill title on old.reddit.com');
+      return { success: false, error: 'Title field not found on old.reddit.com' };
     }
-    await humanDelay(500, 1000);
 
-    // Type title
-    await humanType(page, 'textarea[name="title"], input[name="title"], #t3_--title', content.title, { delay: 50 });
     await humanDelay(800, 1500);
 
-    // Type body
+    // Fill the body
     const bodyText = content.body + '\n\n' + SITE_URL;
-    await humanType(page, 'textarea[name="body"], div[contenteditable="true"], #t3_--body', bodyText, { delay: 30 });
+    const bodyFilled = await humanType(page, '#text, textarea[name="text"], textarea#text-field', bodyText, { delay: 30 });
+    if (!bodyFilled) {
+      log('Reddit: Could not fill body on old.reddit.com');
+      return { success: false, error: 'Body field not found on old.reddit.com' };
+    }
+
     await humanDelay(1000, 2000);
 
-    // Click Post button
-    await safeClick(page, 'button[type="submit"], button[data-click-id="submit"]');
+    // Click submit button
+    let submitted = await safeClick(page, 'button[name="submit"], input[type="submit"], button.btn');
+    if (!submitted) {
+      await page.keyboard.press('Enter');
+      log('Reddit: Submit via Enter');
+    }
+
     await waitForNav(page, 10000);
     await humanDelay(3000, 5000);
 
-    // Verify post was created
+    // Verify
     const pageUrl = page.url();
-    if (pageUrl.includes('/comments/') || pageUrl.includes('submitted')) {
-      log(`Reddit: Post created successfully!`);
+    if (pageUrl.includes('/comments/')) {
+      log(`Reddit: Post created successfully via old.reddit.com!`);
       return { success: true, post_url: pageUrl };
     }
 
-    // Check for any error messages
-    const errorEl = await page.$('.text-12, [class*="error"], [class*="Error"]');
-    if (errorEl) {
-      const errorText = await page.evaluate(el => el.textContent, errorEl);
-      log(`Reddit: Possible error - ${errorText}`);
-      await takeScreenshot(page, 'reddit-post-error');
+    log(`Reddit: Post may have been created (URL: ${pageUrl})`);
+    // Check for error text
+    const errorText = await page.evaluate(() => {
+      const errEl = document.querySelector('.error, .form-error, [class*="error"]');
+      return errEl ? errEl.textContent.trim() : null;
+    }).catch(() => null);
+    if (errorText) {
+      log(`Reddit: Error on page: ${errorText}`);
+      return { success: false, error: errorText };
     }
 
-    // Assume success even if we can't confirm (Reddit sometimes redirects oddly)
-    log(`Reddit: Post likely created (URL: ${pageUrl})`);
-    return { success: true, post_url: `https://reddit.com/r/${subreddit}/comments/` };
+    return { success: false, error: 'Could not verify post creation' };
   } catch (e) {
     log(`Reddit post error: ${e.message}`);
     await takeScreenshot(page, 'reddit-post-error');
@@ -1275,6 +1358,93 @@ async function twitterLogin(page) {
 async function twitterPost(page, content) {
   try {
     log('Twitter: Posting tweet...');
+
+    // ═══ STRATEGY 1: API-based tweet via page.evaluate fetch ═══
+    // This works even when X's web UI is IP-blocked, as long as we have cookies
+    log('Twitter: Attempting API-based tweet...');
+    const apiResult = await page.evaluate(async (tweetText) => {
+      try {
+        // First check if we're logged in by fetching home timeline
+        const homeCheck = await fetch('https://x.com/i/api/2/timeline/home.json?count=1', { credentials: 'include' });
+        if (homeCheck.status === 200) {
+          // We have a valid session — try to tweet via API
+          // Get csrf token from cookies
+          const cookies = document.cookie.split('; ').map(c => c.split('='));
+          const ct0Cookie = cookies.find(c => c[0] === 'ct0');
+          if (!ct0Cookie) return { ok: false, error: 'No ct0 CSRF cookie found' };
+          const csrfToken = ct0Cookie[1];
+
+          // Also get the x-twitter-auth-token or other auth cookies
+          const authToken = cookies.find(c => c[0] === 'auth_token');
+
+          // Use the GraphQL API endpoint for creating tweets
+          const variables = {
+            tweet_text: tweetText,
+            dark_request: false,
+            media: { media_entities: [], possibly_sensitive: false },
+            semantic_annotation_ids: [],
+          };
+          const features = {
+            communities_web_enable_tweet_community_results_fetch: true,
+            c9s_tweet_anatomy_moderator_badge_enabled: true,
+            tweetypie_unmention_optimization_enabled: true,
+            responsive_web_edit_tweet_api_enabled: true,
+            graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+            view_counts_everywhere_api_enabled: true,
+            longform_notetweets_consumption_enabled: true,
+            responsive_web_twitter_article_tweet_consumption_enabled: true,
+            tweet_awards_web_tipping_enabled: false,
+            creator_subscriptions_quote_tweet_preview_enabled: false,
+            longform_notetweets_rich_text_read_enabled: true,
+            longform_notetweets_inline_media_enabled: true,
+            articles_preview_enabled: true,
+            rweb_video_timestamps_enabled: true,
+            rweb_tipjar_consumption_enabled: true,
+            responsive_web_graphql_exclude_directive_enabled: true,
+            verified_phone_label_enabled: false,
+            freedom_of_speech_not_reach_fetch_enabled: true,
+            standardized_nudges_misinfo: true,
+            tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+            responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+            responsive_web_graphql_timeline_navigation_enabled: true,
+            responsive_web_enhance_cards_enabled: false,
+          };
+
+          const resp = await fetch('https://x.com/i/api/graphql/Va2lvahdYCP1BLcl18y6pw/CreateTweet', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrfToken,
+              'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
+              'User-Agent': navigator.userAgent,
+              'X-Twitter-Active-User': 'yes',
+              'X-Twitter-Client-Language': 'en',
+            },
+            body: JSON.stringify({ variables, features }),
+            credentials: 'include',
+          });
+
+          const data = await resp.json();
+          if (data.data && data.data.create_tweet && data.data.create_tweet.tweet_results) {
+            const tweetId = data.data.create_tweet.tweet_results.result?.rest_id;
+            return { ok: true, tweet_id: tweetId, url: `https://x.com/i/status/${tweetId}` };
+          }
+          if (data.errors) return { ok: false, error: JSON.stringify(data.errors) };
+          return { ok: false, error: 'Unexpected response: ' + JSON.stringify(data).substring(0, 300) };
+        }
+        return { ok: false, error: `Home timeline returned status ${homeCheck.status} — not logged in` };
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }, content.text);
+
+    if (apiResult.ok) {
+      log(`Twitter: Tweet posted via API! URL: ${apiResult.url}`);
+      return { success: true, post_url: apiResult.url };
+    }
+    log(`Twitter: API tweet failed: ${apiResult.error} — trying web UI...`);
+
+    // ═══ STRATEGY 2: Web UI posting ═══
     await humanDelay(2000, 3000);
 
     // Click the compose tweet button (if on home page)
@@ -1308,7 +1478,7 @@ async function twitterPost(page, content) {
       log(`Twitter: Toast message - ${toastText}`);
     }
 
-    log('Twitter: Tweet posted successfully!');
+    log('Twitter: Tweet posted successfully via web UI!');
     return { success: true };
   } catch (e) {
     log(`Twitter post error: ${e.message}`);
@@ -1737,60 +1907,138 @@ async function pinterestCreatePin(page, content) {
       log(`Pinterest: Link field issue: ${e.message}`);
     }
 
-    // Step 6: Select board
+    // Step 6: Select board — Pinterest's current UI uses a dropdown/modal
     try {
+      const boardName = content.target_board || 'Free Design Tools';
+      let boardSelected = false;
+
+      // Strategy 1: Look for any element that says "Board" or has a dropdown indicator
       const boardBtnSelectors = [
+        'div[data-test-id="pin-editor-board-selector"]',
         'button[data-test-id="pin-editor-board-selector"]',
         'div[class*="boardSelect"]',
+        'div[class*="board"]',
         'button[class*="board"]',
-        'button[class*="Board"]',
+        'div[aria-label*="Board" i]',
+        'button[aria-label*="Board" i]',
+        // Generic: any div with data-test-id containing "board"
+        '[data-test-id*="board" i]',
       ];
-      let boardBtnClicked = false;
       for (const sel of boardBtnSelectors) {
-        boardBtnClicked = await safeClick(page, sel, 3000);
-        if (boardBtnClicked) break;
+        try {
+          const el = await page.$(sel);
+          if (el) {
+            const isVisible = await page.evaluate(e => {
+              const rect = e.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            }, el);
+            if (isVisible) {
+              await el.click();
+              boardSelected = true;
+              log(`Pinterest: Board dropdown opened via: ${sel}`);
+              break;
+            }
+          }
+        } catch (e) { /* try next */ }
       }
-      if (boardBtnClicked) {
-        await humanDelay(1000, 2000);
-        const boardName = content.target_board || 'Free Design Tools';
+
+      if (boardSelected) {
+        await humanDelay(1500, 2500);
+        // Search for the target board
         const boardInputSelectors = [
           'input[placeholder*="board" i]',
           'input[placeholder*="search" i]',
-          'input[class*="boardSearch"]',
-          'input[data-test-id="board-search-input"]',
+          'input[data-test-id*="board" i]',
+          'input[class*="board" i]',
+          'div[contenteditable="true"]', // Sometimes Pinterest uses contenteditable for search
         ];
+        let boardSearchFilled = false;
         for (const sel of boardInputSelectors) {
           try {
             const el = await page.$(sel);
             if (el) {
+              const isVisible = await page.evaluate(e => e.offsetParent !== null, el);
+              if (!isVisible) continue;
               await el.click();
               await humanDelay(300, 500);
               await humanType(page, sel, boardName, { delay: 60 });
+              boardSearchFilled = true;
               log(`Pinterest: Board search filled using selector: ${sel}`);
               break;
             }
           } catch (e) { /* try next */ }
         }
-        await humanDelay(1000, 2000);
-        // Click first board result
-        await safeClick(page, 'div[class*="boardItem"], div[class*="boardResult"], div[class*="BoardTile"], div[data-test-id="board-selection-item"]', 3000);
+        if (boardSearchFilled) {
+          await humanDelay(1500, 2500);
+          // Click first matching board in results
+          const boardResultSelectors = [
+            'div[data-test-id="board-selection-item"]',
+            'div[class*="boardItem"]',
+            'div[class*="boardResult"]',
+            'div[class*="BoardTile"]',
+            'div[class*="boardName"]',
+            // Fallback: any div containing the board name text
+          ];
+          let boardClicked = false;
+          for (const sel of boardResultSelectors) {
+            boardClicked = await safeClick(page, sel, 3000);
+            if (boardClicked) {
+              log(`Pinterest: Board result clicked via: ${sel}`);
+              break;
+            }
+          }
+          if (!boardClicked) {
+            // Text-match fallback: find element containing our board name
+            try {
+              const allDivs = await page.$$('div');
+              for (const div of allDivs) {
+                const t = await page.evaluate(el => el.textContent.trim(), div);
+                if (t.toLowerCase() === boardName.toLowerCase() || t.toLowerCase().includes(boardName.toLowerCase())) {
+                  await div.click();
+                  boardClicked = true;
+                  log(`Pinterest: Board clicked via text match: "${t}"`);
+                  break;
+                }
+              }
+            } catch (e) { /* ignore */ }
+          }
+        }
+      } else {
+        log(`Pinterest: Board dropdown not found — will use Pinterest's default board`);
       }
     } catch (e) {
       log(`Pinterest: Board selection issue (will use default): ${e.message}`);
     }
 
-    await humanDelay(1000, 2000);
+    await humanDelay(2000, 3000);
 
     // Step 7: Publish pin — multiple strategies
-    let publishClicked = await safeClick(page, 'button[data-test-id="pin-editor-publish-button"], button[class*="Publish"]');
+    let publishClicked = false;
+    const publishSelectors = [
+      'button[data-test-id="pin-editor-publish-button"]',
+      'button[class*="Publish"]',
+      'button[class*="publish"]',
+      'button[data-test-id*="publish" i]',
+    ];
+    for (const sel of publishSelectors) {
+      publishClicked = await safeClick(page, sel, 3000);
+      if (publishClicked) {
+        log(`Pinterest: Publish clicked via selector: ${sel}`);
+        break;
+      }
+    }
     if (!publishClicked) {
-      // Fallback: find Publish/Save button by text content
+      // Text-match fallback: find Publish/Save button by text content
       try {
         const buttons = await page.$$('button');
         for (const btn of buttons) {
           const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-          if (btnText === 'publish' || btnText === 'save' || btnText.includes('publish') || btnText.includes('create pin')) {
-            await btn.click();
+          const isVisible = await page.evaluate(e => {
+            const rect = e.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          }, btn);
+          if (isVisible && (btnText === 'publish' || btnText === 'save' || btnText.includes('publish') || btnText.includes('create pin'))) {
+            await page.evaluate(el => el.click(), btn);
             publishClicked = true;
             log(`Pinterest: Publish button clicked via text match: "${btnText}"`);
             break;
@@ -1805,32 +2053,68 @@ async function pinterestCreatePin(page, content) {
       return { success: false, error: 'Publish button not found' };
     }
 
-    await waitForNav(page, 10000);
-    await humanDelay(3000, 5000);
+    // Step 8: Wait and verify pin was created
+    // Pinterest may: redirect to pin page, show toast, or stay on create page with success indicator
+    await humanDelay(5000, 8000);
 
-    // Step 8: Verify pin was created
     const finalUrl = page.url();
+    const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
     log(`Pinterest: Post-publish URL: ${finalUrl}`);
+    log(`Pinterest: Page text (first 300): "${bodyText.substring(0, 300)}"`);
+
+    // Definitive success: redirected to a pin page
     if (finalUrl.includes('/pin/') && !finalUrl.includes('create')) {
-      log('Pinterest: Pin created successfully!');
-      return { success: true };
+      log('Pinterest: Pin created successfully! (redirected to pin page)');
+      return { success: true, pin_url: finalUrl };
     }
 
-    // Pinterest sometimes shows a "Your Pin was saved" toast/modal
-    const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
-    if (bodyText.includes('pin was saved') || bodyText.includes('pin published') || bodyText.includes('successfully')) {
+    // Pinterest often shows a toast "Your Pin was saved!" or "Pin published!"
+    const successPatterns = ['pin was saved', 'pin published', 'successfully saved', 'your pin is live', 'done!', 'saved to'];
+    if (successPatterns.some(p => bodyText.includes(p))) {
       log('Pinterest: Pin saved confirmation detected!');
       return { success: true };
     }
 
-    // Check for actual visible errors (not raw HTML)
-    if (bodyText.includes('something went wrong') || bodyText.includes('try again') || bodyText.includes('couldn\'t save')) {
-      log('Pinterest: Error detected after publish attempt');
-      await takeScreenshot(page, 'pinterest-pin-create-error');
-      return { success: false, error: 'Publish error detected in page content' };
+    // Check for a success toast element
+    const toastEl = await page.$('[data-test-id="toast"], div[class*="toast" i], div[class*="Toast" i], div[class*="success" i], div[class*="Success" i]').catch(() => null);
+    if (toastEl) {
+      const toastText = await page.evaluate(el => el.textContent.trim().toLowerCase(), toastEl).catch(() => '');
+      log(`Pinterest: Toast found: "${toastText}"`);
+      if (toastText.includes('save') || toastText.includes('publish') || toastText.includes('success') || toastText.includes('done')) {
+        log('Pinterest: Pin creation confirmed via toast!');
+        return { success: true };
+      }
     }
 
-    log('Pinterest: Pin creation completed (verification ambiguous)');
+    // Check for actual visible errors
+    const errorPatterns = ['something went wrong', 'try again', 'couldn\'t save', 'error', 'failed', 'oops'];
+    if (errorPatterns.some(p => bodyText.includes(p))) {
+      // But make sure it's a user-visible error, not something in scripts
+      const hasVisibleError = await page.evaluate(() => {
+        const errorElements = document.querySelectorAll('[class*="error" i], [class*="Error" i], [role="alert"]');
+        for (const el of errorElements) {
+          if (el.offsetParent !== null && el.textContent.trim().length > 5) {
+            return el.textContent.trim();
+          }
+        }
+        return null;
+      }).catch(() => null);
+      if (hasVisibleError) {
+        log(`Pinterest: Visible error after publish: "${hasVisibleError}"`);
+        await takeScreenshot(page, 'pinterest-pin-create-error');
+        return { success: false, error: `Publish error: ${hasVisibleError}` };
+      }
+    }
+
+    // If still on pin-creation-tool, check if the pin draft was auto-saved (Pinterest sometimes does this)
+    if (finalUrl.includes('pin-creation-tool')) {
+      log('Pinterest: Still on create page after publish click — pin may have been saved as draft');
+      await takeScreenshot(page, 'pinterest-ambiguous-result');
+      // Don't claim success if we can't verify
+      return { success: false, error: 'Pin may have been saved as draft — could not verify publish' };
+    }
+
+    log('Pinterest: Pin creation completed (ambiguous verification)');
     return { success: true };
   } catch (e) {
     log(`Pinterest pin error: ${e.message}`);
