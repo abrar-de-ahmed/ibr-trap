@@ -1,12 +1,27 @@
 {
   "cookies": [
     {
-      "name": "session_tracker",
-      "value": "nmnecdnlqloefmdppf.0.1778445140337.Z0FBQUFBQnFBT3RValNKd2JmRVliQzZCTUcxSnZ1RTQzV0xrRVJKRXlycERTelZvTFZKS1Z0bUtSUnV6MTVCTXUyNTQtYndyNTNqczlsQld5dk50ZzI1b1RHYzdyVE9halNVcnpnTGItTjRFNEFJTWFobEVSNXBTWm9aMW8wbjhkR0Rza0hIaWxDbzU",
+      "name": "chat:matrix-device-id",
+      "value": "\"7f8c85f76fd43750633095b9b9a6049a\"",
       "domain": ".reddit.com",
       "path": "/",
-      "expires": 1778452339.44269,
-      "size": 237,
+      "expires": -1,
+      "size": 55,
+      "httpOnly": false,
+      "secure": true,
+      "session": true,
+      "sameSite": "None",
+      "priority": "Medium",
+      "sourceScheme": "Secure",
+      "sameParty": false
+    },
+    {
+      "name": "csv",
+      "value": "2",
+      "domain": ".reddit.com",
+      "path": "/",
+      "expires": 1813004021.421435,
+      "size": 4,
       "httpOnly": false,
       "secure": true,
       "session": false,
@@ -46,51 +61,6 @@
       "sameParty": false
     },
     {
-      "name": "csv",
-      "value": "2",
-      "domain": ".reddit.com",
-      "path": "/",
-      "expires": 1813004021.421435,
-      "size": 4,
-      "httpOnly": false,
-      "secure": true,
-      "session": false,
-      "sameSite": "None",
-      "priority": "Medium",
-      "sourceScheme": "Secure",
-      "sameParty": false
-    },
-    {
-      "name": "_grecaptcha",
-      "value": "09AKhCRwj8QL9gEeQFNK1Yu8w__urDjZXNXhTagSrTimmRwOZhaCje0RiicRuwsTwNPr5jZSBd9eH_odMU_QBU-gNlq6W-P_8BoJA_D8IiOjfS47eTs0oRdqRVhCsQ-a63",
-      "domain": ".reddit.com",
-      "path": "/",
-      "expires": -1,
-      "size": 141,
-      "httpOnly": false,
-      "secure": true,
-      "session": true,
-      "sameSite": "Lax",
-      "priority": "Medium",
-      "sourceScheme": "Secure",
-      "sameParty": false
-    },
-    {
-      "name": "chat:matrix-device-id",
-      "value": "\"7f8c85f76fd43750633095b9b9a6049a\"",
-      "domain": ".reddit.com",
-      "path": "/",
-      "expires": -1,
-      "size": 55,
-      "httpOnly": false,
-      "secure": true,
-      "session": true,
-      "sameSite": "None",
-      "priority": "Medium",
-      "sourceScheme": "Secure",
-      "sameParty": false
-    },
-    {
       "name": "edgebucket",
       "value": "AXs43NU9bHEteGj6Lu",
       "domain": ".reddit.com",
@@ -120,16 +90,16 @@
       "sameParty": false
     },
     {
-      "name": "loid",
-      "value": "000000002dyli9nslu.2.1778261249719.Z0FBQUFBQnFBT2IxeV9sdTc0OVBSV1k1ekNFMk9QU0Y3RE5CbjhrcS1oczZtMXdiVEZYTENxcXgzSnhwNnlycVZmOG15cGpJSU1yc28tbkxjM2FNUnE3aGxMa1hPZlg5WllXemtwaV9iblhoRE5oOXFDNzZ5M0Nyd3M3cU5uNUhwaVNBR3VUaXNHWnU",
+      "name": "_grecaptcha",
+      "value": "09AKhCRwj8QL9gEeQFNK1Yu8w__urDjZXNXhTagSrTimmRwOZhaCje0RiicRuwsTwNPr5jZSBd9eH_odMU_QBU-gNlq6W-P_8BoJA_D8IiOjfS47eTs0oRdqRVhCsQ-a63",
       "domain": ".reddit.com",
       "path": "/",
-      "expires": 1813004021.421322,
-      "size": 226,
+      "expires": -1,
+      "size": 141,
       "httpOnly": false,
       "secure": true,
-      "session": false,
-      "sameSite": "None",
+      "session": true,
+      "sameSite": "Lax",
       "priority": "Medium",
       "sourceScheme": "Secure",
       "sameParty": false
@@ -148,7 +118,37 @@
       "priority": "Medium",
       "sourceScheme": "Secure",
       "sameParty": false
+    },
+    {
+      "name": "session_tracker",
+      "value": "nmnecdnlqloefmdppf.0.1778445415809.Z0FBQUFBQnFBT3huZXZta2hWNlpfeFRqdFAxbXVlMWhSbnM4eFI5TThqZWVVSERRVFc1aTVVb3o5RU1QRTl6dHBFRExiRGpIekd1ZjlQb2txcjRiRGhPY0dVd1RXWklSZWtSaGZhalczWHNMVlo5b3pKMU43dzdNa0d6SlBBSnJYdEoyMm5MaVpRRGM",
+      "domain": ".reddit.com",
+      "path": "/",
+      "expires": 1778452614.907278,
+      "size": 237,
+      "httpOnly": false,
+      "secure": true,
+      "session": false,
+      "sameSite": "None",
+      "priority": "Medium",
+      "sourceScheme": "Secure",
+      "sameParty": false
+    },
+    {
+      "name": "loid",
+      "value": "000000002dyli9nslu.2.1778261249719.Z0FBQUFBQnFBT2IxeV9sdTc0OVBSV1k1ekNFMk9QU0Y3RE5CbjhrcS1oczZtMXdiVEZYTENxcXgzSnhwNnlycVZmOG15cGpJSU1yc28tbkxjM2FNUnE3aGxMa1hPZlg5WllXemtwaV9iblhoRE5oOXFDNzZ5M0Nyd3M3cU5uNUhwaVNBR3VUaXNHWnU",
+      "domain": ".reddit.com",
+      "path": "/",
+      "expires": 1813004021.421322,
+      "size": 226,
+      "httpOnly": false,
+      "secure": true,
+      "session": false,
+      "sameSite": "None",
+      "priority": "Medium",
+      "sourceScheme": "Secure",
+      "sameParty": false
     }
   ],
-  "saved_at": "2026-05-10T20:32:20.448Z"
+  "saved_at": "2026-05-10T20:36:55.912Z"
 }
