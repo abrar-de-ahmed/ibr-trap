@@ -1,1 +1,139 @@
-{"directories": [], "total_submitted": 0, "total_approved": 0}
+{
+  "directories": [
+    {
+      "id": 1,
+      "type": "directory",
+      "platform": "producthunt.com",
+      "name": "Product Hunt",
+      "submission_url": "https://www.producthunt.com/posts/new",
+      "site_url": "https://bgremoverdigital.craftedmindss.com",
+      "title": "BG Remover Digital - Free AI Background Remover",
+      "description": "BG Remover Digital — Free AI background remover that works right in your browser. No signup, no watermarks, instant results. Built for ecommerce sellers, content creators, and anyone who needs clean product photos.",
+      "category": "Free Tools",
+      "tags": [
+        "background remover",
+        "AI tool",
+        "free",
+        "image editing",
+        "product photography"
+      ],
+      "status": "prepared",
+      "submitted_date": "2026-05-10",
+      "approved_date": null,
+      "backlink_url": null,
+      "notes": "Best to launch on a Tuesday-Thursday. Prepare maker comment. Add logo and gallery."
+    },
+    {
+      "id": 2,
+      "type": "directory",
+      "platform": "theresafontthat.com",
+      "name": "Theres A Font That",
+      "submission_url": "https://theresafontthat.com/submit/",
+      "site_url": "https://bgremoverdigital.craftedmindss.com",
+      "title": "BG Remover Digital - Free AI Background Remover",
+      "description": "Free AI background removal tool for designers and creators. Instantly remove backgrounds from images in your browser — no signup, no downloads, completely free.",
+      "category": "Design Tools",
+      "tags": [
+        "background remover",
+        "free tool",
+        "AI",
+        "design tools",
+        "image editing"
+      ],
+      "status": "prepared",
+      "submitted_date": "2026-05-10",
+      "approved_date": null,
+      "backlink_url": null,
+      "notes": "Design community audience. Emphasize free and no-signup aspects."
+    },
+    {
+      "id": 3,
+      "type": "directory",
+      "platform": "toolfinder.co",
+      "name": "ToolFinder",
+      "submission_url": "https://toolfinder.co/submit",
+      "site_url": "https://bgremoverdigital.craftedmindss.com",
+      "title": "BG Remover Digital - Free AI Background Remover",
+      "description": "Discover BG Remover Digital — a free AI-powered background remover. Remove image backgrounds instantly in your browser. Perfect for product photography, ecommerce listings, and social media content.",
+      "category": "Image Editing",
+      "tags": [
+        "background remover",
+        "free tool",
+        "AI",
+        "image editing",
+        "product photography"
+      ],
+      "status": "prepared",
+      "submitted_date": "2026-05-10",
+      "approved_date": null,
+      "backlink_url": null,
+      "notes": "Tool discovery platform. Highlight unique selling points."
+    },
+    {
+      "id": 1,
+      "type": "profile",
+      "platform": "blogger.com",
+      "name": "Blogger",
+      "submission_url": "https://www.blogger.com/profile/{profile_id}",
+      "site_url": "https://bgremoverdigital.craftedmindss.com",
+      "bio": "Digital tools enthusiast. Creator of BG Remover Digital — a free AI-powered background removal tool that works right in your browser. https://bgremoverdigital.craftedmindss.com",
+      "username_suggestion": "bgremoverdigital",
+      "profile_url_format": "https://www.blogger.com/profile/{profile_id}",
+      "status": "prepared",
+      "submitted_date": "2026-05-10",
+      "approved_date": null,
+      "backlink_url": null,
+      "notes": "Google-owned. Good SEO benefit. Create blog and add backlink in profile."
+    },
+    {
+      "id": 2,
+      "type": "profile",
+      "platform": "tumblr.com",
+      "name": "Tumblr",
+      "submission_url": "https://bgremoverdigital.tumblr.com",
+      "site_url": "https://bgremoverdigital.craftedmindss.com",
+      "bio": "Free AI image tools. Remove backgrounds instantly with BG Remover Digital — no signup needed. Perfect for product photos and social media. https://bgremoverdigital.craftedmindss.com",
+      "username_suggestion": "bgremoverdigital",
+      "profile_url_format": "https://{username}.tumblr.com",
+      "status": "prepared",
+      "submitted_date": "2026-05-10",
+      "approved_date": null,
+      "backlink_url": null,
+      "notes": "Create blog, add link in description. Post visual content showcasing the tool."
+    },
+    {
+      "id": 1,
+      "type": "web20",
+      "platform": "dev.to",
+      "name": "5 Free AI Tools That Replace Expensive Image Editing Software",
+      "topic": "Free AI tools roundup",
+      "submission_url": "https://dev.to",
+      "site_url": "https://bgremoverdigital.craftedmindss.com",
+      "blog_title": "5 Free AI Tools That Replace Expensive Image Editing Software",
+      "word_count_range": "500-700",
+      "outline": [
+        "Introduction: You don't need Photoshop for basic image editing anymore",
+        "Tool #1: AI background removers (featuring BG Remover Digital)",
+        "Tool #2: Free AI image upscalers",
+        "Tool #3: AI color correction tools",
+        "Tool #4: Free AI image compression tools",
+        "Tool #5: AI-powered image enhancement tools",
+        "Conclusion: The future of free image editing"
+      ],
+      "backlink_placement": "Tool #1 section with detailed review",
+      "keywords": [
+        "free AI tools",
+        "image editing",
+        "Photoshop alternatives",
+        "background remover"
+      ],
+      "status": "prepared",
+      "submitted_date": "2026-05-10",
+      "approved_date": null,
+      "backlink_url": null,
+      "notes": "Target platform: dev.to. Write 500-700 words following the outline. Include natural backlink in Tool #1 section with detailed review."
+    }
+  ],
+  "total_submitted": 0,
+  "total_approved": 0
+}
