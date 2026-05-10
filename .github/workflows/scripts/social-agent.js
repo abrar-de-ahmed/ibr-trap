@@ -566,34 +566,64 @@ async function redditLogin(page) {
     await waitForNav(page);
     await humanDelay(3000, 5000);
 
-    // Check login result
-    const currentUrl = page.url();
-    if (!currentUrl.includes('login')) {
-      log('Reddit: Login successful!');
-      return true;
-    }
+    // ── Post-login verification loop (handles consent, 2FA, email verify) ──
+    let loggedIn = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const currentUrl = page.url();
+      log(`Reddit: Login verify attempt ${attempt + 1}, URL: ${currentUrl}`);
 
-    // Might need to handle consent/cookie page
-    const pageContent = await page.content();
-    if (pageContent.includes('consent') || pageContent.includes('Continue to Reddit')) {
-      log('Reddit: Consent page detected, clicking continue...');
-      try {
-        // Find consent button by text content (Puppeteer-compatible)
-        const buttons = await page.$$('button');
-        for (const btn of buttons) {
-          const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-          if (btnText.includes('continue') || btnText.includes('accept')) {
-            await btn.click();
-            log(`Reddit: Consent button clicked: "${btnText}"`);
-            break;
+      // If we're NOT on any login-related page, we're in
+      if (!currentUrl.includes('login') && !currentUrl.includes('consent')) {
+        log('Reddit: Login successful!');
+        loggedIn = true;
+        break;
+      }
+
+      // Check for consent/cookie page
+      const pageContent = await page.content();
+      if (pageContent.includes('consent') || pageContent.includes('Continue to Reddit') || currentUrl.includes('consent')) {
+        log('Reddit: Consent page detected, clicking continue...');
+        try {
+          const buttons = await page.$$('button');
+          for (const btn of buttons) {
+            const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+            if (btnText.includes('continue') || btnText.includes('accept') || btnText.includes('yes') || btnText.includes('agree')) {
+              await btn.click();
+              log(`Reddit: Consent button clicked: "${btnText}"`);
+              break;
+            }
           }
-        }
-        await humanDelay(2000, 3000);
-      } catch (e) { /* proceed */ }
+          await waitForNav(page, 10000);
+          await humanDelay(3000, 5000);
+          continue; // Re-check URL in next iteration
+        } catch (e) { /* proceed */ }
+      }
+
+      // Check for email verification / 2FA / unusual activity page
+      const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
+      if (bodyText.includes('verify your email') || bodyText.includes('check your email') || bodyText.includes('enter verification code') || bodyText.includes('two-factor') || bodyText.includes('unusual activity') || bodyText.includes('suspicious login')) {
+        log(`Reddit: Additional verification required — "${bodyText.substring(0, 200)}"`);
+        await takeScreenshot(page, `reddit-verification-required-attempt-${attempt}`);
+        break; // Can't proceed without manual intervention
+      }
+
+      // Check for incorrect password / wrong username
+      if (bodyText.includes('incorrect password') || bodyText.includes('wrong password') || bodyText.includes('invalid username') || bodyText.includes('that username doesn\'t exist') || bodyText.includes('incorrect username')) {
+        log(`Reddit: Invalid credentials — "${bodyText.substring(0, 200)}"`);
+        await takeScreenshot(page, 'reddit-invalid-credentials');
+        break;
+      }
+
+      // If URL still has 'login' but no specific error, wait and retry once more
+      log('Reddit: Still on login page, waiting longer before retry...');
+      await humanDelay(5000, 8000);
     }
 
-    log('Reddit: Login completed (verifying...)');
-    return !page.url().includes('login');
+    if (!loggedIn) {
+      log(`Reddit: Login failed. Final URL: ${page.url()}`);
+      await takeScreenshot(page, 'reddit-login-failed-final');
+    }
+    return loggedIn;
   } catch (e) {
     log(`Reddit login error: ${e.message}`);
     await takeScreenshot(page, 'reddit-login-error');
@@ -1002,11 +1032,42 @@ async function pinterestLogin(page) {
       return false;
     }
 
-    // Also check for login error indicators in page content
-    const pageBody = await page.content();
-    if (pageBody.includes('incorrect password') || pageBody.includes('invalid') || pageBody.includes('error')) {
-      log('Pinterest: Login error detected in page content');
-      await takeScreenshot(page, 'pinterest-login-error-content');
+    // Check for visible login error messages (NOT raw HTML — too many false positives)
+    try {
+      const visibleErrors = await page.evaluate(() => {
+        // Only check visible text in the body — not scripts, styles, or hidden elements
+        const bodyText = document.body.innerText.toLowerCase();
+        // Look for actual Pinterest error messages shown to the user
+        const errorPatterns = [
+          'incorrect password',
+          'invalid email or password',
+          'wrong password',
+          'account not found',
+          'too many attempts',
+          'your account was suspended',
+          'couldn\'t log you in',
+          'something went wrong',
+        ];
+        for (const pattern of errorPatterns) {
+          if (bodyText.includes(pattern)) return pattern;
+        }
+        return null;
+      });
+      if (visibleErrors) {
+        log(`Pinterest: Login error detected: "${visibleErrors}"`);
+        await takeScreenshot(page, 'pinterest-login-error-content');
+        return false;
+      }
+    } catch (e) {
+      log(`Pinterest: Error check failed: ${e.message}`);
+    }
+
+    // Also verify we actually navigated away from login
+    const finalUrl = page.url();
+    log(`Pinterest: Post-login URL: ${finalUrl}`);
+    if (finalUrl.includes('login') || finalUrl.includes('login?')) {
+      log('Pinterest: Still on login page — login failed');
+      await takeScreenshot(page, 'pinterest-still-on-login');
       return false;
     }
 
