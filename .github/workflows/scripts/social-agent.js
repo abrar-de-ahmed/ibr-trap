@@ -815,18 +815,77 @@ async function twitterLogin(page) {
     // Wait for next step
     await humanDelay(2000, 4000);
 
-    // Step 2: Might ask for email or phone verification
-    // Check if there's a unique identifier verification
+    // Step 2: Handle email/phone verification screen
+    // Twitter often asks to verify identity via email or phone before showing password
     try {
-      const identifierInput = await page.$('input[data-testid="ocfEnterTextTextInput"]');
-      if (identifierInput) {
-        log('Twitter: Asked for identifier (email/phone), entering email...');
-        await humanType(page, 'input[data-testid="ocfEnterTextTextInput"]', email, { delay: 100 });
-        await humanDelay(1000, 2000);
-        await safeClick(page, 'button[data-testid="ocfEnterTextNextButton"]');
-        await humanDelay(2000, 4000);
+      await humanDelay(1000, 2000);
+      // Check current page state to detect verification prompt
+      const pageText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
+      log(`Twitter: Post-username page text: "${pageText.substring(0, 300)}"`);
+
+      // Detect verification prompt by text content (more reliable than data-testid which changes)
+      const needsVerification = pageText.includes('enter your phone number') ||
+        pageText.includes('enter your email') ||
+        pageText.includes('verify your identity') ||
+        pageText.includes('enter the phone number') ||
+        pageText.includes('enter the email') ||
+        pageText.includes('we need to verify');
+
+      // Also try data-testid detection (some Twitter versions still use it)
+      const identifierInput = await page.$('input[data-testid="ocfEnterTextTextInput"]') ||
+        await page.$('input[type="text"][name*="identifier"]') ||
+        await page.$('input[autocomplete="email"]') ||
+        await page.$('input[autocomplete="tel"]');
+
+      if (needsVerification || identifierInput) {
+        log('Twitter: Verification page detected, entering email...');
+        // Try to find and fill the input field
+        let verificationFilled = false;
+        const verifySelectors = [
+          'input[data-testid="ocfEnterTextTextInput"]',
+          'input[type="text"][name*="identifier"]',
+          'input[autocomplete="email"]',
+          'input[autocomplete="tel"]',
+          'input[name="text"]',
+        ];
+        for (const sel of verifySelectors) {
+          try {
+            const el = await page.$(sel);
+            if (el) {
+              await el.click();
+              await humanDelay(300, 500);
+              await humanType(page, sel, email, { delay: 100 });
+              verificationFilled = true;
+              log(`Twitter: Verification field filled using selector: ${sel}`);
+              break;
+            }
+          } catch (e) { /* try next */ }
+        }
+        if (verificationFilled) {
+          await humanDelay(1000, 2000);
+          // Click Next on verification page
+          let verifyNextClicked = await safeClick(page, 'button[data-testid="ocfEnterTextNextButton"]');
+          if (!verifyNextClicked) {
+            // Fallback: find Next button by text
+            try {
+              const buttons = await page.$$('button');
+              for (const btn of buttons) {
+                const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+                if (btnText === 'next') {
+                  await btn.click();
+                  verifyNextClicked = true;
+                  log('Twitter: Verification Next clicked via text match');
+                  break;
+                }
+              }
+            } catch (e) { /* ignore */ }
+          }
+          await humanDelay(3000, 5000);
+        }
       }
-    } catch (e) { /* No verification needed, proceed */ }
+    } catch (e) {
+      log(`Twitter: Verification step error: ${e.message}`);
+    }
 
     // Step 3: Enter password
     await humanDelay(1000, 2000);
@@ -1089,6 +1148,7 @@ async function downloadPinImage() {
   try {
     // Try multiple image URLs from our site
     const imageUrls = [
+      SITE_URL + '/pinterest-pin-image.jpg',
       SITE_URL + '/og-image.jpg',
       SITE_URL + '/favicon.ico',
       'https://placehold.co/1000x1500/1a56db/ffffff?text=Free+Background+Remover',
@@ -1205,95 +1265,212 @@ async function pinterestCreatePin(page, content) {
       log('Pinterest: No image available for upload, proceeding with URL-based approach');
     }
 
-    // Step 3: Fill title
-    await humanDelay(1000, 2000);
-    const titleFilled = await humanType(page,
-      'input[id="pinTitle"], input[name="title"], div[contenteditable="true"][class*="title"], input[data-test-id="pin-title-input"]',
-      content.pin_title, { delay: 60 }
-    ).then(() => true).catch(() => false);
+    // Step 3: Fill title — try multiple selector strategies for Pinterest's evolving UI
+    await humanDelay(2000, 3000);
+    let titleFilled = false;
+    const titleSelectors = [
+      'input[id="pinTitle"]',
+      'input[name="title"]',
+      'input[data-test-id="pin-title-input"]',
+      'div[contenteditable="true"][class*="title"]',
+      'div[contenteditable="true"][class*="Title"]',
+      'input[placeholder*="title" i]',
+      'label[class*="title"] input',
+      'label[class*="Title"] input',
+      // Generic: first contenteditable div (Pinterest often uses these)
+      'div[contenteditable="true"]',
+    ];
+    for (const sel of titleSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el) {
+          await el.click();
+          await humanDelay(300, 600);
+          await humanType(page, sel, content.pin_title, { delay: 60 });
+          titleFilled = true;
+          log(`Pinterest: Title filled using selector: ${sel}`);
+          break;
+        }
+      } catch (e) { /* try next */ }
+    }
     if (!titleFilled) {
-      log('Pinterest: Could not fill title field, page may not have loaded correctly');
+      log('Pinterest: Could not fill title field — Pinterest UI may have changed');
       await takeScreenshot(page, 'pinterest-no-title-field');
     }
     await humanDelay(800, 1500);
 
     // Step 4: Fill description
-    await humanType(page,
-      'textarea[id="pinDescription"], textarea[name="description"], div[contenteditable="true"][class*="description"], div[data-test-id="pin-description-textarea"]',
-      content.pin_description, { delay: 40 }
-    ).catch(() => log('Pinterest: Description field not found (may be optional)'));
+    let descFilled = false;
+    const descSelectors = [
+      'textarea[id="pinDescription"]',
+      'textarea[name="description"]',
+      'div[data-test-id="pin-description-textarea"]',
+      'div[contenteditable="true"][class*="description"]',
+      'div[contenteditable="true"][class*="Description"]',
+      'textarea[placeholder*="description" i]',
+      'textarea[placeholder*="tell" i]',
+      // Generic: second contenteditable div (after title)
+    ];
+    for (const sel of descSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el) {
+          await el.click();
+          await humanDelay(300, 600);
+          await humanType(page, sel, content.pin_description, { delay: 40 });
+          descFilled = true;
+          log(`Pinterest: Description filled using selector: ${sel}`);
+          break;
+        }
+      } catch (e) { /* try next */ }
+    }
+    if (!descFilled) {
+      log('Pinterest: Description field not found (may be optional or UI changed)');
+    }
     await humanDelay(800, 1500);
 
     // Step 5: Add link
     try {
-      // Click "Add a destination link" toggle if present
-      await safeClick(page, 'button[data-test-id="pin-editor-link-toggle"], div[class*="linkField"], button[class*="link"]');
-      await humanDelay(500, 1000);
+      // Try clicking link toggle first
+      const linkToggleSelectors = [
+        'button[data-test-id="pin-editor-link-toggle"]',
+        'div[class*="linkField"]',
+        'button[class*="link"]',
+        'button[class*="Link"]',
+      ];
+      let linkToggled = false;
+      for (const sel of linkToggleSelectors) {
+        linkToggled = await safeClick(page, sel, 3000);
+        if (linkToggled) break;
+      }
+      if (linkToggled) await humanDelay(500, 1000);
+
       // Type the link
-      await humanType(page,
-        'input[id="pinLink"], input[name="link"], input[placeholder*="http"], input[data-test-id="pin-link-input"]',
-        content.link || SITE_URL, { delay: 60 }
-      );
-      await humanDelay(1000, 2000); // Wait for Pinterest to fetch URL metadata
+      const linkSelectors = [
+        'input[id="pinLink"]',
+        'input[name="link"]',
+        'input[data-test-id="pin-link-input"]',
+        'input[placeholder*="http"]',
+        'input[placeholder*="url" i]',
+        'input[placeholder*="link" i]',
+      ];
+      let linkFilled = false;
+      for (const sel of linkSelectors) {
+        try {
+          const el = await page.$(sel);
+          if (el) {
+            await el.click();
+            await humanDelay(300, 500);
+            await humanType(page, sel, content.link || SITE_URL, { delay: 60 });
+            linkFilled = true;
+            log(`Pinterest: Link filled using selector: ${sel}`);
+            break;
+          }
+        } catch (e) { /* try next */ }
+      }
+      if (!linkFilled) {
+        log('Pinterest: Link field not found (may need to toggle first or UI changed)');
+      }
+      await humanDelay(1000, 2000);
     } catch (e) {
       log(`Pinterest: Link field issue: ${e.message}`);
     }
 
     // Step 6: Select board
     try {
-      await safeClick(page, 'button[data-test-id="pin-editor-board-selector"], div[class*="boardSelect"], button[class*="board"]');
-      await humanDelay(1000, 2000);
-
-      // Search/select board
-      const boardName = content.target_board || 'Free Design Tools';
-      await humanType(page,
-        'input[placeholder*="board"], input[placeholder*="search"], input[class*="boardSearch"], input[data-test-id="board-search-input"]',
-        boardName, { delay: 60 }
-      );
-      await humanDelay(1000, 2000);
-
-      // Select first matching board from dropdown
-      await safeClick(page, 'div[class*="boardItem"], div[class*="boardResult"], div[class*="BoardTile"], div[data-test-id="board-selection-item"]');
+      const boardBtnSelectors = [
+        'button[data-test-id="pin-editor-board-selector"]',
+        'div[class*="boardSelect"]',
+        'button[class*="board"]',
+        'button[class*="Board"]',
+      ];
+      let boardBtnClicked = false;
+      for (const sel of boardBtnSelectors) {
+        boardBtnClicked = await safeClick(page, sel, 3000);
+        if (boardBtnClicked) break;
+      }
+      if (boardBtnClicked) {
+        await humanDelay(1000, 2000);
+        const boardName = content.target_board || 'Free Design Tools';
+        const boardInputSelectors = [
+          'input[placeholder*="board" i]',
+          'input[placeholder*="search" i]',
+          'input[class*="boardSearch"]',
+          'input[data-test-id="board-search-input"]',
+        ];
+        for (const sel of boardInputSelectors) {
+          try {
+            const el = await page.$(sel);
+            if (el) {
+              await el.click();
+              await humanDelay(300, 500);
+              await humanType(page, sel, boardName, { delay: 60 });
+              log(`Pinterest: Board search filled using selector: ${sel}`);
+              break;
+            }
+          } catch (e) { /* try next */ }
+        }
+        await humanDelay(1000, 2000);
+        // Click first board result
+        await safeClick(page, 'div[class*="boardItem"], div[class*="boardResult"], div[class*="BoardTile"], div[data-test-id="board-selection-item"]', 3000);
+      }
     } catch (e) {
       log(`Pinterest: Board selection issue (will use default): ${e.message}`);
     }
 
     await humanDelay(1000, 2000);
 
-    // Step 7: Publish pin
-    const publishClicked = await safeClick(page, 'button[data-test-id="pin-editor-publish-button"], button[class*="Publish"]');
+    // Step 7: Publish pin — multiple strategies
+    let publishClicked = await safeClick(page, 'button[data-test-id="pin-editor-publish-button"], button[class*="Publish"]');
     if (!publishClicked) {
-      // Fallback: find Publish button by text content
+      // Fallback: find Publish/Save button by text content
       try {
         const buttons = await page.$$('button');
         for (const btn of buttons) {
           const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-          if (btnText.includes('publish') || btnText.includes('save')) {
+          if (btnText === 'publish' || btnText === 'save' || btnText.includes('publish') || btnText.includes('create pin')) {
             await btn.click();
+            publishClicked = true;
             log(`Pinterest: Publish button clicked via text match: "${btnText}"`);
             break;
           }
         }
       } catch (e) { /* ignore */ }
     }
+
+    if (!publishClicked) {
+      log('Pinterest: CRITICAL — Could not find Publish button. Pin NOT created.');
+      await takeScreenshot(page, 'pinterest-no-publish-button');
+      return { success: false, error: 'Publish button not found' };
+    }
+
+    await waitForNav(page, 10000);
     await humanDelay(3000, 5000);
 
     // Step 8: Verify pin was created
     const finalUrl = page.url();
-    if (finalUrl.includes('/pin/') || !finalUrl.includes('create')) {
+    log(`Pinterest: Post-publish URL: ${finalUrl}`);
+    if (finalUrl.includes('/pin/') && !finalUrl.includes('create')) {
       log('Pinterest: Pin created successfully!');
       return { success: true };
     }
 
-    // Check for error messages
-    const pageContent = await page.content();
-    if (pageContent.includes('error') || pageContent.includes('something went wrong')) {
-      log('Pinterest: Possible error on pin creation page');
+    // Pinterest sometimes shows a "Your Pin was saved" toast/modal
+    const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
+    if (bodyText.includes('pin was saved') || bodyText.includes('pin published') || bodyText.includes('successfully')) {
+      log('Pinterest: Pin saved confirmation detected!');
+      return { success: true };
+    }
+
+    // Check for actual visible errors (not raw HTML)
+    if (bodyText.includes('something went wrong') || bodyText.includes('try again') || bodyText.includes('couldn\'t save')) {
+      log('Pinterest: Error detected after publish attempt');
       await takeScreenshot(page, 'pinterest-pin-create-error');
+      return { success: false, error: 'Publish error detected in page content' };
     }
 
     log('Pinterest: Pin creation completed (verification ambiguous)');
-    return { success: true }; // Assume success since no exception thrown
+    return { success: true };
   } catch (e) {
     log(`Pinterest pin error: ${e.message}`);
     await takeScreenshot(page, 'pinterest-pin-error');
