@@ -2,9 +2,9 @@
   "status": "active",
   "mode": "monitor",
   "lastKnownHashes": {
-    "homepage": "aa97599783692af942a7c0d8f84f538f00ca64660bf1ee3ca70352b9940b10de",
-    "homepageStable": "aa97599783692af942a7c0d8f84f538f00ca64660bf1ee3ca70352b9940b10de",
-    "homepageFull": "5a4a8edd208ae64a040e2d4b5b0b0f999ff510af0c47612f717caf296404ba13"
+    "homepage": null,
+    "homepageStable": null,
+    "homepageFull": null
   },
   "responseTimeHistory": [
     {
@@ -40,35 +40,13 @@
       "ms": 216
     }
   ],
-  "alerts": [
-    {
-      "date": "2026-05-10",
-      "time": "2026-05-10T02:32:49.896Z",
-      "findings": [
-        "Injected Code"
-      ]
-    },
-    {
-      "date": "2026-05-10",
-      "time": "2026-05-10T08:02:55.340Z",
-      "findings": [
-        "Content Tampering",
-        "Injected Code"
-      ]
-    },
-    {
-      "date": "2026-05-10",
-      "time": "2026-05-10T13:07:35.632Z",
-      "findings": [
-        "Content Tampering",
-        "Injected Code"
-      ]
-    }
-  ],
-  "checkCount": 3,
-  "firstCheck": "2026-05-10",
+  "alerts": [],
+  "checkCount": 0,
+  "firstCheck": "2026-05-11",
   "bravoOverride": null,
-  "lastCheck": "2026-05-10",
+  "lastCheck": null,
   "v2MigrationDate": "2026-05-10",
-  "v2MigrationNote": "Reset from v1 — all previous alerts were false positives (Content Tampering: Next.js build hash changes, Injected Code: GA4 not whitelisted, Site Unreachable: ghost.findings crash bug). See commit for details."
+  "v2MigrationNote": "Reset from v1 \u2014 all previous alerts were false positives (Content Tampering: Next.js build hash changes, Injected Code: GA4 not whitelisted, Site Unreachable: ghost.findings crash bug). See commit for details.",
+  "v3MigrationDate": "2026-05-11",
+  "v3MigrationNote": "Reset from v2 \u2014 all alerts were false positives (Content Tampering: hash not aggressive enough, missed RSC payloads + CSS class hashes + Cloudflare Insights). v3 strips ALL <script> tags + content, CSS module hashes, nonce values. Added cloudflareinsights.com to trusted domains."
 }

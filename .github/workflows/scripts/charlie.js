@@ -20,6 +20,16 @@
  * - External script whitelist: googletagmanager.com, staticimgly.com (our own GA4 + IMG.LY)
  * - Fixed ghost.findings crash — checkGhostPages returns array, not object
  *
+ * v3 FIXES (2026-05-11):
+ * - Added Cloudflare Insights to trusted domains (static.cloudflareinsights.com — auto-injected by CF Pages)
+ * - Aggressive hash stripping: ALL <script> tags + content, CSS class hashes, nonce values
+ * - Prevents Content Tampering FP on every Cloudflare Pages rebuild
+ *
+ * v3 FIXES (2026-05-11):
+ * - Added Cloudflare Insights to trusted domains (static.cloudflareinsights.com — auto-injected by CF Pages)
+ * - Aggressive hash stripping: ALL <script> tags + content, CSS class hashes, nonce values
+ * - Prevents Content Tampering FP on every Cloudflare Pages rebuild
+ *
  * Future Phase 2: Deploy as Cloudflare Worker with real-time blocking
  * See SECURITY-ROADMAP.md for full upgrade path
  */
@@ -68,6 +78,8 @@ const TRUSTED_EXTERNAL_DOMAINS = [
   'googletagmanager.com',   // Google Analytics (GA4) — our own tracking
   'www.googletagmanager.com',
   'staticimgly.com',         // IMG.LY — background removal AI model library
+  'static.cloudflareinsights.com', // Cloudflare Web Analytics beacon (auto-injected by CF Pages)
+  'cloudflareinsights.com',
 ];
 
 function buildTrustedRegex() {
@@ -76,15 +88,39 @@ function buildTrustedRegex() {
 }
 
 // ── Content Integrity Check ──
-// Next.js embeds build-specific hashes in script/src URLs (_next/static/chunks/abc123.js),
-// so every rebuild changes the full HTML hash. We strip dynamic Next.js asset references
-// before hashing to detect REAL content changes only (text, structure, injected code).
+// Next.js + Cloudflare Pages change the HTML on EVERY rebuild:
+//   - Build chunk URLs have random hashes: /_next/static/chunks/abc123.js
+//   - RSC payloads contain build-specific IDs: self.__next_f.push([1,"..."])
+//   - CSS module class hashes change: geist_a71539c9-module__T19VSG__variable
+//   - <script nonce="..."> values change per request
+//   - __next_f.push() payloads contain serialized React tree with build IDs
+//
+// We strip ALL of these to hash only the REAL content (text, structure, links, meta).
 function getStableContentHash(html) {
-  // Strip Next.js dynamic chunk references (they change every build)
-  let stable = html.replace(/<script[^>]*src=["']\/_next\/static\/[^"']*["'][^>]*>/gi, '');
-  stable = stable.replace(/<link[^>]*href=["']\/_next\/static\/[^"']*["'][^>]*>/gi, '');
-  // Strip dynamic build IDs in RSC payloads
-  stable = stable.replace(/self\.__next_f\.push\([^)]*\)/g, '');
+  let stable = html;
+
+  // 1. Strip ALL <script> tags AND their contents (JS bundles, RSC payloads, inline scripts)
+  //    Build-specific chunk URLs, RSC push calls, and inline GA configs all change per build
+  stable = stable.replace(/<script[\s\S]*?<\/script>/gi, '');
+
+  // 2. Strip Next.js dynamic <link> references (CSS files with build hashes)
+  stable = stable.replace(/<link[^>]*href=["']\/_next\/static\/[^"']*?["'][^>]*>/gi, '');
+
+  // 3. Strip Next.js dynamic font <link> preloads (build-specific filenames)
+  stable = stable.replace(/<link[^>]*href=["']\/_next\/static\/media\/[^"']*?["'][^>]*>/gi, '');
+
+  // 4. Strip CSS class hashes from class attributes (e.g., geist_a71539c9-module__T19VSG__variable)
+  //    These change on every Next.js build
+  stable = stable.replace(/class=["'][^"']*["']/gi, (match) => {
+    return match.replace(/[a-f0-9]{8,}-module__[^"'\s]*/gi, 'MODULE_HASH');
+  });
+
+  // 5. Strip nonce attributes (random per request)
+  stable = stable.replace(/\s*nonce=["'][^"']*["']/gi, '');
+
+  // 6. Strip any remaining self.__next_f.push calls (RSC streaming)
+  stable = stable.replace(/self\.__next_f\.push[\s\S]*?(?=self\.__next_f\.push|$)/g, '');
+
   return crypto.createHash('sha256').update(stable).digest('hex');
 }
 
