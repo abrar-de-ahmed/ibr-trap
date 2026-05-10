@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "created": "2026-05-09",
-  "last_updated": "2026-05-11",
+  "last_updated": "2026-05-10",
   "seo": {
     "keywords_tracked": [
       {
@@ -200,7 +200,7 @@
   },
   "social": {
     "reddit": {
-      "posts": 4,
+      "posts": 5,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "active",
@@ -233,6 +233,14 @@
           "date": "2026-05-10",
           "title": "Remove Backgrounds from Pet Photos - Free Online Tool",
           "status": "posted",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "reddit",
+          "date": "2026-05-10",
+          "title": "",
+          "status": "failed",
           "is_experiment": false,
           "post_url": null
         }
