@@ -1,0 +1,58 @@
+name: Test Login Debug
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to test'
+        required: true
+        default: 'reddit'
+        type: choice
+        options:
+          - reddit
+          - twitter
+          - both
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64 libpango-1.0-0 libcairo2 libatspi2.0-0 libxshmfence1 libx11-xcb1
+          npm install puppeteer
+
+      - name: Test Login
+        env:
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          REDDIT_EMAIL: ${{ secrets.REDDIT_EMAIL }}
+          TWITTER_USERNAME: ${{ secrets.TWITTER_USERNAME }}
+          TWITTER_PASSWORD: ${{ secrets.TWITTER_PASSWORD }}
+          TWITTER_EMAIL: ${{ secrets.TWITTER_EMAIL }}
+          PLATFORM: ${{ github.event.inputs.platform }}
+        run: node .github/workflows/scripts/test-login-debug.js
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: login-debug-screenshots
+          path: /tmp/login-debug-*.png
+
+      - name: Upload cookies
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: login-debug-cookies
+          path: /tmp/*-cookies.json
