@@ -200,7 +200,7 @@
   },
   "social": {
     "reddit": {
-      "posts": 11,
+      "posts": 12,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "active",
@@ -214,7 +214,7 @@
       "posted_count": 0
     },
     "pinterest": {
-      "pins": 4,
+      "pins": 5,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
@@ -240,6 +240,22 @@
           "platform": "twitter",
           "date": "2026-05-10",
           "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "reddit",
+          "date": "2026-05-10",
+          "title": "Protip: You can remove backgrounds from any image for free directly in your browser",
+          "status": "failed",
+          "is_experiment": true,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-05-10",
+          "title": "How to Remove Backgrounds from Photos - Free Browser Tool",
           "status": "failed",
           "is_experiment": false,
           "post_url": null
