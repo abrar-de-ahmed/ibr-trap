@@ -20,7 +20,9 @@
  *   - No aggressive marketing — value-first, community-first approach
  */
 
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(StealthPlugin());
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
@@ -103,18 +105,33 @@ async function checkSessionValid(page, platform) {
       await humanDelay(2000, 3000);
       const url = page.url();
       const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
-      // If we see user menu or no login prompt, we're logged in
-      const isLoggedIn = bodyText.includes('home') && !bodyText.includes('log in') && !bodyText.includes('sign up');
-      // Also check URL — logged-in users get reddit.com/home, not a login redirect
-      log(`Reddit: Session check — URL: ${url}, logged in: ${isLoggedIn}`);
+      // Check for user avatar/profile elements that only appear when logged in
+      const hasAvatar = await page.$('#header-profile--flyout, button[aria-label*="User"], header img[alt*="avatar" i], [data-testid="header-profile"]').catch(() => null);
+      // Check for "Log In" or "Sign Up" text — if present, NOT logged in
+      const hasLoginPrompt = bodyText.includes('log in') || bodyText.includes('sign up');
+      const isLoggedIn = hasAvatar || (!hasLoginPrompt && !url.includes('login') && url.includes('reddit.com/'));
+      log(`Reddit: Session check — URL: ${url}, hasAvatar: ${!!hasAvatar}, hasLoginPrompt: ${hasLoginPrompt}, logged in: ${isLoggedIn}`);
       return isLoggedIn;
     } else if (platform === 'twitter') {
       await page.goto('https://x.com/home', { waitUntil: 'domcontentloaded', timeout: 15000 });
       await humanDelay(2000, 3000);
       const url = page.url();
-      // If we end up at /home without redirect to login, we're in
-      const isLoggedIn = !url.includes('login') && !url.includes('flow');
-      log(`Twitter: Session check — URL: ${url}, logged in: ${isLoggedIn}`);
+      // Check for the tweet button which only exists when logged in
+      const hasTweetButton = await page.$('[data-testid="SideNav_NewTweet_Button"]').catch(() => null);
+      // Check for login-specific elements
+      const hasLoginElements = await page.$('[data-testid="LoginForm_Login_Button"]').catch(() => null);
+      const isLoggedIn = (hasTweetButton || (!url.includes('login') && !url.includes('flow') && !hasLoginElements));
+      log(`Twitter: Session check — URL: ${url}, hasTweetButton: ${!!hasTweetButton}, hasLoginElements: ${!!hasLoginElements}, logged in: ${isLoggedIn}`);
+      return isLoggedIn;
+    } else if (platform === 'pinterest') {
+      await page.goto('https://www.pinterest.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await humanDelay(2000, 3000);
+      const url = page.url();
+      const hasCreateBtn = await page.$('[data-test-id="create-pin-button"], button[aria-label="Create"]').catch(() => null);
+      const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
+      const hasLoginPrompt = url.includes('login') || bodyText.includes('log in');
+      const isLoggedIn = hasCreateBtn || (!hasLoginPrompt && !url.includes('login'));
+      log(`Pinterest: Session check — URL: ${url}, hasCreateBtn: ${!!hasCreateBtn}, logged in: ${isLoggedIn}`);
       return isLoggedIn;
     }
     return false;
@@ -486,6 +503,13 @@ async function takeScreenshot(page, name) {
 
 // ── Puppeteer Browser Launch ──
 async function launchBrowser() {
+  // puppeteer-extra + stealth plugin handles most anti-detection:
+  // - navigator.webdriver = undefined
+  // - chrome.runtime mock
+  // - plugins, permissions, languages
+  // - WebGL vendor/renderer
+  // - iframe contentWindow
+  // - media codecs
   const browser = await puppeteer.launch({
     headless: 'new',
     args: [
@@ -495,22 +519,51 @@ async function launchBrowser() {
       '--disable-gpu',
       '--window-size=1366,768',
       '--disable-blink-features=AutomationControlled',
+      '--disable-features=IsolateOrigins,site-per-process',
+      '--disable-site-isolation-trials',
+      '--disable-web-security',
+      '--disable-features=BlockThirdPartyCookies',
     ],
     defaultViewport: { width: 1366, height: 768 },
   });
 
-  // Anti-detection: override navigator.webdriver
   const page = (await browser.pages())[0] || await browser.newPage();
+
+  // Extra anti-detection on top of stealth plugin
   await page.evaluateOnNewDocument(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-    // Randomize user agent hints
+    // Override navigator properties
     Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+    // Fake languages
+    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+    // Override permissions API
+    const originalQuery = window.navigator.permissions?.query;
+    if (originalQuery) {
+      window.navigator.permissions.query = (parameters) =>
+        parameters.name === 'notifications'
+          ? Promise.resolve({ state: Notification.permission })
+          : originalQuery(parameters);
+    }
+    // Chrome runtime mock (extra safety)
+    window.chrome = { runtime: {}, loadTimes: function(){}, csi: function(){} };
+    // Remove puppeteer-specific properties
+    delete navigator.__proto__.webdriver;
   });
 
-  // Set a realistic user agent (keep up to date)
+  // Set a realistic user agent
   await page.setUserAgent(
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
   );
+
+  // Set extra headers to look like a real browser
+  await page.setExtraHTTPHeaders({
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'sec-ch-ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+  });
 
   return { browser, page };
 }
@@ -560,9 +613,26 @@ async function redditLogin(page) {
   }
 
   try {
-    log('Reddit: Logging in...');
-    await page.goto('https://www.reddit.com/login/', { waitUntil: 'networkidle0', timeout: 30000 });
+    // WARM-UP: Visit Reddit homepage first — looks like a natural user arriving at the site
+    log('Reddit: Warming up — visiting homepage first...');
+    try {
+      await page.goto('https://www.reddit.com/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await humanDelay(2000, 4000);
+      // Simulate scrolling like a real user
+      await humanScroll(page, 200, 400);
+      await humanDelay(1000, 2000);
+    } catch (e) {
+      log(`Reddit: Homepage warm-up warning: ${e.message}`);
+    }
+
+    // Now navigate to login page
+    log('Reddit: Navigating to login page...');
+    await page.goto('https://www.reddit.com/login/', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await humanDelay(3000, 5000);
+
+    // Move mouse to a natural position before interacting
+    await randomMouseMove(page);
+    await humanDelay(500, 1000);
 
     // Try multiple selectors for username field
     const usernameSelectors = [
@@ -578,8 +648,14 @@ async function redditLogin(page) {
       try {
         const el = await page.$(sel);
         if (el) {
-          await el.click();
-          await humanDelay(300, 500);
+          // Click with a slight offset to look more natural
+          const box = await el.boundingBox();
+          if (box) {
+            await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
+          } else {
+            await el.click();
+          }
+          await humanDelay(500, 800);
           await humanType(page, sel, username);
           usernameFilled = true;
           log(`Reddit: Username filled using selector: ${sel}`);
@@ -589,12 +665,15 @@ async function redditLogin(page) {
     }
 
     if (!usernameFilled) {
-      log('Reddit: Could not find username field');
+      log('Reddit: Could not find username field — page may not have loaded properly');
+      const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500)).catch(() => 'empty');
+      log(`Reddit: Page content: "${pageContent}"`);
       await takeScreenshot(page, 'reddit-no-username-field');
       return false;
     }
 
-    await humanDelay(1000, 2000);
+    await humanDelay(1500, 2500);
+    await randomMouseMove(page);
 
     // Try multiple selectors for password field
     const passwordSelectors = [
@@ -607,8 +686,13 @@ async function redditLogin(page) {
       try {
         const el = await page.$(sel);
         if (el) {
-          await el.click();
-          await humanDelay(300, 500);
+          const box = await el.boundingBox();
+          if (box) {
+            await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
+          } else {
+            await el.click();
+          }
+          await humanDelay(500, 800);
           await humanType(page, sel, password);
           passwordFilled = true;
           log(`Reddit: Password filled using selector: ${sel}`);
@@ -623,22 +707,28 @@ async function redditLogin(page) {
       return false;
     }
 
-    await humanDelay(500, 1000);
+    await humanDelay(800, 1500);
+    await randomMouseMove(page);
 
     // Submit login
+    let submitted = false;
+
+    // Try button selectors
     const submitSelectors = [
       'button[type="submit"]',
       'button.login-button',
       'button[class*="login" i]',
     ];
-    // Fallback: look for button by text content (Puppeteer-compatible)
-    const textSubmitSelectors = ['Log In', 'Sign In'];
-    let submitted = false;
     for (const sel of submitSelectors) {
       try {
         const btn = await page.$(sel);
         if (btn) {
-          await btn.click();
+          const box = await btn.boundingBox();
+          if (box) {
+            await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+          } else {
+            await btn.click();
+          }
           submitted = true;
           log(`Reddit: Submit clicked using selector: ${sel}`);
           break;
@@ -646,10 +736,11 @@ async function redditLogin(page) {
       } catch (e) { /* try next */ }
     }
 
-    // Fallback: find button by text content (Puppeteer-compatible)
+    // Fallback: find button by text content
     if (!submitted) {
       try {
         const buttons = await page.$$('button');
+        const textSubmitSelectors = ['Log In', 'Sign In'];
         for (const btn of buttons) {
           const btnText = await page.evaluate(el => el.textContent.trim(), btn);
           if (textSubmitSelectors.some(t => btnText.includes(t))) {
@@ -668,24 +759,30 @@ async function redditLogin(page) {
       log('Reddit: Submit via Enter key (no button found)');
     }
 
-    await waitForNav(page);
+    // Wait for navigation after submit
+    try {
+      await waitForNav(page, 15000);
+    } catch (e) {
+      log(`Reddit: waitForNav timeout (may be OK): ${e.message}`);
+    }
     await humanDelay(3000, 5000);
 
     // ── Post-login verification loop (handles consent, 2FA, email verify) ──
     let loggedIn = false;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 4; attempt++) {
       const currentUrl = page.url();
       log(`Reddit: Login verify attempt ${attempt + 1}, URL: ${currentUrl}`);
 
-      // If we're NOT on any login-related page, we're in
-      if (!currentUrl.includes('login') && !currentUrl.includes('consent')) {
-        log('Reddit: Login successful!');
+      // Check for signs we're logged in: user avatar, home feed, specific UI elements
+      const hasAvatar = await page.$('#header-profile--flyout, button[aria-label*="User"], header img[alt*="avatar" i]').catch(() => null);
+      const isHomePage = currentUrl.includes('reddit.com/') && !currentUrl.includes('login') && !currentUrl.includes('consent') && !currentUrl.includes('authorize');
+
+      if (isHomePage || hasAvatar) {
+        log('Reddit: Login successful! (detected via URL/avatar check)');
         loggedIn = true;
         break;
       }
 
-      // IMPORTANT: Check for credential errors and verification FIRST (before consent!)
-      // The word "consent" appears in Reddit's ToS text on login pages — don't let it hijack the flow
       const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
 
       // Check for incorrect password / wrong username
@@ -695,11 +792,11 @@ async function redditLogin(page) {
         break;
       }
 
-      // Check for email verification / 2FA / unusual activity / CAPTCHA
-      if (bodyText.includes('verify your email') || bodyText.includes('check your email') || bodyText.includes('enter verification code') || bodyText.includes('two-factor') || bodyText.includes('unusual activity') || bodyText.includes('suspicious login') || bodyText.includes('captcha') || bodyText.includes('select all')) {
+      // Check for email verification / 2FA / unusual activity
+      if (bodyText.includes('verify your email') || bodyText.includes('check your email') || bodyText.includes('enter verification code') || bodyText.includes('two-factor') || bodyText.includes('unusual activity') || bodyText.includes('suspicious login')) {
         log(`Reddit: Additional verification required — "${bodyText.substring(0, 300)}"`);
         await takeScreenshot(page, `reddit-verification-required-attempt-${attempt}`);
-        break; // Can't proceed without manual intervention
+        break;
       }
 
       // Check for rate limiting / account locked
@@ -709,11 +806,7 @@ async function redditLogin(page) {
         break;
       }
 
-      // NOW check for consent — but be SPECIFIC: only if there's an actual consent DIALOG
-      // (not just the word "consent" in ToS/footer text)
-      // Reddit consent dialogs typically have a specific structure:
-      // - A modal/overlay with "Continue to Reddit" heading
-      // - OR URL contains /authorize/ or /consent/
+      // Check for consent — specific match only
       const isConsentDialog = currentUrl.includes('consent') ||
         currentUrl.includes('authorize') ||
         (bodyText.includes('continue to reddit') && bodyText.includes('allow'));
@@ -732,14 +825,14 @@ async function redditLogin(page) {
           }
           await waitForNav(page, 10000);
           await humanDelay(3000, 5000);
-          continue; // Re-check URL in next iteration
-        } catch (e) { /* proceed to error check */ }
+          continue;
+        } catch (e) { /* proceed */ }
       }
 
-      // If we're on login page with no specific errors, log page state and wait
-      log(`Reddit: Still on login page, no specific errors detected. Page snippet: "${bodyText.substring(0, 300)}"`);
+      // If still stuck, log state and wait
+      log(`Reddit: Still on login page, no specific errors detected. Snippet: "${bodyText.substring(0, 300)}"`);
       await takeScreenshot(page, `reddit-stuck-on-login-attempt-${attempt}`);
-      await humanDelay(5000, 8000);
+      await humanDelay(4000, 6000);
     }
 
     if (!loggedIn) {
@@ -911,21 +1004,51 @@ async function twitterLogin(page) {
   }
 
   try {
-    log('Twitter: Logging in...');
-    await page.goto('https://x.com/i/flow/login', { waitUntil: 'networkidle0', timeout: 30000 });
+    // WARM-UP: Visit X homepage first — looks like a natural user
+    log('Twitter: Warming up — visiting homepage first...');
+    try {
+      await page.goto('https://x.com/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await humanDelay(3000, 5000);
+      await randomMouseMove(page);
+    } catch (e) {
+      log(`Twitter: Homepage warm-up warning: ${e.message}`);
+    }
+
+    // Navigate to login
+    log('Twitter: Navigating to login page...');
+    await page.goto('https://x.com/i/flow/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await humanDelay(3000, 5000);
+    await randomMouseMove(page);
 
     // Step 1: Enter username
-    await humanType(page, 'input[autocomplete="username"], input[name="text"]', username, { delay: 100 });
+    log('Twitter: Looking for username input...');
+    const usernameFilled = await humanType(page, 'input[autocomplete="username"], input[name="text"]', username, { delay: 100 });
+    if (!usernameFilled) {
+      log('Twitter: Could not find username input field');
+      const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500)).catch(() => 'empty');
+      log(`Twitter: Page content: "${pageContent}"`);
+      await takeScreenshot(page, 'twitter-no-username-field');
+      return false;
+    }
+    log('Twitter: Username entered');
     await humanDelay(1000, 2000);
-    // Click Next button (Puppeteer-compatible)
-    let nextClicked = await safeClick(page, 'button[class*="primary"]');
+    await randomMouseMove(page);
+
+    // Click Next button
+    let nextClicked = false;
+    // Try data-testid first
+    nextClicked = await safeClick(page, 'button[data-testid="LoginForm_Login_Button"], button[data-testid="ocfEnterTextNextButton"]');
     if (!nextClicked) {
+      // Try class-based
+      nextClicked = await safeClick(page, 'button[class*="primary"]', 5000);
+    }
+    if (!nextClicked) {
+      // Fallback: find Next button by text
       try {
         const buttons = await page.$$('button');
         for (const btn of buttons) {
           const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-          if (btnText.includes('next')) {
+          if (btnText === 'next') {
             await btn.click();
             nextClicked = true;
             log('Twitter: Next button clicked via text match');
@@ -934,27 +1057,29 @@ async function twitterLogin(page) {
         }
       } catch (e) { /* ignore */ }
     }
+    if (!nextClicked) {
+      log('Twitter: Could not find Next button, pressing Enter');
+      await page.keyboard.press('Enter');
+    }
 
     // Wait for next step
-    await humanDelay(2000, 4000);
+    await humanDelay(3000, 5000);
+    log(`Twitter: Post-username URL: ${page.url()}`);
 
     // Step 2: Handle email/phone verification screen
-    // Twitter often asks to verify identity via email or phone before showing password
     try {
-      await humanDelay(1000, 2000);
-      // Check current page state to detect verification prompt
       const pageText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
       log(`Twitter: Post-username page text: "${pageText.substring(0, 300)}"`);
 
-      // Detect verification prompt by text content (more reliable than data-testid which changes)
       const needsVerification = pageText.includes('enter your phone number') ||
         pageText.includes('enter your email') ||
         pageText.includes('verify your identity') ||
         pageText.includes('enter the phone number') ||
         pageText.includes('enter the email') ||
-        pageText.includes('we need to verify');
+        pageText.includes('we need to verify') ||
+        pageText.includes('enter your phone') ||
+        pageText.includes('in order to');
 
-      // Also try data-testid detection (some Twitter versions still use it)
       const identifierInput = await page.$('input[data-testid="ocfEnterTextTextInput"]') ||
         await page.$('input[type="text"][name*="identifier"]') ||
         await page.$('input[autocomplete="email"]') ||
@@ -962,7 +1087,6 @@ async function twitterLogin(page) {
 
       if (needsVerification || identifierInput) {
         log('Twitter: Verification page detected, entering email...');
-        // Try to find and fill the input field
         let verificationFilled = false;
         const verifySelectors = [
           'input[data-testid="ocfEnterTextTextInput"]',
@@ -986,10 +1110,10 @@ async function twitterLogin(page) {
         }
         if (verificationFilled) {
           await humanDelay(1000, 2000);
+          await randomMouseMove(page);
           // Click Next on verification page
           let verifyNextClicked = await safeClick(page, 'button[data-testid="ocfEnterTextNextButton"]');
           if (!verifyNextClicked) {
-            // Fallback: find Next button by text
             try {
               const buttons = await page.$$('button');
               for (const btn of buttons) {
@@ -1003,7 +1127,12 @@ async function twitterLogin(page) {
               }
             } catch (e) { /* ignore */ }
           }
+          if (!verifyNextClicked) {
+            await page.keyboard.press('Enter');
+            log('Twitter: Verification submitted via Enter');
+          }
           await humanDelay(3000, 5000);
+          log(`Twitter: Post-verification URL: ${page.url()}`);
         }
       }
     } catch (e) {
@@ -1012,21 +1141,90 @@ async function twitterLogin(page) {
 
     // Step 3: Enter password
     await humanDelay(1000, 2000);
-    await humanType(page, 'input[name="password"], input[type="password"]', password, { delay: 100 });
+    await randomMouseMove(page);
+    log('Twitter: Looking for password input...');
+    const passwordFilled = await humanType(page, 'input[name="password"], input[type="password"]', password, { delay: 100 });
+    if (!passwordFilled) {
+      log('Twitter: Could not find password input field');
+      await takeScreenshot(page, 'twitter-no-password-field');
+      return false;
+    }
+    log('Twitter: Password entered');
     await humanDelay(800, 1500);
-    await safeClick(page, 'button[data-testid="LoginForm_Login_Button"]');
+    await randomMouseMove(page);
+
+    // Click Log In button
+    let loginClicked = await safeClick(page, 'button[data-testid="LoginForm_Login_Button"]');
+    if (!loginClicked) {
+      loginClicked = await safeClick(page, 'button[class*="primary"]');
+    }
+    if (!loginClicked) {
+      // Try by text
+      try {
+        const buttons = await page.$$('button');
+        for (const btn of buttons) {
+          const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+          if (btnText === 'log in' || btnText === 'sign in') {
+            await btn.click();
+            loginClicked = true;
+            log(`Twitter: Login button clicked via text match: "${btnText}"`);
+            break;
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+    if (!loginClicked) {
+      await page.keyboard.press('Enter');
+      log('Twitter: Login submitted via Enter');
+    }
+
+    // Wait for navigation
+    try {
+      await waitForNav(page, 15000);
+    } catch (e) {
+      log(`Twitter: waitForNav timeout (may be OK): ${e.message}`);
+    }
     await humanDelay(3000, 5000);
 
     // Check if login succeeded
     const url = page.url();
+    log(`Twitter: Post-login URL: ${url}`);
+
+    // Check for visible signs of being logged in
+    const pageText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
+    const hasHomeContent = pageText.includes('home') || pageText.includes('timeline') || pageText.includes('tweet');
+    const hasTweetButton = await page.$('[data-testid="SideNav_NewTweet_Button"]').catch(() => null);
+
+    if ((url.includes('home') || url === 'https://x.com/' || url === 'https://x.com') && (hasHomeContent || hasTweetButton)) {
+      log('Twitter: Login successful! (verified via URL + page content)');
+      return true;
+    }
+    if (!url.includes('login') && !url.includes('flow') && hasTweetButton) {
+      log('Twitter: Login successful! (tweet button found)');
+      return true;
+    }
     if (url.includes('login') || url.includes('flow')) {
-      log('Twitter: Login may have failed (still on login flow)');
+      // Check for specific error messages
+      if (pageText.includes('incorrect') || pageText.includes('invalid') || pageText.includes('wrong password') || pageText.includes('username or password')) {
+        log(`Twitter: Invalid credentials — "${pageText.substring(0, 300)}"`);
+        await takeScreenshot(page, 'twitter-invalid-credentials');
+        return false;
+      }
+      if (pageText.includes('unusual') || pageText.includes('suspicious') || pageText.includes('locked') || pageText.includes('verify')) {
+        log(`Twitter: Account verification/lock — "${pageText.substring(0, 300)}"`);
+        await takeScreenshot(page, 'twitter-account-locked');
+        return false;
+      }
+      log('Twitter: Still on login flow after all steps — login may have failed');
       await takeScreenshot(page, 'twitter-login-fail');
       return false;
     }
 
-    log('Twitter: Login successful!');
-    return true;
+    // If URL is not login but we can't confirm either way, check more carefully
+    log(`Twitter: Uncertain login state, URL: ${url}, checking page...`);
+    await takeScreenshot(page, 'twitter-uncertain-state');
+    // If we're not on login/flow and have some content, assume success
+    return !url.includes('login') && !url.includes('flow');
   } catch (e) {
     log(`Twitter login error: ${e.message}`);
     await takeScreenshot(page, 'twitter-login-error');

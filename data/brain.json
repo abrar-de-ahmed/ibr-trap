@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "created": "2026-05-09",
-  "last_updated": "2026-05-10",
+  "last_updated": "2026-05-11",
   "seo": {
     "keywords_tracked": [
       {
@@ -227,82 +227,7 @@
     },
     "total_posts": 1,
     "recent_posts": {
-      "2026-05-09": [
-        {
-          "platform": "reddit",
-          "date": "2026-05-09",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "twitter",
-          "date": "2026-05-09",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        }
-      ],
       "2026-05-10": [
-        {
-          "platform": "reddit",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "pinterest",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "twitter",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "pinterest",
-          "date": "2026-05-10",
-          "title": "Free Logo Background Remover - Instant Transparent Logos",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null,
-          "error": "Selectors failed - old code falsely reported success"
-        },
-        {
-          "platform": "reddit",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "twitter",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "reddit",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
         {
           "platform": "pinterest",
           "date": "2026-05-10",

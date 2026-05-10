@@ -35,7 +35,7 @@ jobs:
             libxshmfence1 libx11-xcb1
 
       - name: Install Puppeteer + dependencies
-        run: npm install puppeteer nodemailer
+        run: npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth nodemailer
 
       - name: Run Social Agent v2.0
         env:
