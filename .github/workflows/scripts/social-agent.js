@@ -1054,109 +1054,129 @@ async function twitterLogin(page) {
     await humanDelay(1000, 2000);
     await randomMouseMove(page);
 
-    // Click Next button
+    // Click Next button — enumerate all buttons for diagnostics
     let nextClicked = false;
-    // Try data-testid first
-    nextClicked = await safeClick(page, 'button[data-testid="LoginForm_Login_Button"], button[data-testid="ocfEnterTextNextButton"]');
-    if (!nextClicked) {
-      // Try class-based
-      nextClicked = await safeClick(page, 'button[class*="primary"]', 5000);
-    }
-    if (!nextClicked) {
-      // Fallback: find Next button by text
-      try {
-        const buttons = await page.$$('button');
-        for (const btn of buttons) {
-          const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-          if (btnText === 'next') {
-            await btn.click();
-            nextClicked = true;
-            log('Twitter: Next button clicked via text match');
-            break;
-          }
+    try {
+      const allButtons = await page.$$('button');
+      const buttonTexts = [];
+      for (const btn of allButtons) {
+        const t = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+        const disabled = await page.evaluate(el => el.disabled, btn);
+        buttonTexts.push({ text: t, disabled });
+      }
+      log(`Twitter: Buttons found: ${JSON.stringify(buttonTexts)}`);
+      
+      // Click the first non-disabled button that says 'next'
+      for (const btn of allButtons) {
+        const t = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+        const disabled = await page.evaluate(el => el.disabled, btn);
+        if ((t === 'next') && !disabled) {
+          // Use JavaScript click for reliability
+          await page.evaluate(el => el.click(), btn);
+          nextClicked = true;
+          log('Twitter: Next button clicked (JS click)');
+          break;
         }
-      } catch (e) { /* ignore */ }
+      }
+    } catch (e) { log(`Twitter: Next button error: ${e.message}`); }
+    
+    if (!nextClicked) {
+      // Try data-testid selectors as fallback
+      nextClicked = await safeClick(page, 'button[data-testid="ocfEnterTextNextButton"]');
     }
     if (!nextClicked) {
-      log('Twitter: Could not find Next button, pressing Enter');
+      log('Twitter: No Next button found, trying Enter');
       await page.keyboard.press('Enter');
     }
 
-    // Wait for next step
-    await humanDelay(3000, 5000);
-    log(`Twitter: Post-username URL: ${page.url()}`);
+    // Wait longer for next step to load
+    await humanDelay(5000, 8000);
+    const postUsernameUrl = page.url();
+    log(`Twitter: Post-username URL: ${postUsernameUrl}`);
+    
+    // Log full page state for diagnostics
+    const pageText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
+    log(`Twitter: Full page text (first 500 chars): "${pageText.substring(0, 500)}"`);
+    
+    // Check all visible inputs
+    const visibleInputs = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('input')).map(i => ({
+        type: i.type, name: i.name, autocomplete: i.autocomplete, visible: i.offsetParent !== null
+      })).filter(i => i.visible);
+    }).catch(() => []);
+    log(`Twitter: Visible inputs: ${JSON.stringify(visibleInputs)}`);
 
     // Step 2: Handle email/phone verification screen
-    try {
-      const pageText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
-      log(`Twitter: Post-username page text: "${pageText.substring(0, 300)}"`);
+    // X often shows this before the password step
+    const needsVerification = pageText.includes('enter your phone number') ||
+      pageText.includes('enter your email') ||
+      pageText.includes('verify your identity') ||
+      pageText.includes('enter the phone number') ||
+      pageText.includes('enter the email') ||
+      pageText.includes('we need to verify') ||
+      pageText.includes('enter your phone') ||
+      pageText.includes('in order to') ||
+      pageText.includes('to continue') ||
+      pageText.includes('confirm') ||
+      pageText.includes('verification');
 
-      const needsVerification = pageText.includes('enter your phone number') ||
-        pageText.includes('enter your email') ||
-        pageText.includes('verify your identity') ||
-        pageText.includes('enter the phone number') ||
-        pageText.includes('enter the email') ||
-        pageText.includes('we need to verify') ||
-        pageText.includes('enter your phone') ||
-        pageText.includes('in order to');
+    const identifierInput = await page.$('input[data-testid="ocfEnterTextTextInput"]') ||
+      await page.$('input[type="text"][name*="identifier"]') ||
+      await page.$('input[autocomplete="email"]') ||
+      await page.$('input[autocomplete="tel"]');
 
-      const identifierInput = await page.$('input[data-testid="ocfEnterTextTextInput"]') ||
-        await page.$('input[type="text"][name*="identifier"]') ||
-        await page.$('input[autocomplete="email"]') ||
-        await page.$('input[autocomplete="tel"]');
+    // Also check if there's a text input visible (verification step)
+    const hasTextInput = visibleInputs.some(i => i.type === 'text' && i.name !== 'username');
 
-      if (needsVerification || identifierInput) {
-        log('Twitter: Verification page detected, entering email...');
-        let verificationFilled = false;
-        const verifySelectors = [
-          'input[data-testid="ocfEnterTextTextInput"]',
-          'input[type="text"][name*="identifier"]',
-          'input[autocomplete="email"]',
-          'input[autocomplete="tel"]',
-          'input[name="text"]',
-        ];
-        for (const sel of verifySelectors) {
-          try {
-            const el = await page.$(sel);
-            if (el) {
-              await el.click();
-              await humanDelay(300, 500);
-              await humanType(page, sel, email, { delay: 100 });
-              verificationFilled = true;
-              log(`Twitter: Verification field filled using selector: ${sel}`);
+    if (needsVerification || identifierInput || hasTextInput) {
+      log('Twitter: Verification/challenge page detected, entering email...');
+      let verificationFilled = false;
+      const verifySelectors = [
+        'input[data-testid="ocfEnterTextTextInput"]',
+        'input[type="text"][name*="identifier"]',
+        'input[autocomplete="email"]',
+        'input[autocomplete="tel"]',
+        'input[type="text"]',
+      ];
+      for (const sel of verifySelectors) {
+        try {
+          const el = await page.$(sel);
+          if (el) {
+            const isVisible = await page.evaluate(e => e.offsetParent !== null, el);
+            if (!isVisible) continue;
+            await el.click();
+            await humanDelay(300, 500);
+            await humanType(page, sel, email, { delay: 100 });
+            verificationFilled = true;
+            log(`Twitter: Verification field filled using selector: ${sel}`);
+            break;
+          }
+        } catch (e) { /* try next */ }
+      }
+      if (verificationFilled) {
+        await humanDelay(1000, 2000);
+        await randomMouseMove(page);
+        // Click Next on verification page
+        let verifyNextClicked = false;
+        try {
+          const buttons = await page.$$('button');
+          for (const btn of buttons) {
+            const t = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+            if (t === 'next') {
+              await page.evaluate(el => el.click(), btn);
+              verifyNextClicked = true;
+              log('Twitter: Verification Next clicked (JS click)');
               break;
             }
-          } catch (e) { /* try next */ }
-        }
-        if (verificationFilled) {
-          await humanDelay(1000, 2000);
-          await randomMouseMove(page);
-          // Click Next on verification page
-          let verifyNextClicked = await safeClick(page, 'button[data-testid="ocfEnterTextNextButton"]');
-          if (!verifyNextClicked) {
-            try {
-              const buttons = await page.$$('button');
-              for (const btn of buttons) {
-                const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-                if (btnText === 'next') {
-                  await btn.click();
-                  verifyNextClicked = true;
-                  log('Twitter: Verification Next clicked via text match');
-                  break;
-                }
-              }
-            } catch (e) { /* ignore */ }
           }
-          if (!verifyNextClicked) {
-            await page.keyboard.press('Enter');
-            log('Twitter: Verification submitted via Enter');
-          }
-          await humanDelay(3000, 5000);
-          log(`Twitter: Post-verification URL: ${page.url()}`);
+        } catch (e) { /* ignore */ }
+        if (!verifyNextClicked) {
+          await page.keyboard.press('Enter');
+          log('Twitter: Verification submitted via Enter');
         }
+        await humanDelay(5000, 8000);
+        log(`Twitter: Post-verification URL: ${page.url()}`);
       }
-    } catch (e) {
-      log(`Twitter: Verification step error: ${e.message}`);
     }
 
     // Step 3: Enter password
@@ -1211,8 +1231,8 @@ async function twitterLogin(page) {
     log(`Twitter: Post-login URL: ${url}`);
 
     // Check for visible signs of being logged in
-    const pageText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
-    const hasHomeContent = pageText.includes('home') || pageText.includes('timeline') || pageText.includes('tweet');
+    const loginPageText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
+    const hasHomeContent = loginPageText.includes('home') || loginPageText.includes('timeline') || loginPageText.includes('tweet');
     const hasTweetButton = await page.$('[data-testid="SideNav_NewTweet_Button"]').catch(() => null);
 
     if ((url.includes('home') || url === 'https://x.com/' || url === 'https://x.com') && (hasHomeContent || hasTweetButton)) {
@@ -1225,13 +1245,13 @@ async function twitterLogin(page) {
     }
     if (url.includes('login') || url.includes('flow')) {
       // Check for specific error messages
-      if (pageText.includes('incorrect') || pageText.includes('invalid') || pageText.includes('wrong password') || pageText.includes('username or password')) {
-        log(`Twitter: Invalid credentials — "${pageText.substring(0, 300)}"`);
+      if (loginPageText.includes('incorrect') || loginPageText.includes('invalid') || loginPageText.includes('wrong password') || loginPageText.includes('username or password')) {
+        log(`Twitter: Invalid credentials — "${loginPageText.substring(0, 300)}"`);
         await takeScreenshot(page, 'twitter-invalid-credentials');
         return false;
       }
-      if (pageText.includes('unusual') || pageText.includes('suspicious') || pageText.includes('locked') || pageText.includes('verify')) {
-        log(`Twitter: Account verification/lock — "${pageText.substring(0, 300)}"`);
+      if (loginPageText.includes('unusual') || loginPageText.includes('suspicious') || loginPageText.includes('locked') || loginPageText.includes('verify')) {
+        log(`Twitter: Account verification/lock — "${loginPageText.substring(0, 300)}"`);
         await takeScreenshot(page, 'twitter-account-locked');
         return false;
       }
