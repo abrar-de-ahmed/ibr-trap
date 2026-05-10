@@ -616,7 +616,7 @@ async function redditLogin(page) {
     // WARM-UP: Visit Reddit homepage first — looks like a natural user arriving at the site
     log('Reddit: Warming up — visiting homepage first...');
     try {
-      await page.goto('https://www.reddit.com/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await page.goto('https://www.reddit.com/', { waitUntil: 'load', timeout: 30000 });
       await humanDelay(2000, 4000);
       // Simulate scrolling like a real user
       await humanScroll(page, 200, 400);
@@ -626,9 +626,24 @@ async function redditLogin(page) {
     }
 
     // Now navigate to login page
+    // Reddit is a React SPA — we need to wait for the form to actually render
     log('Reddit: Navigating to login page...');
-    await page.goto('https://www.reddit.com/login/', { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await humanDelay(3000, 5000);
+    await page.goto('https://www.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 45000 });
+    
+    // Explicitly wait for the login form to render (Reddit loads it via React)
+    log('Reddit: Waiting for login form to render...');
+    try {
+      await page.waitForSelector('input[name="username"], #login-username, input[autocomplete="username"], input[type="text"]', { timeout: 15000 });
+      log('Reddit: Login form detected!');
+    } catch (e) {
+      // If selector wait fails, wait a bit more and check what's on the page
+      log(`Reddit: Login form not found via selector, waiting more... (${e.message})`);
+      await humanDelay(5000, 8000);
+      // Try checking page content
+      const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500)).catch(() => 'empty');
+      log(`Reddit: Page content after extra wait: "${pageContent}"`);
+    }
+    await humanDelay(1000, 2000);
 
     // Move mouse to a natural position before interacting
     await randomMouseMove(page);
@@ -1007,7 +1022,7 @@ async function twitterLogin(page) {
     // WARM-UP: Visit X homepage first — looks like a natural user
     log('Twitter: Warming up — visiting homepage first...');
     try {
-      await page.goto('https://x.com/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await page.goto('https://x.com/', { waitUntil: 'load', timeout: 30000 });
       await humanDelay(3000, 5000);
       await randomMouseMove(page);
     } catch (e) {
@@ -1016,8 +1031,20 @@ async function twitterLogin(page) {
 
     // Navigate to login
     log('Twitter: Navigating to login page...');
-    await page.goto('https://x.com/i/flow/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await humanDelay(3000, 5000);
+    await page.goto('https://x.com/i/flow/login', { waitUntil: 'networkidle2', timeout: 45000 });
+    
+    // Wait for username input to appear (X loads it dynamically)
+    log('Twitter: Waiting for login form to render...');
+    try {
+      await page.waitForSelector('input[autocomplete="username"], input[name="text"]', { timeout: 15000 });
+      log('Twitter: Login form detected!');
+    } catch (e) {
+      log(`Twitter: Login form not found via selector: ${e.message}`);
+      const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500)).catch(() => 'empty');
+      log(`Twitter: Page content: "${pageContent}"`);
+      await takeScreenshot(page, 'twitter-login-form-missing');
+    }
+    await humanDelay(1000, 2000);
     await randomMouseMove(page);
 
     // Step 1: Enter username
