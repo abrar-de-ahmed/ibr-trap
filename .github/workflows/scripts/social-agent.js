@@ -627,21 +627,36 @@ async function redditLogin(page) {
 
     // Now navigate to login page
     // Reddit is a React SPA — we need to wait for the form to actually render
-    log('Reddit: Navigating to login page...');
-    await page.goto('https://www.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 45000 });
+    // Try old.reddit.com first (simpler HTML, less JS-based blocking)
+    log('Reddit: Navigating to login page (old.reddit.com)...');
+    await page.goto('https://old.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 45000 });
     
-    // Explicitly wait for the login form to render (Reddit loads it via React)
+    // Explicitly wait for the login form to render
     log('Reddit: Waiting for login form to render...');
     try {
-      await page.waitForSelector('input[name="username"], #login-username, input[autocomplete="username"], input[type="text"]', { timeout: 15000 });
+      // old.reddit.com uses standard HTML form with #user_login or #login_username
+      await page.waitForSelector('#user_login, #login-username, input[name="username"], input[type="text"]', { timeout: 15000 });
       log('Reddit: Login form detected!');
     } catch (e) {
-      // If selector wait fails, wait a bit more and check what's on the page
-      log(`Reddit: Login form not found via selector, waiting more... (${e.message})`);
-      await humanDelay(5000, 8000);
-      // Try checking page content
-      const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500)).catch(() => 'empty');
-      log(`Reddit: Page content after extra wait: "${pageContent}"`);
+      // If old.reddit.com fails, try new Reddit as fallback
+      log(`Reddit: old.reddit.com form not found, trying www.reddit.com... (${e.message})`);
+      await page.goto('https://www.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 45000 });
+      try {
+        await page.waitForSelector('input[name="username"], #login-username, input[autocomplete="username"], input[type="text"]', { timeout: 15000 });
+        log('Reddit: www login form detected!');
+      } catch (e2) {
+        log(`Reddit: Both login pages failed to render form. Last error: ${e2.message}`);
+        await humanDelay(3000, 5000);
+        const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500)).catch(() => 'empty');
+        log(`Reddit: Page content: "${pageContent}"`);
+        // Check for JavaScript errors
+        const jsErrors = await page.evaluate(() => {
+          // Check if React loaded
+          const hasReact = typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined' || document.querySelector('[data-reactroot]') !== null;
+          return { hasReact, url: window.location.href, readyState: document.readyState };
+        }).catch(() => ({ hasReact: false, error: true }));
+        log(`Reddit: Diagnostics: ${JSON.stringify(jsErrors)}`);
+      }
     }
     await humanDelay(1000, 2000);
 
@@ -649,9 +664,10 @@ async function redditLogin(page) {
     await randomMouseMove(page);
     await humanDelay(500, 1000);
 
-    // Try multiple selectors for username field
+    // Try multiple selectors for username field (works for both old and new Reddit)
     const usernameSelectors = [
-      '#login-username',
+      '#user_login',            // old.reddit.com
+      '#login-username',        // new Reddit
       'input[name="username"]',
       'input[autocomplete="username"]',
       'input[id="username"]',
@@ -692,7 +708,8 @@ async function redditLogin(page) {
 
     // Try multiple selectors for password field
     const passwordSelectors = [
-      '#login-password',
+      '#passwd',                // old.reddit.com
+      '#login-password',        // new Reddit
       'input[name="password"]',
       'input[type="password"]'
     ];
