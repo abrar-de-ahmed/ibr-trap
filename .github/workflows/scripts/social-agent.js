@@ -613,65 +613,77 @@ async function redditLogin(page) {
   }
 
   try {
-    // WARM-UP: Visit Reddit homepage first — looks like a natural user arriving at the site
-    log('Reddit: Warming up — visiting homepage first...');
-    try {
-      await page.goto('https://www.reddit.com/', { waitUntil: 'load', timeout: 30000 });
-      await humanDelay(2000, 4000);
-      // Simulate scrolling like a real user
-      await humanScroll(page, 200, 400);
-      await humanDelay(1000, 2000);
-    } catch (e) {
-      log(`Reddit: Homepage warm-up warning: ${e.message}`);
-    }
-
-    // Now navigate to login page
-    // Reddit is a React SPA — we need to wait for the form to actually render
-    // Try old.reddit.com first (simpler HTML, less JS-based blocking)
-    log('Reddit: Navigating to login page (old.reddit.com)...');
-    await page.goto('https://old.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 45000 });
+    // ═══ STRATEGY 1: API-based login ═══
+    // Reddit's /api/login/ is a POST endpoint that returns session cookies.
+    // This completely bypasses the need for JavaScript rendering — it works
+    // even when Reddit blocks datacenter IPs from loading the React app.
+    log('Reddit: Attempting API-based login (/api/login/)...');
     
-    // Explicitly wait for the login form to render
-    log('Reddit: Waiting for login form to render...');
+    let apiLoginOk = false;
     try {
-      // old.reddit.com uses standard HTML form with #user_login or #login_username
-      await page.waitForSelector('#user_login, #login-username, input[name="username"], input[type="text"]', { timeout: 15000 });
-      log('Reddit: Login form detected!');
-    } catch (e) {
-      // If old.reddit.com fails, try new Reddit as fallback
-      log(`Reddit: old.reddit.com form not found, trying www.reddit.com... (${e.message})`);
-      await page.goto('https://www.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 45000 });
-      try {
-        await page.waitForSelector('input[name="username"], #login-username, input[autocomplete="username"], input[type="text"]', { timeout: 15000 });
-        log('Reddit: www login form detected!');
-      } catch (e2) {
-        log(`Reddit: Both login pages failed to render form. Last error: ${e2.message}`);
-        await humanDelay(3000, 5000);
-        const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500)).catch(() => 'empty');
-        log(`Reddit: Page content: "${pageContent}"`);
-        // Check for JavaScript errors
-        const jsErrors = await page.evaluate(() => {
-          // Check if React loaded
-          const hasReact = typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined' || document.querySelector('[data-reactroot]') !== null;
-          return { hasReact, url: window.location.href, readyState: document.readyState };
-        }).catch(() => ({ hasReact: false, error: true }));
-        log(`Reddit: Diagnostics: ${JSON.stringify(jsErrors)}`);
+      await page.goto('https://www.reddit.com/', { waitUntil: 'load', timeout: 20000 });
+      await humanDelay(1000, 2000);
+      
+      const apiResult = await page.evaluate(async (creds) => {
+        try {
+          const resp = await fetch('https://www.reddit.com/api/login/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `user=${encodeURIComponent(creds.username)}&passwd=${encodeURIComponent(creds.password)}&api_type=json`,
+            credentials: 'include',
+          });
+          const data = await resp.json();
+          return { ok: data.json?.data !== undefined, errors: data.json?.errors };
+        } catch (e) { return { ok: false, errors: [[e.message]] }; }
+      }, { username, password });
+      
+      if (apiResult.ok) {
+        log('Reddit: API login succeeded!');
+        apiLoginOk = true;
+      } else {
+        log(`Reddit: API login error: ${JSON.stringify(apiResult.errors)}`);
       }
+    } catch (e) {
+      log(`Reddit: API login exception: ${e.message}`);
     }
-    await humanDelay(1000, 2000);
+    
+    // If API login worked, verify session and return
+    if (apiLoginOk) {
+      await humanDelay(2000, 3000);
+      await page.goto('https://www.reddit.com/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await humanDelay(2000, 3000);
+      const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
+      const hasUserMenu = await page.$('#header-profile--flyout, [data-testid="header-profile"]').catch(() => null);
+      if (hasUserMenu || !bodyText.includes('log in')) {
+        log('Reddit: Session verified via API login!');
+        return true;
+      }
+      log('Reddit: API login OK but session not verified, falling back to web login...');
+    }
+    
+    // ═══ STRATEGY 2: Web login via old.reddit.com ═══
+    log('Reddit: Trying old.reddit.com web login...');
+    await page.goto('https://old.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 45000 });
+    await humanDelay(2000, 3000);
+    
+    const formFound = await page.$('#user_login, input[name="username"], input[type="text"]').catch(() => null);
+    if (!formFound) {
+      log('Reddit: old.reddit.com form also not rendered — IP may be blocked');
+      await takeScreenshot(page, 'reddit-ip-blocked');
+      return false;
+    }
+    log('Reddit: old.reddit.com login form found!');
 
-    // Move mouse to a natural position before interacting
+    await humanDelay(1000, 2000);
     await randomMouseMove(page);
     await humanDelay(500, 1000);
 
-    // Try multiple selectors for username field (works for both old and new Reddit)
+    // Fill username (old.reddit.com uses #user_login)
     const usernameSelectors = [
-      '#user_login',            // old.reddit.com
-      '#login-username',        // new Reddit
+      '#user_login',
+      '#login-username',
       'input[name="username"]',
       'input[autocomplete="username"]',
-      'input[id="username"]',
-      'input[placeholder*="username" i]',
       'input[type="text"]'
     ];
     let usernameFilled = false;
@@ -679,26 +691,20 @@ async function redditLogin(page) {
       try {
         const el = await page.$(sel);
         if (el) {
-          // Click with a slight offset to look more natural
           const box = await el.boundingBox();
-          if (box) {
-            await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
-          } else {
-            await el.click();
-          }
+          if (box) await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
+          else await el.click();
           await humanDelay(500, 800);
           await humanType(page, sel, username);
           usernameFilled = true;
-          log(`Reddit: Username filled using selector: ${sel}`);
+          log(`Reddit: Username filled via: ${sel}`);
           break;
         }
-      } catch (e) { /* try next */ }
+      } catch (e) { /* next */ }
     }
 
     if (!usernameFilled) {
-      log('Reddit: Could not find username field — page may not have loaded properly');
-      const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500)).catch(() => 'empty');
-      log(`Reddit: Page content: "${pageContent}"`);
+      log('Reddit: Could not find username field');
       await takeScreenshot(page, 'reddit-no-username-field');
       return false;
     }
@@ -706,31 +712,23 @@ async function redditLogin(page) {
     await humanDelay(1500, 2500);
     await randomMouseMove(page);
 
-    // Try multiple selectors for password field
-    const passwordSelectors = [
-      '#passwd',                // old.reddit.com
-      '#login-password',        // new Reddit
-      'input[name="password"]',
-      'input[type="password"]'
-    ];
+    // Fill password (old.reddit.com uses #passwd)
+    const passwordSelectors = ['#passwd', '#login-password', 'input[name="password"]', 'input[type="password"]'];
     let passwordFilled = false;
     for (const sel of passwordSelectors) {
       try {
         const el = await page.$(sel);
         if (el) {
           const box = await el.boundingBox();
-          if (box) {
-            await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
-          } else {
-            await el.click();
-          }
+          if (box) await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
+          else await el.click();
           await humanDelay(500, 800);
           await humanType(page, sel, password);
           passwordFilled = true;
-          log(`Reddit: Password filled using selector: ${sel}`);
+          log(`Reddit: Password filled via: ${sel}`);
           break;
         }
-      } catch (e) { /* try next */ }
+      } catch (e) { /* next */ }
     }
 
     if (!passwordFilled) {
@@ -744,11 +742,11 @@ async function redditLogin(page) {
 
     // Submit login
     let submitted = false;
-
-    // Try button selectors
+    // old.reddit.com uses a <button type="submit"> inside the login form
     const submitSelectors = [
       'button[type="submit"]',
       'button.login-button',
+      'input[type="submit"]',
       'button[class*="login" i]',
     ];
     for (const sel of submitSelectors) {
@@ -756,102 +754,76 @@ async function redditLogin(page) {
         const btn = await page.$(sel);
         if (btn) {
           const box = await btn.boundingBox();
-          if (box) {
-            await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-          } else {
-            await btn.click();
-          }
+          if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+          else await btn.click();
           submitted = true;
-          log(`Reddit: Submit clicked using selector: ${sel}`);
+          log(`Reddit: Submit clicked via: ${sel}`);
           break;
         }
-      } catch (e) { /* try next */ }
+      } catch (e) { /* next */ }
     }
-
-    // Fallback: find button by text content
     if (!submitted) {
+      // Text-match fallback
       try {
         const buttons = await page.$$('button');
-        const textSubmitSelectors = ['Log In', 'Sign In'];
         for (const btn of buttons) {
-          const btnText = await page.evaluate(el => el.textContent.trim(), btn);
-          if (textSubmitSelectors.some(t => btnText.includes(t))) {
+          const t = await page.evaluate(el => el.textContent.trim(), btn);
+          if (t.toLowerCase().includes('log in') || t.toLowerCase().includes('sign in')) {
             await btn.click();
             submitted = true;
-            log(`Reddit: Submit clicked via text match: "${btnText}"`);
+            log(`Reddit: Submit clicked via text: "${t}"`);
             break;
           }
         }
       } catch (e) { /* ignore */ }
     }
-
     if (!submitted) {
-      // Fallback: press Enter
       await page.keyboard.press('Enter');
-      log('Reddit: Submit via Enter key (no button found)');
+      log('Reddit: Submit via Enter');
     }
 
-    // Wait for navigation after submit
-    try {
-      await waitForNav(page, 15000);
-    } catch (e) {
-      log(`Reddit: waitForNav timeout (may be OK): ${e.message}`);
-    }
+    try { await waitForNav(page, 15000); } catch (e) { /* ok */ }
     await humanDelay(3000, 5000);
 
-    // ── Post-login verification loop (handles consent, 2FA, email verify) ──
+    // Verify login
     let loggedIn = false;
-    for (let attempt = 0; attempt < 4; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       const currentUrl = page.url();
-      log(`Reddit: Login verify attempt ${attempt + 1}, URL: ${currentUrl}`);
-
-      // Check for signs we're logged in: user avatar, home feed, specific UI elements
-      const hasAvatar = await page.$('#header-profile--flyout, button[aria-label*="User"], header img[alt*="avatar" i]').catch(() => null);
-      const isHomePage = currentUrl.includes('reddit.com/') && !currentUrl.includes('login') && !currentUrl.includes('consent') && !currentUrl.includes('authorize');
-
-      if (isHomePage || hasAvatar) {
-        log('Reddit: Login successful! (detected via URL/avatar check)');
+      log(`Reddit: Verify attempt ${attempt + 1}, URL: ${currentUrl}`);
+      
+      const hasAvatar = await page.$('#header-profile--flyout, button[aria-label*="User"]').catch(() => null);
+      const isHome = currentUrl.includes('reddit.com/') && !currentUrl.includes('login') && !currentUrl.includes('consent');
+      
+      if (isHome || hasAvatar) {
+        log('Reddit: Login successful!');
         loggedIn = true;
         break;
       }
-
+      
       const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
-
-      // Check for incorrect password / wrong username
-      if (bodyText.includes('incorrect password') || bodyText.includes('wrong password') || bodyText.includes('invalid username') || bodyText.includes('that username doesn\'t exist') || bodyText.includes('incorrect username') || bodyText.includes('invalid password')) {
-        log(`Reddit: Invalid credentials — "${bodyText.substring(0, 300)}"`);
+      
+      if (bodyText.includes('incorrect password') || bodyText.includes('wrong password') || bodyText.includes('invalid username') || bodyText.includes('that username doesn\'t exist')) {
+        log(`Reddit: Invalid credentials`);
         await takeScreenshot(page, 'reddit-invalid-credentials');
         break;
       }
-
-      // Check for email verification / 2FA / unusual activity
-      if (bodyText.includes('verify your email') || bodyText.includes('check your email') || bodyText.includes('enter verification code') || bodyText.includes('two-factor') || bodyText.includes('unusual activity') || bodyText.includes('suspicious login')) {
-        log(`Reddit: Additional verification required — "${bodyText.substring(0, 300)}"`);
-        await takeScreenshot(page, `reddit-verification-required-attempt-${attempt}`);
+      
+      if (bodyText.includes('verify your email') || bodyText.includes('two-factor') || bodyText.includes('unusual activity')) {
+        log(`Reddit: Additional verification required`);
+        await takeScreenshot(page, 'reddit-verification-required');
         break;
       }
-
-      // Check for rate limiting / account locked
-      if (bodyText.includes('try again later') || bodyText.includes('too many requests') || bodyText.includes('rate limit') || bodyText.includes('temporarily locked')) {
-        log(`Reddit: Rate limited or locked — "${bodyText.substring(0, 300)}"`);
-        await takeScreenshot(page, 'reddit-rate-limited');
-        break;
-      }
-
-      // Check for consent — specific match only
-      const isConsentDialog = currentUrl.includes('consent') ||
-        currentUrl.includes('authorize') ||
+      
+      const isConsent = currentUrl.includes('consent') || currentUrl.includes('authorize') ||
         (bodyText.includes('continue to reddit') && bodyText.includes('allow'));
-
-      if (isConsentDialog) {
-        log('Reddit: Consent DIALOG detected (specific match), clicking continue...');
+      if (isConsent) {
+        log('Reddit: Consent dialog, clicking continue...');
         try {
           const buttons = await page.$$('button');
           for (const btn of buttons) {
-            const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-            if (btnText.includes('continue') || btnText.includes('accept') || btnText.includes('allow')) {
+            const t = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+            if (t.includes('continue') || t.includes('accept')) {
               await btn.click();
-              log(`Reddit: Consent button clicked: "${btnText}"`);
               break;
             }
           }
@@ -860,15 +832,14 @@ async function redditLogin(page) {
           continue;
         } catch (e) { /* proceed */ }
       }
-
-      // If still stuck, log state and wait
-      log(`Reddit: Still on login page, no specific errors detected. Snippet: "${bodyText.substring(0, 300)}"`);
-      await takeScreenshot(page, `reddit-stuck-on-login-attempt-${attempt}`);
+      
+      log(`Reddit: Still on login page. Snippet: "${bodyText.substring(0, 200)}"`);
+      await takeScreenshot(page, `reddit-stuck-${attempt}`);
       await humanDelay(4000, 6000);
     }
 
     if (!loggedIn) {
-      log(`Reddit: Login failed after all attempts. Final URL: ${page.url()}`);
+      log(`Reddit: Login failed. Final URL: ${page.url()}`);
       await takeScreenshot(page, 'reddit-login-failed-final');
     }
     return loggedIn;
