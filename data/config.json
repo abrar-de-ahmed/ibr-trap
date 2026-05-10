@@ -102,13 +102,15 @@
     "posting_method": "puppeteer",
     "agent_version": "2.0",
     "subreddits": [
+      "r/SideProject",
       "r/Entrepreneur",
-      "r/shopify",
-      "r/Etsy",
-      "r/ecommerce",
-      "r/smallbusiness",
       "r/photography",
-      "r/SideProject"
+      "r/graphic_design",
+      "r/webdev",
+      "r/FOSSselfpromo",
+      "r/internettutorials",
+      "r/UsefulWebsites",
+      "r/sweatystartup"
     ],
     "account_status": {
       "reddit": {
