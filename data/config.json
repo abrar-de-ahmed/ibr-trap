@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "created": "2026-05-09",
-  "last_evolution": "2026-05-09",
+  "last_evolution": "2026-05-10",
   "site": {
     "url": "https://bgremoverdigital.craftedmindss.com",
     "brand_name": "BG Remover Digital",
@@ -13,8 +13,8 @@
     "start_date": "2026-05-09",
     "price_per_user": 9,
     "current_paid_users": 3,
-    "current_week": 1,
-    "current_phase": "week1_baby_steps"
+    "current_week": 2,
+    "current_phase": "week2_walking"
   },
   "mitigation": {
     "week1": {
@@ -56,7 +56,7 @@
     }
   },
   "budget": {
-    "ads_enabled": false,
+    "ads_enabled": true,
     "ads_start_after_users": 2,
     "scaling": [
       {
@@ -82,7 +82,7 @@
     ]
   },
   "seo": {
-    "title_strategy": "format_B",
+    "title_strategy": "format_A",
     "blog_word_count": 1200,
     "title_formats": {
       "format_A": "Remove [keyword] Background - Free Online Tool",
@@ -250,12 +250,12 @@
     {
       "slug": "transparent",
       "keyword": "transparent background maker",
-      "status": "candidate"
+      "status": "created"
     },
     {
       "slug": "white-background",
       "keyword": "white background maker online",
-      "status": "candidate"
+      "status": "created"
     },
     {
       "slug": "free-online",
