@@ -2,9 +2,9 @@
   "status": "active",
   "mode": "monitor",
   "lastKnownHashes": {
-    "homepage": null,
-    "homepageStable": null,
-    "homepageFull": null
+    "homepage": "b1c4435edfbdec01f40e23ae995a6e8fcc60e31a666aaf513eef0b05484e2f0b",
+    "homepageStable": "b1c4435edfbdec01f40e23ae995a6e8fcc60e31a666aaf513eef0b05484e2f0b",
+    "homepageFull": "ce8d5fe0f15919f77fb8d4aea11fe9269d2fb1ecea30c4fc8a4528b44021ccfb"
   },
   "responseTimeHistory": [
     {
@@ -38,15 +38,19 @@
     {
       "time": "2026-05-10T13:07:35.632Z",
       "ms": 216
+    },
+    {
+      "time": "2026-05-10T17:23:10.841Z",
+      "ms": 209
     }
   ],
   "alerts": [],
-  "checkCount": 0,
+  "checkCount": 1,
   "firstCheck": "2026-05-11",
   "bravoOverride": null,
-  "lastCheck": null,
+  "lastCheck": "2026-05-10",
   "v2MigrationDate": "2026-05-10",
-  "v2MigrationNote": "Reset from v1 \u2014 all previous alerts were false positives (Content Tampering: Next.js build hash changes, Injected Code: GA4 not whitelisted, Site Unreachable: ghost.findings crash bug). See commit for details.",
+  "v2MigrationNote": "Reset from v1 — all previous alerts were false positives (Content Tampering: Next.js build hash changes, Injected Code: GA4 not whitelisted, Site Unreachable: ghost.findings crash bug). See commit for details.",
   "v3MigrationDate": "2026-05-11",
-  "v3MigrationNote": "Reset from v2 \u2014 all alerts were false positives (Content Tampering: hash not aggressive enough, missed RSC payloads + CSS class hashes + Cloudflare Insights). v3 strips ALL <script> tags + content, CSS module hashes, nonce values. Added cloudflareinsights.com to trusted domains."
+  "v3MigrationNote": "Reset from v2 — all alerts were false positives (Content Tampering: hash not aggressive enough, missed RSC payloads + CSS class hashes + Cloudflare Insights). v3 strips ALL <script> tags + content, CSS module hashes, nonce values. Added cloudflareinsights.com to trusted domains."
 }
