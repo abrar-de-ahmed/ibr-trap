@@ -2,9 +2,9 @@
   "status": "active",
   "mode": "monitor",
   "lastKnownHashes": {
-    "homepage": "2d2f14ba95492c0080943387f05f69f666bae5f5e745c7fb765bd51eec92a58e",
-    "homepageStable": "2d2f14ba95492c0080943387f05f69f666bae5f5e745c7fb765bd51eec92a58e",
-    "homepageFull": "155141ad99c6c5de883c0443f213ab75f259c85c9df318695296d3476423c249"
+    "homepage": "acd96bec273fcb65481ea091f6db556fab905232dc12731497046d8326212763",
+    "homepageStable": "acd96bec273fcb65481ea091f6db556fab905232dc12731497046d8326212763",
+    "homepageFull": "66be40046acd77527c29f717af5b7ca5c65b572b083b82da77ec0df90bfae172"
   },
   "responseTimeHistory": [
     {
@@ -30,6 +30,10 @@
     {
       "time": "2026-05-10T02:32:49.896Z",
       "ms": 170
+    },
+    {
+      "time": "2026-05-10T08:02:55.340Z",
+      "ms": 151
     }
   ],
   "alerts": [
@@ -39,9 +43,17 @@
       "findings": [
         "Injected Code"
       ]
+    },
+    {
+      "date": "2026-05-10",
+      "time": "2026-05-10T08:02:55.340Z",
+      "findings": [
+        "Content Tampering",
+        "Injected Code"
+      ]
     }
   ],
-  "checkCount": 1,
+  "checkCount": 2,
   "firstCheck": "2026-05-10",
   "bravoOverride": null,
   "lastCheck": "2026-05-10",
