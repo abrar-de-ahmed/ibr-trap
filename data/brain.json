@@ -235,14 +235,6 @@
           "status": "posted",
           "is_experiment": false,
           "post_url": null
-        },
-        {
-          "platform": "reddit",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
         }
       ]
     },
