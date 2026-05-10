@@ -207,7 +207,7 @@
       "posted_count": 0
     },
     "twitter": {
-      "posts": 4,
+      "posts": 3,
       "avg_engagement": 0,
       "best_time": null,
       "status": "active",
@@ -233,22 +233,6 @@
           "date": "2026-05-10",
           "title": "Remove Backgrounds from Pet Photos - Free Online Tool",
           "status": "posted",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "reddit",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "twitter",
-          "date": "2026-05-10",
-          "title": "",
-          "status": "failed",
           "is_experiment": false,
           "post_url": null
         }

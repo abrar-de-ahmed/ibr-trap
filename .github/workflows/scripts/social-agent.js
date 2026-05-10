@@ -440,13 +440,18 @@ function humanDelay(min = 800, max = 2500) {
 
 // Human-like typing with random delays
 async function humanType(page, selector, text, { delay = 80 } = {}) {
-  await page.waitForSelector(selector, { timeout: 10000 });
-  await page.click(selector);
-  await humanDelay(300, 600);
-  for (let i = 0; i < text.length; i++) {
-    await page.keyboard.type(text[i], { delay: delay + Math.floor(rand() * 60) });
-    // Occasional longer pause (like a human thinking)
-    if (rand() < 0.05) await humanDelay(400, 800);
+  try {
+    await page.waitForSelector(selector, { timeout: 10000 });
+    await page.click(selector);
+    await humanDelay(300, 600);
+    for (let i = 0; i < text.length; i++) {
+      await page.keyboard.type(text[i], { delay: delay + Math.floor(rand() * 60) });
+      // Occasional longer pause (like a human thinking)
+      if (rand() < 0.05) await humanDelay(400, 800);
+    }
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
