@@ -579,15 +579,47 @@ async function redditLogin(page) {
         break;
       }
 
-      // Check for consent/cookie page
-      const pageContent = await page.content();
-      if (pageContent.includes('consent') || pageContent.includes('Continue to Reddit') || currentUrl.includes('consent')) {
-        log('Reddit: Consent page detected, clicking continue...');
+      // IMPORTANT: Check for credential errors and verification FIRST (before consent!)
+      // The word "consent" appears in Reddit's ToS text on login pages — don't let it hijack the flow
+      const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
+
+      // Check for incorrect password / wrong username
+      if (bodyText.includes('incorrect password') || bodyText.includes('wrong password') || bodyText.includes('invalid username') || bodyText.includes('that username doesn\'t exist') || bodyText.includes('incorrect username') || bodyText.includes('invalid password')) {
+        log(`Reddit: Invalid credentials — "${bodyText.substring(0, 300)}"`);
+        await takeScreenshot(page, 'reddit-invalid-credentials');
+        break;
+      }
+
+      // Check for email verification / 2FA / unusual activity / CAPTCHA
+      if (bodyText.includes('verify your email') || bodyText.includes('check your email') || bodyText.includes('enter verification code') || bodyText.includes('two-factor') || bodyText.includes('unusual activity') || bodyText.includes('suspicious login') || bodyText.includes('captcha') || bodyText.includes('select all')) {
+        log(`Reddit: Additional verification required — "${bodyText.substring(0, 300)}"`);
+        await takeScreenshot(page, `reddit-verification-required-attempt-${attempt}`);
+        break; // Can't proceed without manual intervention
+      }
+
+      // Check for rate limiting / account locked
+      if (bodyText.includes('try again later') || bodyText.includes('too many requests') || bodyText.includes('rate limit') || bodyText.includes('temporarily locked')) {
+        log(`Reddit: Rate limited or locked — "${bodyText.substring(0, 300)}"`);
+        await takeScreenshot(page, 'reddit-rate-limited');
+        break;
+      }
+
+      // NOW check for consent — but be SPECIFIC: only if there's an actual consent DIALOG
+      // (not just the word "consent" in ToS/footer text)
+      // Reddit consent dialogs typically have a specific structure:
+      // - A modal/overlay with "Continue to Reddit" heading
+      // - OR URL contains /authorize/ or /consent/
+      const isConsentDialog = currentUrl.includes('consent') ||
+        currentUrl.includes('authorize') ||
+        (bodyText.includes('continue to reddit') && bodyText.includes('allow'));
+
+      if (isConsentDialog) {
+        log('Reddit: Consent DIALOG detected (specific match), clicking continue...');
         try {
           const buttons = await page.$$('button');
           for (const btn of buttons) {
             const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-            if (btnText.includes('continue') || btnText.includes('accept') || btnText.includes('yes') || btnText.includes('agree')) {
+            if (btnText.includes('continue') || btnText.includes('accept') || btnText.includes('allow')) {
               await btn.click();
               log(`Reddit: Consent button clicked: "${btnText}"`);
               break;
@@ -596,31 +628,17 @@ async function redditLogin(page) {
           await waitForNav(page, 10000);
           await humanDelay(3000, 5000);
           continue; // Re-check URL in next iteration
-        } catch (e) { /* proceed */ }
+        } catch (e) { /* proceed to error check */ }
       }
 
-      // Check for email verification / 2FA / unusual activity page
-      const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
-      if (bodyText.includes('verify your email') || bodyText.includes('check your email') || bodyText.includes('enter verification code') || bodyText.includes('two-factor') || bodyText.includes('unusual activity') || bodyText.includes('suspicious login')) {
-        log(`Reddit: Additional verification required — "${bodyText.substring(0, 200)}"`);
-        await takeScreenshot(page, `reddit-verification-required-attempt-${attempt}`);
-        break; // Can't proceed without manual intervention
-      }
-
-      // Check for incorrect password / wrong username
-      if (bodyText.includes('incorrect password') || bodyText.includes('wrong password') || bodyText.includes('invalid username') || bodyText.includes('that username doesn\'t exist') || bodyText.includes('incorrect username')) {
-        log(`Reddit: Invalid credentials — "${bodyText.substring(0, 200)}"`);
-        await takeScreenshot(page, 'reddit-invalid-credentials');
-        break;
-      }
-
-      // If URL still has 'login' but no specific error, wait and retry once more
-      log('Reddit: Still on login page, waiting longer before retry...');
+      // If we're on login page with no specific errors, log page state and wait
+      log(`Reddit: Still on login page, no specific errors detected. Page snippet: "${bodyText.substring(0, 300)}"`);
+      await takeScreenshot(page, `reddit-stuck-on-login-attempt-${attempt}`);
       await humanDelay(5000, 8000);
     }
 
     if (!loggedIn) {
-      log(`Reddit: Login failed. Final URL: ${page.url()}`);
+      log(`Reddit: Login failed after all attempts. Final URL: ${page.url()}`);
       await takeScreenshot(page, 'reddit-login-failed-final');
     }
     return loggedIn;
