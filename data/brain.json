@@ -181,7 +181,7 @@
   },
   "content": {
     "blog_posts": {
-      "total": 0,
+      "total": 1,
       "ranking_keywords": 0,
       "best_topic": null
     },
@@ -203,8 +203,17 @@
       }
     },
     "best_blog_length": "1200",
-    "faq_sections_added": 0,
-    "title_ab_tests": {}
+    "faq_sections_added": 5,
+    "title_ab_tests": {
+      "remove-backgrounds-without-photoshop": {
+        "variant_a": "How to Remove Image Backgrounds Without Photoshop",
+        "variant_b": "9 Tips for How to Remove Image Backgrounds Without Photoshop | BG Remover Digital",
+        "active": "A",
+        "created": "2026-05-11",
+        "impressions_a": 0,
+        "impressions_b": 0
+      }
+    }
   },
   "social": {
     "reddit": {

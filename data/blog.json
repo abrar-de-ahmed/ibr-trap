@@ -1,1 +1,22 @@
-{"posts": [], "next_post_id": 1}
+{
+  "posts": [
+    {
+      "id": 1,
+      "title": "How to Remove Image Backgrounds Without Photoshop",
+      "title_variant_a": "How to Remove Image Backgrounds Without Photoshop",
+      "title_variant_b": "9 Tips for How to Remove Image Backgrounds Without Photoshop | BG Remover Digital",
+      "active_title": "A",
+      "topic": "How to Remove Image Backgrounds Without Photoshop",
+      "slug": "remove-backgrounds-without-photoshop",
+      "word_count": 731,
+      "keywords": [
+        "background removal",
+        "no photoshop",
+        "free alternative"
+      ],
+      "created_date": "2026-05-11",
+      "status": "generated"
+    }
+  ],
+  "next_post_id": 2
+}
