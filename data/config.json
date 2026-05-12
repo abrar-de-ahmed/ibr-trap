@@ -275,17 +275,17 @@
     {
       "slug": "png",
       "keyword": "remove background from png",
-      "status": "candidate"
+      "status": "created"
     },
     {
       "slug": "jpg",
       "keyword": "remove background from jpg",
-      "status": "candidate"
+      "status": "created"
     },
     {
       "slug": "no-signup",
       "keyword": "background remover no signup",
-      "status": "candidate"
+      "status": "created"
     }
   ]
 }
