@@ -135,57 +135,90 @@ async function loadCookiesIntoPage(page, platform) {
 async function checkSessionValid(page, platform) {
   try {
     if (platform === 'reddit') {
-      // Try API-based check first (works even when IP-blocked from web UI)
-      const apiCheck = await page.evaluate(async () => {
+      // ═══ FIX: Use nodeFetch instead of page.evaluate(fetch) — works from GH Actions IPs ═══
+      const oauthToken = process.env.REDDIT_OAUTH_TOKEN;
+      if (oauthToken) {
+        log('Reddit: Validating session via nodeFetch (OAuth token from env)...');
         try {
-          const resp = await fetch('https://www.reddit.com/api/me.json', { credentials: 'include' });
-          if (resp.status === 200) {
+          const resp = await nodeFetch('https://oauth.reddit.com/api/v1/me', {
+            headers: { 'Authorization': `Bearer ${oauthToken}`, 'User-Agent': 'BGRemoverDigital/1.0' }
+          });
+          if (resp.ok) {
             const data = await resp.json();
-            if (data.data && data.data.name) return { valid: true, username: data.data.name };
+            log(`Reddit: Session valid via nodeFetch OAuth (user: ${data.name})`);
+            await page.evaluate((token) => { localStorage.setItem('reddit_oauth_token', token); }, oauthToken);
+            return true;
           }
-          return { valid: false };
-        } catch (e) { return { valid: false, error: e.message }; }
-      }).catch(() => ({ valid: false }));
-      
-      if (apiCheck.valid) {
-        log(`Reddit: Session valid via API (user: ${apiCheck.username})`);
-        return true;
+          log(`Reddit: nodeFetch OAuth check failed (status: ${resp.status}), trying fallback...`);
+        } catch (e) {
+          log(`Reddit: nodeFetch OAuth error: ${e.message}, trying fallback...`);
+        }
       }
-      log(`Reddit: API session check failed, trying web check...`);
-      
-      // Fallback: web check
+      // Fallback: check cookies file OAuth token
+      const cookiesFile = path.join(COOKIES_DIR, 'reddit-cookies.json');
+      if (fs.existsSync(cookiesFile)) {
+        try {
+          const cookieData = readJSON(cookiesFile);
+          if (cookieData && cookieData.oauth_token && Date.now() < (cookieData.oauth_expires || 0)) {
+            const resp = await nodeFetch('https://oauth.reddit.com/api/v1/me', {
+              headers: { 'Authorization': `Bearer ${cookieData.oauth_token}`, 'User-Agent': 'BGRemoverDigital/1.0' }
+            });
+            if (resp.ok) {
+              const data = await resp.json();
+              log(`Reddit: Session valid via cookies file OAuth (user: ${data.name})`);
+              await page.evaluate((token) => { localStorage.setItem('reddit_oauth_token', token); }, cookieData.oauth_token);
+              return true;
+            }
+          }
+        } catch (e) { /* fall through to browser check */ }
+      }
+      // Final fallback: browser-based check (may fail from GH Actions IPs)
+      log('Reddit: All nodeFetch auth checks failed, falling back to browser check...');
       await page.goto('https://www.reddit.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
       await humanDelay(2000, 3000);
       const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
       const hasAvatar = await page.$('#header-profile--flyout, button[aria-label*="User"], header img[alt*="avatar" i]').catch(() => null);
       const hasLoginPrompt = bodyText.includes('log in') || bodyText.includes('sign up');
       const isLoggedIn = hasAvatar || (!hasLoginPrompt && bodyText.length > 100);
-      log(`Reddit: Web session check — bodyText length: ${bodyText.length}, hasAvatar: ${!!hasAvatar}, logged in: ${isLoggedIn}`);
+      log(`Reddit: Browser session check — bodyText length: ${bodyText.length}, hasAvatar: ${!!hasAvatar}, logged in: ${isLoggedIn}`);
       return isLoggedIn;
     } else if (platform === 'twitter') {
-      // Try API-based check first
+      // ═══ FIX: Use nodeFetch with cookies file — works from GH Actions IPs ═══
+      const twCookiesFile = path.join(COOKIES_DIR, 'twitter-cookies.json');
+      if (fs.existsSync(twCookiesFile)) {
+        log('Twitter: Validating session via nodeFetch (cookies file)...');
+        try {
+          const cookieData = readJSON(twCookiesFile);
+          const ct0 = cookieData?.cookies?.find(c => c.name === 'ct0');
+          const authToken = cookieData?.cookies?.find(c => c.name === 'auth_token');
+          if (ct0 && authToken) {
+            const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
+            const resp = await nodeFetch('https://x.com/i/api/1.1/account/settings.json', {
+              headers: {
+                'Cookie': cookieStr,
+                'X-CSRF-Token': ct0.value,
+                'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+              }
+            });
+            if (resp.ok) {
+              log('Twitter: Session valid via nodeFetch cookies!');
+              return true;
+            }
+            log(`Twitter: nodeFetch session invalid (status: ${resp.status}), trying browser check...`);
+          }
+        } catch (e) {
+          log(`Twitter: nodeFetch error: ${e.message}, trying browser check...`);
+        }
+      }
+      // Fallback: browser-based check
       await page.goto('https://x.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
       await humanDelay(2000, 3000);
-      
-      const apiCheck = await page.evaluate(async () => {
-        try {
-          const resp = await fetch('https://x.com/i/api/1.1/account/settings.json', { credentials: 'include' });
-          return { status: resp.status, ok: resp.status === 200 };
-        } catch (e) { return { ok: false, error: e.message }; }
-      }).catch(() => ({ ok: false }));
-      
-      if (apiCheck.ok) {
-        log('Twitter: Session valid via API (account settings returned 200)');
-        return true;
-      }
-      log(`Twitter: API session check returned status ${apiCheck.status}, trying web check...`);
-      
-      // Fallback: web check
       const hasTweetButton = await page.$('[data-testid="SideNav_NewTweet_Button"]').catch(() => null);
       const hasLoginElements = await page.$('[data-testid="LoginForm_Login_Button"]').catch(() => null);
       const url = page.url();
       const isLoggedIn = (hasTweetButton || (!url.includes('login') && !url.includes('flow') && !hasLoginElements));
-      log(`Twitter: Web session check — URL: ${url}, hasTweetButton: ${!!hasTweetButton}, logged in: ${isLoggedIn}`);
+      log(`Twitter: Browser session check — URL: ${url}, hasTweetButton: ${!!hasTweetButton}, logged in: ${isLoggedIn}`);
       return isLoggedIn;
     } else if (platform === 'pinterest') {
       await page.goto('https://www.pinterest.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
