@@ -4,7 +4,7 @@
  * ─────────────────────────────────────────────────────────
  * MISSION: Reply to comments on Reddit, Twitter/X, and Pinterest posts
  *   - Runs every 4 hours via GitHub Actions cron
- *   - Uses z-ai CLI for AI-powered contextual replies
+ *   - Uses intelligent fallback reply system (no external AI CLI needed)
  *   - Tracks replied comment IDs in brain.json to avoid duplicates
  *   - Weekly self-review of engagement metrics
  *   - Respects per-session and per-platform reply limits
@@ -90,7 +90,7 @@ function nodeFetch(url, options = {}) {
 
     // Copy allowed headers
     const safeHeaders = ['content-type', 'authorization', 'cookie', 'user-agent',
-      'x-csrf-token', 'x-twitter-active-user', 'x-twitter-client-language', 'accept',
+      'x-csrf-token', 'x-twitter-active-user', 'x-twitter-client-language', 'x-twitter-auth-type', 'accept',
       'accept-language', 'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform', 'referer'];
     for (const [key, value] of Object.entries(headers)) {
       if (safeHeaders.includes(key.toLowerCase())) {
@@ -124,6 +124,45 @@ function nodeFetch(url, options = {}) {
     if (body) req.write(body);
     req.end();
   });
+}
+
+// ── Dynamic Twitter GraphQL Query ID Extraction ──
+async function extractTwitterQueryId(queryName, cookies) {
+  try {
+    const ct0 = cookies.find(c => c.name === 'ct0');
+    const authToken = cookies.find(c => c.name === 'auth_token');
+    if (!ct0 || !authToken) return null;
+    const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+    const mainResp = await nodeFetch('https://x.com/', {
+      headers: {
+        'Cookie': cookieStr,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      }
+    });
+    if (!mainResp.ok) return null;
+    const mainHtml = await mainResp.text();
+    const scriptUrls = [];
+    const scriptRegex = /src="(https:\/\/abs\.twimg\.com\/responsive-web\/client-web\/main\.[a-f0-9]+\.js)"/g;
+    let match;
+    while ((match = scriptRegex.exec(mainHtml)) !== null) { scriptUrls.push(match[1]); }
+    const apiRegex = /src="(https:\/\/abs\.twimg\.com\/responsive-web\/client-web\/api\/[a-zA-Z0-9_-]+\.[a-f0-9]+\.js)"/g;
+    while ((match = apiRegex.exec(mainHtml)) !== null) { scriptUrls.push(match[1]); }
+    for (const jsUrl of scriptUrls.slice(0, 5)) {
+      try {
+        const jsResp = await nodeFetch(jsUrl, { headers: { 'Cookie': cookieStr, 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+        if (!jsResp.ok) continue;
+        const jsText = await jsResp.text();
+        const pattern = new RegExp(`queryId:\\s*["']([a-zA-Z0-9_-]+)["'].*?operationName:\\s*["']${queryName}["']`, 's');
+        const altPattern = new RegExp(`operationName:\\s*["']${queryName}["'].*?queryId:\\s*["']([a-zA-Z0-9_-]+)["']`, 's');
+        const directPattern = new RegExp(`"${queryName}"\\s*:\\s*["']([a-zA-Z0-9_-]+)["']`);
+        let m = jsText.match(pattern) || jsText.match(altPattern) || jsText.match(directPattern);
+        if (m && m[1]) { log(`Twitter: Extracted queryId for ${queryName}: ${m[1]}`); return m[1]; }
+      } catch (e) { /* try next */ }
+    }
+    log(`Twitter: Could not extract queryId for ${queryName}, using fallback`);
+    return null;
+  } catch (e) { log(`Twitter: QueryId extraction error: ${e.message}`); return null; }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -185,83 +224,155 @@ function initConfig() {
 // LLM REPLY GENERATION
 // ═══════════════════════════════════════════════════════════════
 
-const SYSTEM_PROMPT = `You are replying to a comment on a social media post for BG Remover Digital (bgremoverdigital.craftedmindss.com), a free online background removal tool. Rules:
-- Be SHORT (1-3 sentences max). Like a real person on their phone.
-- Match the user's tone. Casual if they're casual, direct if they ask a question.
-- If someone says "cool" or "nice", just say thanks — don't over-explain.
-- DO NOT promote the product unless asked about it.
-- DO NOT say "I'm an AI" or "I'm a bot".
-- If asked a question about the tool, answer honestly and briefly.
-- If someone criticizes, be polite and open to feedback.
-- Keep it natural and conversational.`;
-
 function generateReply(userComment, conversationContext, platform) {
+  userComment = userComment || '';
   conversationContext = conversationContext || '';
   platform = platform || 'reddit';
+  const lower = userComment.toLowerCase();
 
-  const platformNote = platform === 'twitter' ? 'Keep it VERY short (under 280 chars). Can use emojis.' :
-    platform === 'pinterest' ? 'Be friendly and helpful.' : '';
-
-  const userPrompt = conversationContext
-    ? `Conversation so far:\n${conversationContext}\n\nLatest comment: "${userComment}"\n\n${platformNote}\nWrite a short reply:`
-    : `Comment: "${userComment}"\n\n${platformNote}\nWrite a short reply:`;
-
-  try {
-    const fullPrompt = `${SYSTEM_PROMPT}\n\n${userPrompt}`;
-    // Use z-ai CLI for chat completion
-    const escapedPrompt = fullPrompt.replace(/'/g, "'\\''").replace(/"/g, '\\"');
-    const result = execSync(`z-ai chat -p '${escapedPrompt}'`, {
-      timeout: 30000,
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim();
-
-    if (!result || result.length === 0) {
-      throw new Error('Empty response from z-ai');
+  // ── Skip mod/bot comments ──
+  const modPatterns = [
+    'automoderator', 'auto-moderator', 'moderator', 'mod bot',
+    'removed', 'locked', 'stickied', 'pinned',
+    '[removed]', '[deleted]', 'bot detection',
+    'rule ', 'your post has been', 'your comment has been',
+    'warning: ', 'ban', 'suspended', 'muted',
+  ];
+  for (const mp of modPatterns) {
+    if (lower.includes(mp)) {
+      log(`SM Executive: Skipping mod/bot comment: "${userComment.substring(0, 60)}..."`);
+      return null; // Signal to skip this comment entirely
     }
-
-    // Extract just the reply text (z-ai CLI may add formatting)
-    const lines = result.split('\n').filter(l => l.trim());
-    const reply = lines[lines.length - 1].trim();
-
-    // Truncate excessively long replies
-    if (reply.length > 300) {
-      const truncated = reply.substring(0, 297) + '...';
-      log(`LLM reply truncated: ${truncated}`);
-      return truncated;
-    }
-
-    return reply;
-  } catch (e) {
-    log(`LLM failed: ${e.message}, using fallback`);
-    // Fallback responses based on comment type
-    const lowerComment = (userComment || '').toLowerCase();
-    let fallback;
-
-    if (lowerComment.includes('cool') || lowerComment.includes('nice') || lowerComment.includes('awesome') || lowerComment.includes('great')) {
-      fallback = 'Thanks! Appreciate it!';
-    } else if (lowerComment.includes('how') || lowerComment.includes('work') || lowerComment.includes('what')) {
-      fallback = 'It uses client-side AI to remove backgrounds right in your browser — no upload needed!';
-    } else if (lowerComment.includes('thank') || lowerComment.includes('thx')) {
-      fallback = 'No problem, glad it helped!';
-    } else if (lowerComment.includes('bad') || lowerComment.includes('hate') || lowerComment.includes('suck')) {
-      fallback = 'Sorry to hear that — feedback like this helps us improve. What could be better?';
-    } else if (lowerComment.includes('free')) {
-      fallback = 'Yeah, it\'s completely free — no signup, no watermarks.';
-    } else {
-      const fallbacks = [
-        'Thanks for checking it out!',
-        'Glad you found it useful!',
-        'Appreciate the feedback!',
-        'Thanks! Let me know if you have any questions.',
-        'Cool, glad it helped!',
-        'Thanks for the kind words!',
-      ];
-      fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-    }
-
-    return fallback;
   }
+
+  // ── Expanded fallback response system ──
+  // Categorized by comment intent with multiple variants each
+
+  const responses = {
+    praise: [
+      'Thanks! Appreciate it!',
+      'Glad you like it!',
+      'Thanks for the kind words!',
+      'Appreciate that!',
+      'Thanks for checking it out!',
+    ],
+    question_how: [
+      'It uses client-side AI — your images never leave your browser.',
+      'Runs entirely in the browser using AI. No upload needed!',
+      'Client-side AI does the work. Everything stays on your device.',
+    ],
+    question_what: [
+      'It\'s a free background remover that works right in your browser.',
+      'A browser tool that removes image backgrounds instantly — no signup.',
+      'Free tool to remove backgrounds from any image. 100% client-side.',
+    ],
+    question_free: [
+      'Yeah, completely free — no signup, no watermarks, no limits.',
+      '100% free! No account needed, no hidden costs.',
+      'Totally free. No signup, no watermarks. Just drop and download.',
+    ],
+    thanks: [
+      'No problem, glad it helped!',
+      'Happy to help!',
+      'You\'re welcome!',
+      'Anytime!',
+    ],
+    criticism: [
+      'Sorry about that — what would make it better? We\'re always improving.',
+      'Fair point. What specific issue did you run into?',
+      'Thanks for the honest feedback — we\'ll look into it.',
+    ],
+    feature_request: [
+      'Great suggestion! I\'ll add that to the list.',
+      'Good idea — I\'ll see what we can do.',
+      'Noted! We\'re always looking to improve.',
+    ],
+    comparison: [
+      'We try to keep it simple and free — works right in the browser.',
+      'Different tools for different needs! This one\'s focused on being free and easy.',
+      'The main advantage is it runs in your browser — no install or upload.',
+    ],
+    pricing: [
+      'It\'s free! No premium tiers, no limits.',
+      'Completely free, no catch. Just a useful tool.',
+      'Zero cost. No signup, no subscription, no watermarks.',
+    ],
+    speed: [
+      'Usually instant! Depends on image size and complexity.',
+      'Pretty fast — most images are done in a couple seconds.',
+      'Client-side processing makes it quick since nothing uploads.',
+    ],
+    alternative: [
+      'Thanks for the suggestion! I\'ll check it out.',
+      'Good to know about alternatives — always good to have options.',
+    ],
+    tech_question: [
+      'It uses AI running in your browser — no server processing.',
+      'Built with web technologies — works on any modern browser.',
+      'The AI model runs locally in your browser using WebAssembly.',
+    ],
+    greeting: [
+      'Hey! Thanks for stopping by.',
+      'Hi there! Let me know if you have any questions.',
+    ],
+    generic_positive: [
+      'Thanks for checking it out!',
+      'Glad you found it useful!',
+      'Appreciate the feedback!',
+      'Cool, glad it helped!',
+      'Thanks! Let me know if you have any questions.',
+      'Awesome, happy to hear that!',
+      'Sweet, glad you came across it!',
+    ],
+  };
+
+  // Match comment to response category
+  let category = null;
+  let reply = null;
+
+  if (lower.match(/\b(cool|nice|awesome|great|love|amazing|perfect|excellent|fantastic|incredible|sick|fire)\b/)) {
+    category = 'praise';
+  } else if (lower.match(/\b(how does|how do|how can|how to|explain|work)\b/)) {
+    category = 'question_how';
+  } else if (lower.match(/\b(what is|what are|what\'s|what does)\b/)) {
+    category = 'question_what';
+  } else if (lower.match(/\b(free|cost|price|pay|charge|subscription|premium|tier)\b/)) {
+    category = 'pricing';
+  } else if (lower.match(/\b(thank|thx|ty|cheers)\b/)) {
+    category = 'thanks';
+  } else if (lower.match(/\b(bad|suck|hate|terrible|awful|worst|broken|useless|crap|garbage)\b/)) {
+    category = 'criticism';
+  } else if (lower.match(/\b(should|could you|add|feature|wish|would be nice|suggest|improve)\b/)) {
+    category = 'feature_request';
+  } else if (lower.match(/\b(photoshop|canva|remove\.bg|slazzer|other|compared|vs|versus|alternative|better than)\b/)) {
+    category = 'comparison';
+  } else if (lower.match(/\b(fast|slow|quick|speed|time|long|instant)\b/)) {
+    category = 'speed';
+  } else if (lower.match(/\b(tech|technology|ai|model|algorithm|behind|built with|made with|framework|library)\b/)) {
+    category = 'tech_question';
+  } else if (lower.match(/\b(hey|hi|hello|yo|sup|greetings)\b/) && lower.length < 30) {
+    category = 'greeting';
+  } else if (lower.match(/\b(try|also|another|similar|you could|check out)\b/)) {
+    category = 'alternative';
+  }
+
+  if (category && responses[category]) {
+    const pool = responses[category];
+    reply = pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // Fallback to generic positive if no category matched
+  if (!reply) {
+    const pool = responses.generic_positive;
+    reply = pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // Platform-specific adjustments
+  if (platform === 'twitter' && reply.length > 250) {
+    reply = reply.substring(0, 247) + '...';
+  }
+
+  return reply;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -369,6 +480,9 @@ async function redditEngage(page, brain, config) {
 
       // Skip our own comments
       if (author === 'AbrardeAhmed' || author === '[deleted]') continue;
+      // Skip mod/bot comments (AutoModerator, etc.)
+      const modBotAuthors = ['automoderator', 'auto-moderator', 'moderator', 'reddit-bot', 'suite-bot'];
+      if (modBotAuthors.some(m => author.toLowerCase().includes(m))) continue;
       // Skip if already replied
       if (brain.replied_comments.some(r => r.comment_id === commentId)) continue;
       // Skip very short comments (likely noise)
@@ -495,6 +609,7 @@ async function twitterEngage(page, brain, config) {
         'X-CSRF-Token': ct0Value,
         'Authorization': bearer,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+        'X-Twitter-Auth-Type': 'OAuth2Session',
       }
     });
     if (!verifyResp.ok) {
@@ -607,7 +722,10 @@ async function twitterEngage(page, brain, config) {
       };
 
       try {
-        const replyResp = await nodeFetch('https://x.com/i/api/graphql/Va2lvahdYCP1BLcl18y6pw/CreateTweet', {
+        // Dynamic query ID extraction — Twitter changes these frequently
+        let queryId = await extractTwitterQueryId('CreateTweet', cookieData.cookies);
+        if (!queryId) { queryId = 'Va2lvahdYCP1BLcl18y6pw'; } // fallback
+        const replyResp = await nodeFetch(`https://x.com/i/api/graphql/${queryId}/CreateTweet`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -617,6 +735,7 @@ async function twitterEngage(page, brain, config) {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
             'X-Twitter-Active-User': 'yes',
             'X-Twitter-Client-Language': 'en',
+            'X-Twitter-Auth-Type': 'OAuth2Session',
             'Referer': 'https://x.com/',
           },
           body: JSON.stringify({ variables, features }),
@@ -1038,6 +1157,8 @@ async function main() {
   // Commit changes to git
   try {
     const projectRoot = path.resolve(DATA_DIR, '..');
+    // Safety: ensure full git history for push (GH Actions checkout may be shallow)
+    execSync(`cd "${projectRoot}" && git fetch origin --unshallow 2>/dev/null || true`, { stdio: 'pipe' });
     execSync(
       `cd "${projectRoot}" && git add data/sm-executive-brain.json data/sm-executive-config.json 2>/dev/null && ` +
       `git commit -m "sm-executive: engagement update - ${TODAY} [skip ci]" 2>/dev/null && ` +

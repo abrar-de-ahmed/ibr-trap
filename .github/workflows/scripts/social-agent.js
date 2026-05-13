@@ -74,6 +74,70 @@ async function nodeFetch(url, options = {}) {
   });
 }
 
+// ── Dynamic Twitter GraphQL Query ID Extraction ──
+// Twitter changes query IDs frequently — we extract them from the JS bundle at runtime
+async function extractTwitterQueryId(queryName, cookies) {
+  try {
+    const ct0 = cookies.find(c => c.name === 'ct0');
+    const authToken = cookies.find(c => c.name === 'auth_token');
+    if (!ct0 || !authToken) return null;
+    const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+
+    // Fetch Twitter's main page to find the JS bundle URL
+    const mainResp = await nodeFetch('https://x.com/', {
+      headers: {
+        'Cookie': cookieStr,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      }
+    });
+    if (!mainResp.ok) return null;
+    const mainHtml = await mainResp.text();
+
+    // Find JS bundle URLs from script tags
+    const scriptUrls = [];
+    const scriptRegex = /src="(https:\/\/abs\.twimg\.com\/responsive-web\/client-web\/main\.[a-f0-9]+\.js)"/g;
+    let match;
+    while ((match = scriptRegex.exec(mainHtml)) !== null) {
+      scriptUrls.push(match[1]);
+    }
+    // Also try api bundle
+    const apiRegex = /src="(https:\/\/abs\.twimg\.com\/responsive-web\/client-web\/api\/[a-zA-Z0-9_-]+\.[a-f0-9]+\.js)"/g;
+    while ((match = apiRegex.exec(mainHtml)) !== null) {
+      scriptUrls.push(match[1]);
+    }
+
+    for (const jsUrl of scriptUrls.slice(0, 5)) {
+      try {
+        const jsResp = await nodeFetch(jsUrl, {
+          headers: {
+            'Cookie': cookieStr,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          }
+        });
+        if (!jsResp.ok) continue;
+        const jsText = await jsResp.text();
+
+        // Search for the query ID associated with the operation name
+        const pattern = new RegExp(`queryId:\\s*["']([a-zA-Z0-9_-]+)["'].*?operationName:\\s*["']${queryName}["']`, 's');
+        const altPattern = new RegExp(`operationName:\\s*["']${queryName}["'].*?queryId:\\s*["']([a-zA-Z0-9_-]+)["']`, 's');
+        const directPattern = new RegExp(`"${queryName}"\\s*:\\s*["']([a-zA-Z0-9_-]+)["']`);
+
+        let m = jsText.match(pattern) || jsText.match(altPattern) || jsText.match(directPattern);
+        if (m && m[1]) {
+          log(`Twitter: Extracted queryId for ${queryName}: ${m[1]}`);
+          return m[1];
+        }
+      } catch (e) { /* try next bundle */ }
+    }
+    log(`Twitter: Could not extract queryId for ${queryName}, will use fallback`);
+    return null;
+  } catch (e) {
+    log(`Twitter: QueryId extraction error: ${e.message}`);
+    return null;
+  }
+}
+
 function log(msg) {
   console.log(`[Social Agent ${new Date().toISOString()}] ${msg}`);
 }
@@ -199,6 +263,7 @@ async function checkSessionValid(page, platform) {
                 'X-CSRF-Token': ct0.value,
                 'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+                'X-Twitter-Auth-Type': 'OAuth2Session',
               }
             });
             if (resp.ok) {
@@ -1062,6 +1127,7 @@ async function twitterLogin(page) {
               'X-CSRF-Token': ct0.value,
               'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'X-Twitter-Auth-Type': 'OAuth2Session',
             }
           });
           if (resp.ok) {
@@ -1396,7 +1462,20 @@ async function twitterPost(page, content) {
             responsive_web_enhance_cards_enabled: false,
           };
 
-          const resp = await nodeFetch('https://x.com/i/api/graphql/Va2lvahdYCP1BLcl18y6pw/CreateTweet', {
+          // ═══ Dynamic Query ID extraction — Twitter changes these frequently ═══
+          let queryId = await extractTwitterQueryId('CreateTweet', cookieData.cookies);
+          if (!queryId) {
+            // Fallback query IDs to try (update these if all fail)
+            const fallbackIds = ['Va2lvahdYCP1BLcl18y6pw', 'bDE2rBtZb3uyrczSZ_pOfA', 'TlMG_yLQG2CLYkhe6O8pIA'];
+            for (const fid of fallbackIds) {
+              log(`Twitter: Trying fallback queryId: ${fid}`);
+              // We'll try the first fallback; if it fails, the browser fallback takes over
+              queryId = fid;
+              break;
+            }
+          }
+
+          const resp = await nodeFetch(`https://x.com/i/api/graphql/${queryId}/CreateTweet`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1406,6 +1485,7 @@ async function twitterPost(page, content) {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               'X-Twitter-Active-User': 'yes',
               'X-Twitter-Client-Language': 'en',
+              'X-Twitter-Auth-Type': 'OAuth2Session',
             },
             body: JSON.stringify({ variables, features }),
           });
@@ -1655,40 +1735,119 @@ async function pinterestLogin(page) {
   }
 }
 
-// Generate a unique Pinterest pin image using AI
+// Generate a Pinterest pin image using canvas template approach (works in GH Actions — no z-ai CLI needed)
 async function generatePinImage(topic) {
-  const imagePrompts = {
-    'product-photos': 'Professional product photography before-and-after: a sneaker on messy background (left half) and same sneaker on clean white (right half). Split comparison, studio lighting, e-commerce style, 2:3 vertical aspect ratio. No text overlays.',
-    'jewelry': 'Elegant jewelry pieces on transparent background, studio lighting, luxury feel, soft bokeh, rose gold necklace and ring displayed on marble surface. Professional product photography, 2:3 vertical aspect ratio. No text overlays.',
-    'clothing': 'Fashion clothing flat lay on clean white background, neatly arranged outfits, minimalist style, soft natural lighting, editorial look. Professional fashion photography, 2:3 vertical aspect ratio. No text overlays.',
-    'pets': 'Cute golden retriever portrait with clean background removed, isolated on pure white, studio lighting, happy expression, professional pet photography style. Warm and friendly mood, 2:3 vertical aspect ratio. No text overlays.',
-    'logos': 'Collection of colorful logos on transparent background, arranged in a grid pattern, clean modern design, professional branding showcase. Minimalist aesthetic, 2:3 vertical aspect ratio. No text overlays.',
-    'id-photos': 'Professional headshot portrait on clean white background, passport photo style, even lighting, neutral expression. Photography studio quality, 2:3 vertical aspect ratio. No text overlays.',
-    'white-background': 'Clean product photography setup showing multiple items on pure white backgrounds, amazon listing style, professional studio quality, overhead flat lay view. E-commerce aesthetic, 2:3 vertical aspect ratio. No text overlays.',
-    'transparent': 'Creative collage of objects with transparent backgrounds floating in space, colorful and modern design, digital art style, eye-catching composition. 2:3 vertical aspect ratio. No text overlays.',
-    'how-to': 'Step-by-step visual tutorial showing image background removal process, before/after arrows, clean infographic style, blue and white color scheme. Instructional design, 2:3 vertical aspect ratio. No text overlays.',
-    'default': 'Modern smartphone mockup showing a photo editing app interface with background removal in progress, floating UI elements, gradient blue-purple background, sleek tech aesthetic. Digital product showcase, 2:3 vertical aspect ratio. No text overlays.',
-  };
-
-  const prompt = imagePrompts[topic] || imagePrompts['default'];
-  const outputPath = `/tmp/pinterest-pin-${topic}-${Date.now()}.jpg`;
-
+  const outputPath = `/tmp/pinterest-pin-${topic}-${Date.now()}.png`;
+  
   try {
-    log(`Pinterest: Generating AI image for topic: ${topic}`);
-    const { execSync } = require('child_process');
-    execSync(`z-ai-generate --prompt "${prompt.replace(/"/g, '\\"')}" --output "${outputPath}" --size 1000x1500`, {
-      timeout: 120000, stdio: ['pipe', 'pipe', 'pipe']
+    log(`Pinterest: Generating canvas image for topic: ${topic}`);
+    
+    // We'll create a simple HTML-to-image using Puppeteer (already available)
+    // This approach works reliably in GH Actions with xvfb
+    
+    // Color schemes for different topics
+    const colorSchemes = {
+      'product-photos': { bg: '#1a56db', accent: '#3b82f6', text: '#ffffff' },
+      'jewelry': { bg: '#7c3aed', accent: '#a78bfa', text: '#ffffff' },
+      'clothing': { bg: '#059669', accent: '#34d399', text: '#ffffff' },
+      'pets': { bg: '#d97706', accent: '#fbbf24', text: '#ffffff' },
+      'logos': { bg: '#dc2626', accent: '#f87171', text: '#ffffff' },
+      'id-photos': { bg: '#2563eb', accent: '#60a5fa', text: '#ffffff' },
+      'white-background': { bg: '#0f172a', accent: '#38bdf8', text: '#ffffff' },
+      'transparent': { bg: '#7c3aed', accent: '#c084fc', text: '#ffffff' },
+      'how-to': { bg: '#0891b2', accent: '#22d3ee', text: '#ffffff' },
+      'default': { bg: '#4f46e5', accent: '#818cf8', text: '#ffffff' },
+    };
+    
+    const colors = colorSchemes[topic] || colorSchemes['default'];
+    
+    // Headlines and subtexts per topic
+    const copy = {
+      'product-photos': { h1: 'Free Background Remover', h2: 'Professional Product Photos', sub: 'No signup - Works in your browser' },
+      'jewelry': { h1: 'Remove Backgrounds', h2: 'Jewelry & Accessories', sub: 'Studio quality cutouts in seconds' },
+      'clothing': { h1: 'Clean Backgrounds', h2: 'For Fashion & Clothing', sub: 'E-commerce ready PNGs instantly' },
+      'pets': { h1: 'Pet Photo Editor', h2: 'Perfect Backgrounds', sub: 'Handles fur, whiskers & edges' },
+      'logos': { h1: 'Logo Background Remover', h2: 'Instant Transparent PNG', sub: 'Professional results every time' },
+      'id-photos': { h1: 'ID Photo Tool', h2: 'Background Replacement', sub: 'Passport, visa & headshots' },
+      'white-background': { h1: 'White Background Maker', h2: 'For Online Listings', sub: 'Amazon, Shopify & Etsy ready' },
+      'transparent': { h1: 'Transparent PNG Maker', h2: 'Any Image, Any Format', sub: 'One click background removal' },
+      'how-to': { h1: 'How To Guide', h2: 'Remove Backgrounds', sub: 'Easy 3-step process' },
+      'default': { h1: 'Free Background Remover', h2: 'AI-Powered Tool', sub: '100% browser-based - No upload' },
+    };
+    
+    const c = copy[topic] || copy['default'];
+    
+    // Generate a unique layout variant based on date
+    const layoutVariant = Math.floor(Date.now() / 86400000) % 3;
+    
+    const htmlContent = `<!DOCTYPE html>
+<html><head><style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1000px; height: 1500px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; }
+  .bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: ${colors.bg}; }
+  .shape1 { position: absolute; border-radius: 50%; opacity: 0.15; }
+  ${layoutVariant === 0 ? `
+    .shape1 { width: 600px; height: 600px; background: ${colors.accent}; top: -150px; right: -150px; }
+    .shape2 { width: 400px; height: 400px; background: ${colors.accent}; bottom: -100px; left: -100px; border-radius: 50%; opacity: 0.1; position: absolute; }
+  ` : layoutVariant === 1 ? `
+    .shape1 { width: 800px; height: 800px; background: ${colors.accent}; bottom: -300px; right: -200px; }
+    .shape2 { width: 300px; height: 300px; background: #ffffff; top: 100px; left: 50px; border-radius: 50%; opacity: 0.05; position: absolute; }
+  ` : `
+    .shape1 { width: 500px; height: 500px; background: ${colors.accent}; top: 200px; left: -200px; }
+    .shape2 { width: 350px; height: 350px; background: ${colors.accent}; bottom: 100px; right: -100px; border-radius: 50%; opacity: 0.08; position: absolute; }
+  `}
+  .content { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; padding: 80px; text-align: center; color: ${colors.text}; }
+  .icon-area { width: 180px; height: 180px; border: 4px solid rgba(255,255,255,0.3); border-radius: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 60px; background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); }
+  .icon-area svg { width: 80px; height: 80px; fill: ${colors.text}; opacity: 0.9; }
+  h1 { font-size: 72px; font-weight: 800; letter-spacing: -2px; line-height: 1.1; margin-bottom: 24px; }
+  h2 { font-size: 42px; font-weight: 400; opacity: 0.85; margin-bottom: 40px; }
+  .divider { width: 80px; height: 4px; background: ${colors.accent}; border-radius: 2px; margin-bottom: 40px; }
+  .sub { font-size: 28px; opacity: 0.7; font-weight: 300; letter-spacing: 1px; }
+  .badge { margin-top: 60px; padding: 16px 36px; border: 2px solid rgba(255,255,255,0.25); border-radius: 50px; font-size: 22px; font-weight: 500; opacity: 0.8; letter-spacing: 0.5px; }
+  .dots { position: absolute; bottom: 40px; display: flex; gap: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); }
+  .dot.active { background: ${colors.accent}; width: 24px; border-radius: 4px; }
+</style></head><body>
+  <div class="bg"></div>
+  <div class="shape1"></div>
+  <div class="shape2"></div>
+  <div class="content">
+    <div class="icon-area">
+      <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+    </div>
+    <h1>${c.h1}</h1>
+    <h2>${c.h2}</h2>
+    <div class="divider"></div>
+    <p class="sub">${c.sub}</p>
+    <div class="badge">100% FREE - No Signup</div>
+  </div>
+  <div class="dots"><div class="dot"></div><div class="dot active"></div><div class="dot"></div></div>
+</body></html>`;
+    
+    // Use Puppeteer to render HTML to PNG (Puppeteer is already installed)
+    const puppeteer = require('puppeteer-extra');
+    const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+    puppeteer.use(StealthPlugin());
+    
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     });
-    const stats = fs.statSync(outputPath);
-    if (stats.size > 10000) {
-      log(`Pinterest: AI image generated successfully (${stats.size} bytes)`);
+    
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1000, height: 1500 });
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      await page.screenshot({ path: outputPath, type: 'png', clip: { x: 0, y: 0, width: 1000, height: 1500 } });
+      log(`Pinterest: Canvas image generated at ${outputPath}`);
       return outputPath;
+    } finally {
+      await browser.close();
     }
-    log(`Pinterest: AI image too small (${stats.size} bytes), falling back`);
   } catch (e) {
-    log(`Pinterest: AI image generation failed: ${e.message}, falling back`);
+    log(`Pinterest: Canvas image generation failed: ${e.message}, falling back`);
+    return null;
   }
-  return null;
 }
 
 // Download an image from our site for Pinterest pin upload
@@ -2300,6 +2459,8 @@ function commitAndPush() {
   try {
     execSync('git config user.name "Social Agent"', { stdio: 'pipe' });
     execSync('git config user.email "social-agent[bot]@users.noreply.github.com"', { stdio: 'pipe' });
+    // Ensure we have a proper git remote for pushing (GH Actions shallow clone fix)
+    execSync('git fetch origin --unshallow 2>/dev/null || true', { stdio: 'pipe' });
     execSync('mkdir -p data/cookies 2>/dev/null; git add data/brain.json data/cookies/ 2>/dev/null', { stdio: 'pipe' });
 
     const status = execSync('git status --porcelain data/brain.json data/cookies/ 2>/dev/null', { stdio: 'pipe' }).toString().trim();
