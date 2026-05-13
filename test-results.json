@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-05-13T20:29:28.164Z",
+  "results": [
+    {
+      "platform": "reddit",
+      "success": true,
+      "post_url": "https://www.reddit.com/r/selfhosted/comments/1tcbad7/_/olmwsc9/",
+      "type": "comment"
+    },
+    {
+      "platform": "twitter",
+      "success": false,
+      "error": "Session invalid: 404"
+    },
+    {
+      "platform": "pinterest",
+      "success": false,
+      "error": "Command failed: z-ai-generate --prompt \"Professional product photography, clean white background, e-commerce style, sneakers displayed beautifully, studio lighting, 2:3 vertical aspect ratio\" --output \"/tmp/pinterest-pin-test-1778704168047.jpg\" --size 1000x1500\n❌ Error: --size must be one of: 1024x1024, 768x1344, 864x1152, 1344x768, 1152x864, 1440x720, 720x1440\n"
+    }
+  ]
+}

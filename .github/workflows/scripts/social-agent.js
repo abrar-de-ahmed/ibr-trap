@@ -765,10 +765,16 @@ async function checkAccountMaturity(oauthToken) {
     const commentKarma = me.comment_karma || 0;
     const linkKarma = me.link_karma || 0;
     const totalKarma = commentKarma + linkKarma;
-    const eligible = accountAgeDays >= 30 && commentKarma >= 10;
+    // Soft gate: warn but allow posting if close to thresholds
+    // Hard block only if account is brand new (< 7 days) or zero karma
+    const hardEligible = accountAgeDays >= 7 && totalKarma >= 1;
+    const softEligible = accountAgeDays >= 30 && commentKarma >= 10;
     return {
-      eligible,
-      reason: eligible ? 'OK' : `Account age: ${accountAgeDays}d (need 30d), comment karma: ${commentKarma} (need 10), total karma: ${totalKarma}`,
+      eligible: hardEligible,
+      fullyMature: softEligible,
+      reason: softEligible ? 'OK (fully mature)' :
+        hardEligible ? `WARNING: Account not fully mature yet (age: ${accountAgeDays}d, comment karma: ${commentKarma}, total: ${totalKarma}). Posting with caution.` :
+        `Account too new: age ${accountAgeDays}d (need 7d), karma ${totalKarma}`,
       accountAgeDays, commentKarma, linkKarma, totalKarma, username: me.name
     };
   } catch (e) {
@@ -863,10 +869,16 @@ async function redditPost(page, content) {
           const postData = await postResp.json();
           if (postData.json && postData.json.data && postData.json.data.url) {
             let postUrl = postData.json.data.url;
-            // FIX: Avoid double domain prefix
-            if (postUrl.startsWith('https://www.reddit.comhttps://') || postUrl.startsWith('https://www.reddit.com/r/')) {
-              // URL is already absolute, use as-is
-            } else if (postUrl.startsWith('/')) {
+            // FIX: Normalize URL — Reddit API sometimes returns relative or double-prefixed URLs
+            if (postUrl.includes('https://www.reddit.comhttps://') || postUrl.includes('https://www.reddit.comhttp://')) {
+              // Double-prefixed URL: extract the real URL after the first domain
+              const afterDomain = postUrl.indexOf('.com/');
+              postUrl = postUrl.substring(afterDomain + 5); // skip "https://" → actually we want the SECOND url
+              // More robust: find the second http(s) in the string
+              const match = postUrl.match(/https?:\/\/www\.reddit\.com\/.*/);
+              postUrl = match ? match[0] : 'https://www.reddit.com' + postUrl;
+            }
+            if (!postUrl.startsWith('http')) {
               postUrl = 'https://www.reddit.com' + postUrl;
             }
             log(`Reddit: Post created via OAuth API! URL: ${postUrl}`);
@@ -893,7 +905,15 @@ async function redditPost(page, content) {
           if (retryResp.ok) {
             const postData = await retryResp.json();
             if (postData.json && postData.json.data && postData.json.data.url) {
-              return { success: true, post_url: 'https://www.reddit.com' + postData.json.data.url };
+              let retryUrl = postData.json.data.url;
+              if (retryUrl.includes('https://www.reddit.comhttps://') || retryUrl.includes('https://www.reddit.comhttp://')) {
+                const match = retryUrl.match(/https?:\/\/www\.reddit\.com\/.*/);
+                retryUrl = match ? match[0] : retryUrl;
+              }
+              if (!retryUrl.startsWith('http')) {
+                retryUrl = 'https://www.reddit.com' + retryUrl;
+              }
+              return { success: true, post_url: retryUrl };
             }
           }
           return { success: false, error: 'Rate limited after retry' };
