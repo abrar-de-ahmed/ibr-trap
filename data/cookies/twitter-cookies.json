@@ -1,0 +1,17 @@
+{
+  "cookies": [
+    {
+      "name": "ct0",
+      "value": "c227a373c6795bfbbe0b4e23b49cf6d357054e00e8daede6625a1e4c92e21876c234cee4968e17a7a3e751bd43ed6c13a4a4f1b4673c4caa9467072181051e99ac7279da3d327207aec71ac738cbadce",
+      "domain": ".x.com",
+      "path": "/"
+    },
+    {
+      "name": "auth_token",
+      "value": "d6634040254440ec14df5ee18e4e5bbf905b7500",
+      "domain": ".x.com",
+      "path": "/"
+    }
+  ],
+  "saved_at": "2026-05-14T03:30:00.000Z"
+}

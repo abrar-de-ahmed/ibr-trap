@@ -1,0 +1,47 @@
+name: SM Executive - Comment Reply & Engagement
+
+on:
+  schedule:
+    # Every 4 hours
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sm-executive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Chrome dependencies + xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 \
+            libxdamage1 libxrandr2 libgbm1 libasound2t64 \
+            libpango-1.0-0 libcairo2 libatspi2.0-0 \
+            libxshmfence1 libx11-xcb1 \
+            xvfb
+
+      - name: Install Puppeteer + dependencies
+        run: npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+
+      - name: Run SM Executive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REDDIT_OAUTH_TOKEN: ${{ secrets.REDDIT_OAUTH_TOKEN }}
+          TWITTER_USERNAME: ${{ secrets.TWITTER_USERNAME }}
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1366x768x24" node .github/workflows/scripts/sm-executive.js

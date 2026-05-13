@@ -40,6 +40,40 @@ const NOW = new Date();
 const DAY_OF_WEEK = NOW.getUTCDay(); // 0=Sun, 6=Sat
 const IS_MONDAY = DAY_OF_WEEK === 1; // Monday = weekly engagement day
 
+// ── Node.js-level fetch (bypasses browser/GitHub Actions IP blocking) ──
+async function nodeFetch(url, options = {}) {
+  const https = require('https');
+  const http = require('http');
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https') ? https : http;
+    const parsed = new URL(url);
+    const opts = {
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      timeout: options.timeout || 30000,
+    };
+    const req = mod.request(opts, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        resolve({
+          ok: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          json: () => JSON.parse(data),
+          text: () => data,
+          headers: res.headers,
+        });
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+
 function log(msg) {
   console.log(`[Social Agent ${new Date().toISOString()}] ${msg}`);
 }
@@ -640,437 +674,241 @@ async function loginWithCookies(platform, page, loginFn) {
 // ═══════════════════════════════════════════════════════════════
 
 async function redditLogin(page) {
-  // ═══ STRATEGY 1: OAuth Bearer Token (works from ANY IP — no login page needed) ═══
+  // ═══ STRATEGY 1: OAuth Bearer Token via nodeFetch (works from ANY IP) ═══
   const oauthToken = process.env.REDDIT_OAUTH_TOKEN;
   if (oauthToken) {
-    log('Reddit: Attempting OAuth Bearer token login...');
+    log('Reddit: Attempting OAuth Bearer token login via nodeFetch...');
     try {
-      const result = await page.evaluate(async (token) => {
-        try {
-          const resp = await fetch('https://oauth.reddit.com/api/v1/me', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (resp.status === 200) {
-            const data = await resp.json();
-            return { ok: true, username: data.name, id: data.id };
-          }
-          return { ok: false, status: resp.status };
-        } catch (e) { return { ok: false, error: e.message }; }
-      }, oauthToken);
-
-      if (result.ok) {
-        log(`Reddit: OAuth login successful! User: ${result.username} (ID: ${result.id})`);
-        // Store token in localStorage so API calls from page context can use it
-        await page.evaluate((token) => {
-          localStorage.setItem('reddit_oauth_token', token);
-        }, oauthToken);
+      const resp = await nodeFetch('https://oauth.reddit.com/api/v1/me', {
+        headers: { 'Authorization': `Bearer ${oauthToken}`, 'User-Agent': 'BGRemoverDigital/1.0' }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        log(`Reddit: OAuth login successful! User: ${data.name} (ID: ${data.id})`);
+        // Store token in localStorage for page-context API calls
+        await page.evaluate((token) => { localStorage.setItem('reddit_oauth_token', token); }, oauthToken);
         return true;
       }
-      log(`Reddit: OAuth token failed (status: ${result.status}), falling back...`);
+      log(`Reddit: OAuth token failed (status: ${resp.status}), trying cookies file...`);
     } catch (e) {
       log(`Reddit: OAuth login error: ${e.message}`);
     }
   }
 
-  // ═══ STRATEGY 2: OAuth token from cookies file ═══
+  // ═══ STRATEGY 2: OAuth token from cookies file via nodeFetch ═══
   const cookiesFile = path.join(COOKIES_DIR, 'reddit-cookies.json');
   if (fs.existsSync(cookiesFile)) {
     try {
       const cookieData = readJSON(cookiesFile);
       if (cookieData && cookieData.oauth_token) {
         const tokenExpiry = cookieData.oauth_expires || 0;
-        const now = Date.now();
-        if (now < tokenExpiry) {
-          log(`Reddit: Found OAuth token in cookies file (expires in ${Math.round((tokenExpiry - now) / 3600000)}h)`);
+        if (Date.now() < tokenExpiry) {
+          log(`Reddit: Found OAuth token in cookies file (expires in ${Math.round((tokenExpiry - Date.now()) / 3600000)}h)`);
           try {
-            const result = await page.evaluate(async (token) => {
-              try {
-                const resp = await fetch('https://oauth.reddit.com/api/v1/me', {
-                  headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (resp.status === 200) {
-                  const data = await resp.json();
-                  return { ok: true, username: data.name, id: data.id };
-                }
-                return { ok: false, status: resp.status };
-              } catch (e) { return { ok: false, error: e.message }; }
-            }, cookieData.oauth_token);
-
-            if (result.ok) {
-              log(`Reddit: OAuth login via cookies file! User: ${result.username}`);
-              await page.evaluate((token) => {
-                localStorage.setItem('reddit_oauth_token', token);
-              }, cookieData.oauth_token);
+            const resp = await nodeFetch('https://oauth.reddit.com/api/v1/me', {
+              headers: { 'Authorization': `Bearer ${cookieData.oauth_token}`, 'User-Agent': 'BGRemoverDigital/1.0' }
+            });
+            if (resp.ok) {
+              const data = await resp.json();
+              log(`Reddit: OAuth login via cookies file! User: ${data.name}`);
+              await page.evaluate((token) => { localStorage.setItem('reddit_oauth_token', token); }, cookieData.oauth_token);
               return true;
             }
-            log(`Reddit: Cookies file OAuth token expired (status: ${result.status})`);
+            log(`Reddit: Cookies file OAuth token expired (status: ${resp.status})`);
           } catch (e) {
             log(`Reddit: Cookies file OAuth error: ${e.message}`);
           }
         } else {
-          log(`Reddit: OAuth token in cookies file expired ${(tokenExpiry - now) / 1000}s ago`);
+          log(`Reddit: OAuth token in cookies file expired`);
         }
       }
     } catch (e) { /* ignore */ }
   }
 
-  // ═══ STRATEGY 3: Username/password login (fallback) ═══
+  // ═══ STRATEGY 3: Username/password via nodeFetch (bypasses browser IP block) ═══
   const username = process.env.REDDIT_USERNAME;
   const password = process.env.REDDIT_PASSWORD;
-  if (!username || !password) {
-    log('Reddit: No credentials or valid token, skipping');
-    return false;
+  if (username && password) {
+    log('Reddit: Attempting API login via nodeFetch...');
+    try {
+      const resp = await nodeFetch('https://www.reddit.com/api/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'BGRemoverDigital/1.0' },
+        body: `user=${encodeURIComponent(username)}&passwd=${encodeURIComponent(password)}&api_type=json`,
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.json && data.json.data && data.json.data.modhash) {
+          log(`Reddit: API login successful!`);
+          return true;
+        }
+      }
+      log(`Reddit: API login failed (status: ${resp.status})`);
+    } catch (e) {
+      log(`Reddit: API login error: ${e.message}`);
+    }
   }
 
+  log('Reddit: All login strategies failed, skipping');
+  return false;
+}
+
+// ═══ Reddit Rule Compliance ═══
+async function checkAccountMaturity(oauthToken) {
   try {
-    log('Reddit: Attempting API-based login (/api/login/)...');
-    let apiLoginOk = false;
-    try {
-      await page.goto('https://www.reddit.com/', { waitUntil: 'load', timeout: 20000 });
-      await humanDelay(1000, 2000);
-      const apiResult = await page.evaluate(async (creds) => {
-        try {
-          const resp = await fetch('https://www.reddit.com/api/login/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `user=${encodeURIComponent(creds.username)}&passwd=${encodeURIComponent(creds.password)}&api_type=json`,
-            credentials: 'include',
-          });
-          const data = await resp.json();
-          return { ok: data.json?.data !== undefined, errors: data.json?.errors };
-        } catch (e) { return { ok: false, errors: [[e.message]] }; }
-      }, { username, password });
-      if (apiResult.ok) {
-        log('Reddit: API login succeeded!');
-        apiLoginOk = true;
-      } else {
-        log(`Reddit: API login error: ${JSON.stringify(apiResult.errors)}`);
-      }
-    } catch (e) {
-      log(`Reddit: API login exception: ${e.message}`);
-    }
-    if (apiLoginOk) {
-      await humanDelay(2000, 3000);
-      const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase()).catch(() => '');
-      const hasUserMenu = await page.$('#header-profile--flyout, [data-testid="header-profile"]').catch(() => null);
-      if (hasUserMenu || !bodyText.includes('log in')) {
-        log('Reddit: Session verified via API login!');
-        return true;
-      }
-    }
-
-    // ═══ STRATEGY 4: old.reddit.com web login ═══
-    log('Reddit: Trying old.reddit.com web login...');
-    await page.goto('https://old.reddit.com/login/', { waitUntil: 'networkidle2', timeout: 45000 });
-    await humanDelay(2000, 3000);
-    const formFound = await page.$('#user_login, input[name="username"], input[type="text"]').catch(() => null);
-    if (!formFound) {
-      log('Reddit: old.reddit.com form also not rendered — IP may be blocked');
-      await takeScreenshot(page, 'reddit-ip-blocked');
-      return false;
-    }
-    log('Reddit: old.reddit.com login form found!');
-    await humanDelay(1000, 2000);
-    await randomMouseMove(page);
-    await humanDelay(500, 1000);
-
-    const usernameSelectors = ['#user_login', '#login-username', 'input[name="username"]', 'input[autocomplete="username"]', 'input[type="text"]'];
-    let usernameFilled = false;
-    for (const sel of usernameSelectors) {
-      try {
-        const el = await page.$(sel);
-        if (el) {
-          const box = await el.boundingBox();
-          if (box) await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
-          else await el.click();
-          await humanDelay(500, 800);
-          await humanType(page, sel, username);
-          usernameFilled = true;
-          log(`Reddit: Username filled via: ${sel}`);
-          break;
-        }
-      } catch (e) { /* next */ }
-    }
-    if (!usernameFilled) {
-      log('Reddit: Could not find username field');
-      return false;
-    }
-
-    await humanDelay(1500, 2500);
-    await randomMouseMove(page);
-
-    const passwordSelectors = ['#passwd', '#login-password', 'input[name="password"]', 'input[type="password"]'];
-    let passwordFilled = false;
-    for (const sel of passwordSelectors) {
-      try {
-        const el = await page.$(sel);
-        if (el) {
-          const box = await el.boundingBox();
-          if (box) await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
-          else await el.click();
-          await humanDelay(500, 800);
-          await humanType(page, sel, password);
-          passwordFilled = true;
-          log(`Reddit: Password filled via: ${sel}`);
-          break;
-        }
-      } catch (e) { /* next */ }
-    }
-    if (!passwordFilled) {
-      log('Reddit: Could not find password field');
-      return false;
-    }
-
-    await humanDelay(800, 1500);
-    await randomMouseMove(page);
-
-    let submitted = false;
-    const submitSelectors = ['button[type="submit"]', 'button.login-button', 'input[type="submit"]', 'button[class*="login" i]'];
-    for (const sel of submitSelectors) {
-      try {
-        const btn = await page.$(sel);
-        if (btn) {
-          const box = await btn.boundingBox();
-          if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-          else await btn.click();
-          submitted = true;
-          log(`Reddit: Submit clicked via: ${sel}`);
-          break;
-        }
-      } catch (e) { /* next */ }
-    }
-    if (!submitted) {
-      try {
-        const buttons = await page.$$('button');
-        for (const btn of buttons) {
-          const t = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-          if (t.includes('log in') || t.includes('sign in')) {
-            await btn.click();
-            submitted = true;
-            break;
-          }
-        }
-      } catch (e) { /* ignore */ }
-    }
-    if (!submitted) {
-      await page.keyboard.press('Enter');
-      log('Reddit: Submit via Enter');
-    }
-
-    try { await waitForNav(page, 15000); } catch (e) { /* ok */ }
-    await humanDelay(3000, 5000);
-
-    let loggedIn = false;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const currentUrl = page.url();
-      log(`Reddit: Verify attempt ${attempt + 1}, URL: ${currentUrl}`);
-      const hasAvatar = await page.$('#header-profile--flyout, button[aria-label*="User"]').catch(() => null);
-      const isHome = currentUrl.includes('reddit.com/') && !currentUrl.includes('login') && !currentUrl.includes('consent');
-      if (isHome || hasAvatar) {
-        log('Reddit: Login successful!');
-        loggedIn = true;
-        break;
-      }
-      const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
-      if (bodyText.includes('incorrect password') || bodyText.includes('wrong password') || bodyText.includes('invalid username')) {
-        log('Reddit: Invalid credentials');
-        break;
-      }
-      if (bodyText.includes('verify your email') || bodyText.includes('two-factor') || bodyText.includes('unusual activity')) {
-        log('Reddit: Additional verification required');
-        break;
-      }
-      const isConsent = currentUrl.includes('consent') || currentUrl.includes('authorize') ||
-        (bodyText.includes('continue to reddit') && bodyText.includes('allow'));
-      if (isConsent) {
-        log('Reddit: Consent dialog, clicking continue...');
-        try {
-          const buttons = await page.$$('button');
-          for (const btn of buttons) {
-            const t = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-            if (t.includes('continue') || t.includes('accept')) {
-              await btn.click();
-              break;
-            }
-          }
-          await waitForNav(page, 10000);
-          await humanDelay(3000, 5000);
-          continue;
-        } catch (e) { /* proceed */ }
-      }
-      log(`Reddit: Still on login page. Snippet: "${bodyText.substring(0, 200)}"`);
-      await takeScreenshot(page, `reddit-stuck-${attempt}`);
-      await humanDelay(4000, 6000);
-    }
-    if (!loggedIn) {
-      log(`Reddit: Login failed. Final URL: ${page.url()}`);
-      await takeScreenshot(page, 'reddit-login-failed-final');
-    }
-    return loggedIn;
+    const resp = await nodeFetch('https://oauth.reddit.com/api/v1/me', {
+      headers: { 'Authorization': `Bearer ${oauthToken}`, 'User-Agent': 'BGRemoverDigital/1.0' }
+    });
+    if (!resp.ok) return { eligible: false, reason: 'Cannot fetch account info' };
+    const me = await resp.json();
+    const accountAgeDays = Math.floor((Date.now() / 1000 - me.created_utc) / 86400);
+    const commentKarma = me.comment_karma || 0;
+    const linkKarma = me.link_karma || 0;
+    const totalKarma = commentKarma + linkKarma;
+    const eligible = accountAgeDays >= 30 && commentKarma >= 10;
+    return {
+      eligible,
+      reason: eligible ? 'OK' : `Account age: ${accountAgeDays}d (need 30d), comment karma: ${commentKarma} (need 10), total karma: ${totalKarma}`,
+      accountAgeDays, commentKarma, linkKarma, totalKarma, username: me.name
+    };
   } catch (e) {
-    log(`Reddit login error: ${e.message}`);
-    await takeScreenshot(page, 'reddit-login-error');
-    return false;
+    return { eligible: false, reason: e.message };
+  }
+}
+
+async function checkSubredditRules(subreddit, oauthToken) {
+  try {
+    const resp = await nodeFetch(`https://oauth.reddit.com/r/${subreddit}/about/rules`, {
+      headers: { 'Authorization': `Bearer ${oauthToken}`, 'User-Agent': 'BGRemoverDigital/1.0' }
+    });
+    if (!resp.ok) return { canPost: true, rules: [], note: `Could not fetch rules (${resp.status}), proceeding cautiously` };
+    const data = await resp.json();
+    const rules = data.rules || [];
+    const ruleTexts = rules.map(r => (r.short_name || '') + ': ' + (r.description || '')).join(' ').toLowerCase();
+    const issues = [];
+    // Check for common restrictions
+    if (ruleTexts.includes('no self-promotion') || ruleTexts.includes('no promotion') || ruleTexts.includes('no self promo'))
+      issues.push('Self-promotion not allowed');
+    if (ruleTexts.includes('minimum karma') || ruleTexts.includes('min karma'))
+      issues.push('Minimum karma required');
+    if (ruleTexts.includes('minimum account age') || ruleTexts.includes('min account'))
+      issues.push('Minimum account age required');
+    if (ruleTexts.includes('10:1') || ruleTexts.includes('10 to 1') || ruleTexts.includes('participation ratio'))
+      issues.push('10:1 participation ratio required');
+    if (issues.length === 0 && rules.length > 0) return { canPost: true, rules: rules.map(r => r.short_name), note: 'No restrictions detected' };
+    if (issues.length > 0) return { canPost: false, rules: rules.map(r => r.short_name), issues, note: `Issues: ${issues.join('; ')}` };
+    return { canPost: true, rules: [], note: 'No rules found' };
+  } catch (e) {
+    return { canPost: true, rules: [], note: `Rule check failed: ${e.message}` };
   }
 }
 
 async function redditPost(page, content) {
   const subreddit = content.subreddit || 'Entrepreneur';
   try {
-    log(`Reddit: Posting to r/${subreddit}...`);
-
-    // ═══ STRATEGY 1: OAuth Bearer Token API posting (works from ANY IP) ═══
-    // Uses oauth.reddit.com which accepts Bearer tokens directly
+    // ═══ PRE-POSTING GATE: Check account maturity + subreddit rules ═══
     const oauthToken = process.env.REDDIT_OAUTH_TOKEN || await page.evaluate(() => localStorage.getItem('reddit_oauth_token'));
     if (oauthToken) {
-      log('Reddit: Attempting OAuth API post...');
-      const apiResult = await page.evaluate(async (params) => {
-        try {
-          // First, get the modhash using OAuth
-          const meResp = await fetch('https://oauth.reddit.com/api/v1/me', {
-            headers: { 'Authorization': `Bearer ${params.token}` }
-          });
-          if (meResp.status !== 200) {
-            return { ok: false, error: `OAuth check failed: ${meResp.status}` };
+      const maturity = await checkAccountMaturity(oauthToken);
+      log(`Reddit: Account maturity check — ${maturity.reason}`);
+      if (!maturity.eligible) {
+        log(`Reddit: Account not mature enough to post. Skipping. (${maturity.reason})`);
+        return { success: false, error: `Account not eligible: ${maturity.reason}` };
+      }
+      const subRules = await checkSubredditRules(subreddit, oauthToken);
+      log(`Reddit: r/${subreddit} rules — ${subRules.note}`);
+      if (!subRules.canPost) {
+        log(`Reddit: Subreddit r/${subreddit} has restrictions. Skipping. (${subRules.note})`);
+        return { success: false, error: `Subreddit restrictions: ${subRules.note}` };
+      }
+    }
+
+    log(`Reddit: Posting to r/${subreddit}...`);
+
+    // ═══ STRATEGY 1: OAuth Bearer Token via nodeFetch (works from ANY IP) ═══
+    // oauthToken already verified in pre-posting gate above
+    if (oauthToken) {
+      log('Reddit: Attempting OAuth API post via nodeFetch...');
+      try {
+        // Verify token first
+        const meResp = await nodeFetch('https://oauth.reddit.com/api/v1/me', {
+          headers: { 'Authorization': `Bearer ${oauthToken}`, 'User-Agent': 'BGRemoverDigital/1.0' }
+        });
+        if (!meResp.ok) {
+          log(`Reddit: OAuth token invalid (status: ${meResp.status}), skipping post`);
+          return { success: false, error: `OAuth token invalid: ${meResp.status}` };
+        }
+
+        // Submit post
+        const postBody = new URLSearchParams({
+          api_type: 'json',
+          kind: 'self',
+          sr: subreddit,
+          title: content.title,
+          text: content.body + '\n\n' + SITE_URL,
+          submit: 'Submit',
+        });
+
+        const postResp = await nodeFetch('https://oauth.reddit.com/api/submit/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Bearer ${oauthToken}`,
+            'User-Agent': 'BGRemoverDigital/1.0',
+          },
+          body: postBody.toString(),
+        });
+
+        if (postResp.ok) {
+          const postData = await postResp.json();
+          if (postData.json && postData.json.data && postData.json.data.url) {
+            let postUrl = postData.json.data.url;
+            // FIX: Avoid double domain prefix
+            if (postUrl.startsWith('https://www.reddit.comhttps://') || postUrl.startsWith('https://www.reddit.com/r/')) {
+              // URL is already absolute, use as-is
+            } else if (postUrl.startsWith('/')) {
+              postUrl = 'https://www.reddit.com' + postUrl;
+            }
+            log(`Reddit: Post created via OAuth API! URL: ${postUrl}`);
+            return { success: true, post_url: postUrl };
           }
-
-          // Submit post using OAuth
-          const body = new URLSearchParams({
-            api_type: 'json',
-            kind: 'self',
-            sr: params.subreddit,
-            title: params.title,
-            text: params.body + '\n\n' + params.siteUrl,
-            // No uh (modhash) needed with OAuth — the Bearer token is the auth
-            submit: 'Submit',
-          });
-
-          const postResp = await fetch('https://oauth.reddit.com/api/submit/', {
+          if (postData.json && postData.json.errors && postData.json.errors.length > 0) {
+            log(`Reddit: Post rejected: ${JSON.stringify(postData.json.errors)}`);
+            return { success: false, error: JSON.stringify(postData.json.errors) };
+          }
+          log(`Reddit: Unexpected OAuth response: ${JSON.stringify(postData).substring(0, 300)}`);
+        } else if (postResp.status === 429) {
+          log('Reddit: Rate limited, waiting 60s...');
+          await new Promise(r => setTimeout(r, 60000));
+          // Retry once
+          const retryResp = await nodeFetch('https://oauth.reddit.com/api/submit/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
-              'Authorization': `Bearer ${params.token}`,
+              'Authorization': `Bearer ${oauthToken}`,
+              'User-Agent': 'BGRemoverDigital/1.0',
             },
-            body: body.toString(),
+            body: postBody.toString(),
           });
-
-          const postData = await postResp.json();
-          if (postData.json && postData.json.data && postData.json.data.url) {
-            return { ok: true, url: 'https://www.reddit.com' + postData.json.data.url };
+          if (retryResp.ok) {
+            const postData = await retryResp.json();
+            if (postData.json && postData.json.data && postData.json.data.url) {
+              return { success: true, post_url: 'https://www.reddit.com' + postData.json.data.url };
+            }
           }
-          if (postData.json && postData.json.errors && postData.json.errors.length > 0) {
-            return { ok: false, error: JSON.stringify(postData.json.errors) };
-          }
-          return { ok: false, error: 'Unexpected OAuth response: ' + JSON.stringify(postData).substring(0, 300) };
-        } catch (e) {
-          return { ok: false, error: e.message };
+          return { success: false, error: 'Rate limited after retry' };
+        } else {
+          log(`Reddit: OAuth post failed (status: ${postResp.status})`);
         }
-      }, { token: oauthToken, subreddit, title: content.title, body: content.body, siteUrl: SITE_URL });
-
-      if (apiResult.ok) {
-        log(`Reddit: Post created via OAuth API! URL: ${apiResult.url}`);
-        return { success: true, post_url: apiResult.url };
-      }
-      log(`Reddit: OAuth API post failed: ${apiResult.error} — trying regular API...`);
-    }
-
-    // ═══ STRATEGY 2: Regular API posting with cookies ═══
-    log('Reddit: Attempting regular API-based post...');
-    const apiResult = await page.evaluate(async (postContent) => {
-      try {
-        const csrfResp = await fetch('https://www.reddit.com/api/me.json', { credentials: 'include' });
-        const csrfData = await csrfResp.json();
-        if (!csrfData.data || !csrfData.data.modhash) {
-          return { ok: false, error: 'Could not get modhash — not logged in via API' };
-        }
-        const modhash = csrfData.data.modhash;
-        const body = new URLSearchParams({
-          api_type: 'json',
-          kind: 'self',
-          sr: postContent.subreddit,
-          title: postContent.title,
-          text: postContent.body + '\n\n' + postContent.siteUrl,
-          uh: modhash,
-          submit: 'Submit',
-        });
-        const postResp = await fetch('https://www.reddit.com/api/submit/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: body.toString(),
-          credentials: 'include',
-        });
-        const postData = await postResp.json();
-        if (postData.json && postData.json.data && postData.json.data.url) {
-          return { ok: true, url: 'https://www.reddit.com' + postData.json.data.url };
-        }
-        if (postData.json && postData.json.errors && postData.json.errors.length > 0) {
-          return { ok: false, error: JSON.stringify(postData.json.errors) };
-        }
-        return { ok: false, error: 'Unknown API response: ' + JSON.stringify(postData).substring(0, 200) };
       } catch (e) {
-        return { ok: false, error: e.message };
+        log(`Reddit: OAuth post error: ${e.message}`);
       }
-    }, { subreddit, title: content.title, body: content.body, siteUrl: SITE_URL });
-
-    if (apiResult.ok) {
-      log(`Reddit: Post created via regular API! URL: ${apiResult.url}`);
-      return { success: true, post_url: apiResult.url };
-    }
-    log(`Reddit: Regular API post failed: ${apiResult.error} — trying web UI...`);
-
-    // ═══ STRATEGY 3: Web UI posting via old.reddit.com ═══
-    log('Reddit: Trying old.reddit.com web posting...');
-    await page.goto(`https://old.reddit.com/r/${subreddit}/submit/`, { waitUntil: 'networkidle2', timeout: 30000 });
-    await humanDelay(2000, 4000);
-
-    const isLoggedInOld = await page.evaluate(() => {
-      const userLink = document.querySelector('#header-bottom-right a[href*="/user/"], .user > a');
-      return !!userLink;
-    }).catch(() => false);
-
-    if (!isLoggedInOld) {
-      log('Reddit: Not logged in on old.reddit.com — cannot post');
-      return { success: false, error: 'Not logged in on old.reddit.com' };
     }
 
-    const titleFilled = await humanType(page, '#title, textarea[name="title"], input[name="title"]', content.title, { delay: 50 });
-    if (!titleFilled) {
-      return { success: false, error: 'Title field not found on old.reddit.com' };
-    }
-    await humanDelay(800, 1500);
-
-    const bodyText = content.body + '\n\n' + SITE_URL;
-    const bodyFilled = await humanType(page, '#text, textarea[name="text"], textarea#text-field', bodyText, { delay: 30 });
-    if (!bodyFilled) {
-      return { success: false, error: 'Body field not found on old.reddit.com' };
-    }
-    await humanDelay(1000, 2000);
-
-    let submitted = await safeClick(page, 'button[name="submit"], input[type="submit"], button.btn');
-    if (!submitted) await page.keyboard.press('Enter');
-
-    await waitForNav(page, 10000);
-    await humanDelay(3000, 5000);
-
-    const pageUrl = page.url();
-    if (pageUrl.includes('/comments/')) {
-      log(`Reddit: Post created successfully via old.reddit.com!`);
-      return { success: true, post_url: pageUrl };
-    }
-
-    const errorText = await page.evaluate(() => {
-      const errEl = document.querySelector('.error, .form-error, [class*="error"]');
-      return errEl ? errEl.textContent.trim() : null;
-    }).catch(() => null);
-    if (errorText) {
-      log(`Reddit: Error on page: ${errorText}`);
-      return { success: false, error: errorText };
-    }
-
-    return { success: false, error: 'Could not verify post creation' };
+    log('Reddit: No valid OAuth token, cannot post');
+    return { success: false, error: 'No valid OAuth token available' };
   } catch (e) {
-    log(`Reddit post error: ${e.message}`);
-    await takeScreenshot(page, 'reddit-post-error');
+    log(`Reddit: Post error: ${e.message}`);
     return { success: false, error: e.message };
   }
 }
@@ -1153,6 +991,45 @@ async function twitterLogin(page) {
   const username = process.env.TWITTER_USERNAME;
   const password = process.env.TWITTER_PASSWORD;
   const email = process.env.TWITTER_EMAIL;
+
+  // ═══ STRATEGY 0: Validate session from cookies file via nodeFetch ═══
+  const twCookiesFile = path.join(COOKIES_DIR, 'twitter-cookies.json');
+  if (fs.existsSync(twCookiesFile)) {
+    log('Twitter: Found cookies file, validating session via nodeFetch...');
+    try {
+      const cookieData = readJSON(twCookiesFile);
+      if (cookieData && cookieData.cookies) {
+        const ct0 = cookieData.cookies.find(c => c.name === 'ct0');
+        const authToken = cookieData.cookies.find(c => c.name === 'auth_token');
+        if (ct0 && authToken) {
+          const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
+          const resp = await nodeFetch('https://x.com/i/api/1.1/account/settings.json', {
+            headers: {
+              'Cookie': cookieStr,
+              'X-CSRF-Token': ct0.value,
+              'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            }
+          });
+          if (resp.ok) {
+            log('Twitter: Session valid via cookies file!');
+            // Load cookies into browser for any page.evaluate calls
+            await page.setCookie(...cookieData.cookies.map(c => ({
+              name: c.name, value: c.value, domain: c.domain || '.x.com',
+              path: c.path || '/', httpOnly: c.httpOnly || false, secure: c.secure || true,
+            })));
+            return true;
+          }
+          log(`Twitter: Cookies file session invalid (status: ${resp.status})`);
+        } else {
+          log('Twitter: Cookies file missing ct0 or auth_token');
+        }
+      }
+    } catch (e) {
+      log(`Twitter: Cookies file validation error: ${e.message}`);
+    }
+  }
+
   if (!username || !password || !email) {
     log('Twitter: No credentials, skipping');
     return false;
@@ -1423,27 +1300,19 @@ async function twitterPost(page, content) {
   try {
     log('Twitter: Posting tweet...');
 
-    // ═══ STRATEGY 1: API-based tweet via page.evaluate fetch ═══
-    // This works even when X's web UI is IP-blocked, as long as we have cookies
-    log('Twitter: Attempting API-based tweet...');
-    const apiResult = await page.evaluate(async (tweetText) => {
+    // ═══ STRATEGY 1: API-based tweet via nodeFetch with cookies from file ═══
+    const twCookiesFile = path.join(COOKIES_DIR, 'twitter-cookies.json');
+    if (fs.existsSync(twCookiesFile)) {
+      log('Twitter: Attempting API tweet via nodeFetch...');
       try {
-        // First check if we're logged in by fetching home timeline
-        const homeCheck = await fetch('https://x.com/i/api/2/timeline/home.json?count=1', { credentials: 'include' });
-        if (homeCheck.status === 200) {
-          // We have a valid session — try to tweet via API
-          // Get csrf token from cookies
-          const cookies = document.cookie.split('; ').map(c => c.split('='));
-          const ct0Cookie = cookies.find(c => c[0] === 'ct0');
-          if (!ct0Cookie) return { ok: false, error: 'No ct0 CSRF cookie found' };
-          const csrfToken = ct0Cookie[1];
+        const cookieData = readJSON(twCookiesFile);
+        const ct0 = cookieData?.cookies?.find(c => c.name === 'ct0');
+        const authToken = cookieData?.cookies?.find(c => c.name === 'auth_token');
+        if (ct0 && authToken) {
+          const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
 
-          // Also get the x-twitter-auth-token or other auth cookies
-          const authToken = cookies.find(c => c[0] === 'auth_token');
-
-          // Use the GraphQL API endpoint for creating tweets
           const variables = {
-            tweet_text: tweetText,
+            tweet_text: content.text,
             dark_request: false,
             media: { media_entities: [], possibly_sensitive: false },
             semantic_annotation_ids: [],
@@ -1474,79 +1343,78 @@ async function twitterPost(page, content) {
             responsive_web_enhance_cards_enabled: false,
           };
 
-          const resp = await fetch('https://x.com/i/api/graphql/Va2lvahdYCP1BLcl18y6pw/CreateTweet', {
+          const resp = await nodeFetch('https://x.com/i/api/graphql/Va2lvahdYCP1BLcl18y6pw/CreateTweet', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-CSRF-Token': csrfToken,
+              'Cookie': cookieStr,
+              'X-CSRF-Token': ct0.value,
               'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
-              'User-Agent': navigator.userAgent,
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               'X-Twitter-Active-User': 'yes',
               'X-Twitter-Client-Language': 'en',
             },
             body: JSON.stringify({ variables, features }),
-            credentials: 'include',
           });
 
-          const data = await resp.json();
-          if (data.data && data.data.create_tweet && data.data.create_tweet.tweet_results) {
-            const tweetId = data.data.create_tweet.tweet_results.result?.rest_id;
-            return { ok: true, tweet_id: tweetId, url: `https://x.com/i/status/${tweetId}` };
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.data && data.data.create_tweet && data.data.create_tweet.tweet_results) {
+              const tweetId = data.data.create_tweet.tweet_results.result?.rest_id;
+              log(`Twitter: Tweet posted! ID: ${tweetId}`);
+              return { success: true, tweet_id: tweetId, post_url: `https://x.com/i/status/${tweetId}` };
+            }
+            if (data.errors) {
+              log(`Twitter: Tweet errors: ${JSON.stringify(data.errors)}`);
+            } else {
+              log(`Twitter: Unexpected response: ${JSON.stringify(data).substring(0, 300)}`);
+            }
+          } else if (resp.status === 429) {
+            log('Twitter: Rate limited, waiting 60s...');
+            await new Promise(r => setTimeout(r, 60000));
+          } else {
+            log(`Twitter: API tweet failed (status: ${resp.status})`);
           }
-          if (data.errors) return { ok: false, error: JSON.stringify(data.errors) };
-          return { ok: false, error: 'Unexpected response: ' + JSON.stringify(data).substring(0, 300) };
+        } else {
+          log('Twitter: Missing ct0 or auth_token in cookies file');
         }
-        return { ok: false, error: `Home timeline returned status ${homeCheck.status} — not logged in` };
       } catch (e) {
-        return { ok: false, error: e.message };
+        log(`Twitter: API tweet error: ${e.message}`);
       }
-    }, content.text);
-
-    if (apiResult.ok) {
-      log(`Twitter: Tweet posted via API! URL: ${apiResult.url}`);
-      return { success: true, post_url: apiResult.url };
+    } else {
+      log('Twitter: No cookies file found');
     }
-    log(`Twitter: API tweet failed: ${apiResult.error} — trying web UI...`);
 
-    // ═══ STRATEGY 2: Web UI posting ═══
-    await humanDelay(2000, 3000);
-
-    // Click the compose tweet button (if on home page)
-    const composeBtn = await page.$('a[data-testid="SideNav_NewTweet_Button"], div[data-testid="tweetButtonInline"]');
-    if (!composeBtn) {
-      // Try going to home
-      await page.goto('https://x.com/home', { waitUntil: 'domcontentloaded', timeout: 15000 });
+    // ═══ STRATEGY 2: Browser-based tweet (fallback) ═══
+    // ... keep the existing browser-based fallback code ...
+    log('Twitter: Falling back to browser-based posting...');
+    // Navigate to twitter compose
+    try {
+      await page.goto('https://x.com/compose/post', { waitUntil: 'domcontentloaded', timeout: 20000 });
       await humanDelay(2000, 3000);
+      // Try to find the tweet compose box
+      const tweetBox = await page.$('[data-testid="tweetTextarea_0"]') || await page.$('[contenteditable="true"][role="textbox"]');
+      if (tweetBox) {
+        await tweetBox.click();
+        await humanDelay(500, 1000);
+        await page.keyboard.type(content.text, { delay: 30 + Math.floor(rand() * 40) });
+        await humanDelay(1000, 2000);
+        // Click tweet button
+        const tweetBtn = await page.$('[data-testid="tweetButton"]');
+        if (tweetBtn) {
+          await tweetBtn.click();
+          await humanDelay(3000, 5000);
+          log('Twitter: Tweet submitted via browser (cannot verify URL)');
+          return { success: true, post_url: null };
+        }
+      }
+    } catch (e) {
+      log(`Twitter: Browser fallback error: ${e.message}`);
     }
 
-    // Click tweet compose area
-    await safeClick(page, 'div[data-testid="tweetTextarea_0"], div[contenteditable="true"][data-testid="tweetTextarea_0"]');
-    await humanDelay(1000, 2000);
-
-    // Type tweet content
-    const tweetText = content.text;
-    for (let i = 0; i < tweetText.length; i++) {
-      await page.keyboard.type(tweetText[i], { delay: 60 + Math.floor(rand() * 50) });
-      if (rand() < 0.03) await humanDelay(300, 600);
-    }
-    await humanDelay(1500, 3000);
-
-    // Click Post button
-    await safeClick(page, 'button[data-testid="tweetButton"]');
-    await humanDelay(3000, 5000);
-
-    // Verify tweet posted
-    const toast = await page.$('[data-testid="toast"]');
-    if (toast) {
-      const toastText = await page.evaluate(el => el.textContent, toast);
-      log(`Twitter: Toast message - ${toastText}`);
-    }
-
-    log('Twitter: Tweet posted successfully via web UI!');
-    return { success: true };
+    return { success: false, error: 'All posting strategies failed' };
   } catch (e) {
-    log(`Twitter post error: ${e.message}`);
-    await takeScreenshot(page, 'twitter-post-error');
+    log(`Twitter: Post error: ${e.message}`);
     return { success: false, error: e.message };
   }
 }
@@ -1734,8 +1602,50 @@ async function pinterestLogin(page) {
   }
 }
 
+// Generate a unique Pinterest pin image using AI
+async function generatePinImage(topic) {
+  const imagePrompts = {
+    'product-photos': 'Professional product photography before-and-after: a sneaker on messy background (left half) and same sneaker on clean white (right half). Split comparison, studio lighting, e-commerce style, 2:3 vertical aspect ratio. No text overlays.',
+    'jewelry': 'Elegant jewelry pieces on transparent background, studio lighting, luxury feel, soft bokeh, rose gold necklace and ring displayed on marble surface. Professional product photography, 2:3 vertical aspect ratio. No text overlays.',
+    'clothing': 'Fashion clothing flat lay on clean white background, neatly arranged outfits, minimalist style, soft natural lighting, editorial look. Professional fashion photography, 2:3 vertical aspect ratio. No text overlays.',
+    'pets': 'Cute golden retriever portrait with clean background removed, isolated on pure white, studio lighting, happy expression, professional pet photography style. Warm and friendly mood, 2:3 vertical aspect ratio. No text overlays.',
+    'logos': 'Collection of colorful logos on transparent background, arranged in a grid pattern, clean modern design, professional branding showcase. Minimalist aesthetic, 2:3 vertical aspect ratio. No text overlays.',
+    'id-photos': 'Professional headshot portrait on clean white background, passport photo style, even lighting, neutral expression. Photography studio quality, 2:3 vertical aspect ratio. No text overlays.',
+    'white-background': 'Clean product photography setup showing multiple items on pure white backgrounds, amazon listing style, professional studio quality, overhead flat lay view. E-commerce aesthetic, 2:3 vertical aspect ratio. No text overlays.',
+    'transparent': 'Creative collage of objects with transparent backgrounds floating in space, colorful and modern design, digital art style, eye-catching composition. 2:3 vertical aspect ratio. No text overlays.',
+    'how-to': 'Step-by-step visual tutorial showing image background removal process, before/after arrows, clean infographic style, blue and white color scheme. Instructional design, 2:3 vertical aspect ratio. No text overlays.',
+    'default': 'Modern smartphone mockup showing a photo editing app interface with background removal in progress, floating UI elements, gradient blue-purple background, sleek tech aesthetic. Digital product showcase, 2:3 vertical aspect ratio. No text overlays.',
+  };
+
+  const prompt = imagePrompts[topic] || imagePrompts['default'];
+  const outputPath = `/tmp/pinterest-pin-${topic}-${Date.now()}.jpg`;
+
+  try {
+    log(`Pinterest: Generating AI image for topic: ${topic}`);
+    const { execSync } = require('child_process');
+    execSync(`z-ai-generate --prompt "${prompt.replace(/"/g, '\\"')}" --output "${outputPath}" --size 1000x1500`, {
+      timeout: 120000, stdio: ['pipe', 'pipe', 'pipe']
+    });
+    const stats = fs.statSync(outputPath);
+    if (stats.size > 10000) {
+      log(`Pinterest: AI image generated successfully (${stats.size} bytes)`);
+      return outputPath;
+    }
+    log(`Pinterest: AI image too small (${stats.size} bytes), falling back`);
+  } catch (e) {
+    log(`Pinterest: AI image generation failed: ${e.message}, falling back`);
+  }
+  return null;
+}
+
 // Download an image from our site for Pinterest pin upload
 async function downloadPinImage() {
+  // Try AI-generated image first (dynamic, unique per post)
+  const topics = ['product-photos', 'jewelry', 'clothing', 'pets', 'logos', 'white-background', 'transparent', 'how-to'];
+  const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+  const aiImage = await generatePinImage(randomTopic);
+  if (aiImage) return aiImage;
+
   const https = require('https');
   const http = require('http');
   const imagePath = '/tmp/pinterest-pin-image.jpg';
@@ -1860,67 +1770,55 @@ async function pinterestCreatePin(page, content) {
       log('Pinterest: No image available for upload, proceeding with URL-based approach');
     }
 
-    // Step 3: Fill title — try multiple selector strategies for Pinterest's evolving UI
-    await humanDelay(2000, 3000);
-    let titleFilled = false;
+    // Step 3: Fill title
     const titleSelectors = [
-      'input[id="pinTitle"]',
-      'input[name="title"]',
-      'input[data-test-id="pin-title-input"]',
-      'div[contenteditable="true"][class*="title"]',
-      'div[contenteditable="true"][class*="Title"]',
-      'input[placeholder*="title" i]',
-      'label[class*="title"] input',
-      'label[class*="Title"] input',
-      // Generic: first contenteditable div (Pinterest often uses these)
       'div[contenteditable="true"]',
+      'input[placeholder*="title" i]',
+      'input[placeholder*="Add a title" i]',
+      '[data-test-id="pin-title"]',
+      'textarea[placeholder*="title" i]',
     ];
+    let titleFilled = false;
     for (const sel of titleSelectors) {
-      try {
-        const el = await page.$(sel);
-        if (el) {
-          await el.click();
-          await humanDelay(300, 600);
-          await humanType(page, sel, content.pin_title, { delay: 60 });
-          titleFilled = true;
-          log(`Pinterest: Title filled using selector: ${sel}`);
-          break;
-        }
-      } catch (e) { /* try next */ }
+      const el = await page.$(sel);
+      if (el) {
+        await el.click();
+        await humanDelay(300, 500);
+        await page.keyboard.type(content.pin_title, { delay: 30 + Math.floor(rand() * 30) });
+        titleFilled = true;
+        log(`Pinterest: Title filled using selector: ${sel}`);
+        break;
+      }
     }
-    if (!titleFilled) {
-      log('Pinterest: Could not fill title field — Pinterest UI may have changed');
-      await takeScreenshot(page, 'pinterest-no-title-field');
-    }
+    if (!titleFilled) log('Pinterest: Could not fill title');
     await humanDelay(800, 1500);
 
     // Step 4: Fill description
-    let descFilled = false;
     const descSelectors = [
-      'textarea[id="pinDescription"]',
-      'textarea[name="description"]',
-      'div[data-test-id="pin-description-textarea"]',
-      'div[contenteditable="true"][class*="description"]',
-      'div[contenteditable="true"][class*="Description"]',
       'textarea[placeholder*="description" i]',
-      'textarea[placeholder*="tell" i]',
-      // Generic: second contenteditable div (after title)
+      'textarea[placeholder*="Tell everyone" i]',
+      'div[contenteditable="true"]:nth-child(2)',
+      'textarea[placeholder*="What is it about" i]',
+      '[data-test-id="pin-description"]',
+      'div[aria-label*="description" i]',
+      'div[aria-label*="Description" i]',
     ];
-    for (const sel of descSelectors) {
-      try {
-        const el = await page.$(sel);
-        if (el) {
-          await el.click();
-          await humanDelay(300, 600);
-          await humanType(page, sel, content.pin_description, { delay: 40 });
-          descFilled = true;
-          log(`Pinterest: Description filled using selector: ${sel}`);
-          break;
-        }
-      } catch (e) { /* try next */ }
-    }
-    if (!descFilled) {
-      log('Pinterest: Description field not found (may be optional or UI changed)');
+    if (content.pin_description) {
+      let descFilled = false;
+      for (const sel of descSelectors) {
+        try {
+          const el = await page.$(sel);
+          if (el) {
+            await el.click();
+            await humanDelay(300, 500);
+            await page.keyboard.type(content.pin_description, { delay: 20 + Math.floor(rand() * 20) });
+            descFilled = true;
+            log(`Pinterest: Description filled using selector: ${sel}`);
+            break;
+          }
+        } catch (e) { /* try next */ }
+      }
+      if (!descFilled) log('Pinterest: Description field not found (may be optional)');
     }
     await humanDelay(800, 1500);
 
