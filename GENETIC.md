@@ -2,8 +2,19 @@
 
 > Complete word-for-word transcript of the genetic algorithm, self-rebuilding agents, growth strategy, and defense protocol discussion.
 > Started: May 8, 2026
-> Last Updated: May 10, 2026
-> Status: ALL 4 GROWTH AGENTS DEPLOYED — GA Intelligence ACTIVE — Social Agent v2.0 BUGS FIXED — Charlie Agent v2 FALSE POSITIVE BUGS FIXED
+> Last Updated: May 14, 2026
+> Status: ALL 4 GROWTH AGENTS DEPLOYED — GA Intelligence ACTIVE — Social Agent v2.0 + SM Executive HARDENED (bg_V2.0) — Charlie Agent v2 FALSE POSITIVE BUGS FIXED
+>
+> PHASE 3-5 COMPLETE (May 13, 2026 — Tag: bg_V2.0):
+> - Twitter dynamic GraphQL query ID extraction (runtime, no more 404s)
+> - Twitter x-twitter-auth-type: OAuth2Session header (no more 403s)
+> - Git push fixed: fetch-depth: 0 in both workflow YAMLs + git fetch --unshallow safety net
+> - Pinterest added to platform rotation (Reddit + Twitter + Pinterest all scored)
+> - Pinterest pin images: Puppeteer HTML-to-PNG canvas approach (10 templates, no external CLI)
+> - SM Executive: z-ai CLI completely removed, 13-category fallback reply system (80+ variants)
+> - SM Executive: dual-layer mod/bot comment filtering (AutoModerator + mod author skip)
+> - SM Executive: Twitter cookie-based auth (ct0 + auth_token) via nodeFetch + dynamic GraphQL
+> - Commit: c4875da — 4 files changed, +382/-98 lines
 >
 > CHARLIE AGENT v2 FIX STATUS (May 10, 2026):
 > - 3 false positive bugs found and fixed (commit: 696fe19)
@@ -13,22 +24,28 @@
 > - State file reset: all previous alerts were false positives
 > - Site verified 100% clean (full security scan performed)
 >
-> SOCIAL AGENT v2.0 BUG FIX STATUS (May 10, 2026):
-> - 8 bugs found: 3 CRITICAL, 3 MEDIUM, 2 MINOR
-> - All 8 bugs FIXED and pushed (commits: 6c0aa6e, 34be5bc)
-> - Key fixes: isContentUnique crash, networkidle2 timeout, wrong post tab,
->   :has-text selectors (Playwright-only), Pinterest no image upload,
->   Pinterest login check inverted, Pinterest submit button, Chrome UA
-> - Pinterest now downloads + uploads images (3 fallback sources)
-> - Expert QA Report generated (18-page PDF)
+> SOCIAL AGENT v2.0 STATUS (May 14, 2026 — bg_V2.0):
+> - 8 original bugs fixed (May 10) + 6 live issues fixed (May 13)
+> - Twitter: dynamic GraphQL query ID + x-twitter-auth-type header + cookie-based nodeFetch
+> - Reddit: nodeFetch for all API calls (bypasses GH Actions IP blocks)
+> - Pinterest: canvas-based pin image generation + added to rotation
+> - Git push: fetch-depth: 0 + --unshallow safety net
 > - Next scheduled run: Daily 10:00 UTC (3:00 PM PKT)
+>
+> SM EXECUTIVE STATUS (May 14, 2026 — bg_V2.0):
+> - Schedule: Every 4 hours (6x daily)
+> - Fallback-only replies: 13 categories, 80+ variants, zero external AI/CLI
+> - Mod filtering: Dual-layer skip (content patterns + author names)
+> - Platforms: Reddit (OAuth), Twitter (cookies), Pinterest (cookies)
+> - State files: sm-executive-brain.json, sm-executive-config.json (auto-created)
 >
 > GROWTH AGENT ARMY — DEPLOYMENT STATUS:
 > - Growth Agent v2: ✅ ACTIVE — `.github/workflows/growth-agent.yml` (Daily 8:00 UTC)
 > - Content Agent: ✅ ACTIVE — `.github/workflows/content-agent.yml` (Mon/Wed/Fri 9:00 UTC)
-> - Social Agent v2.0: ✅ ACTIVE — `.github/workflows/social-agent.yml` (Daily 10:00 UTC) — **Puppeteer auto-posting + engagement**
+> - Social Agent v2.0: ✅ ACTIVE — `.github/workflows/social-agent.yml` (Daily 10:00 UTC) — **nodeFetch + dynamic GraphQL + canvas pins**
+> - SM Executive: ✅ ACTIVE — `.github/workflows/sm-executive.yml` (Every 4 hours) — **Fallback-only replies + mod filtering**
 > - Directory Agent: ✅ ACTIVE — `.github/workflows/directory-agent.yml` (Weekly Sunday 11:00 UTC)
-> - Supervisor Agent v2: ✅ ACTIVE — Monitors all 10 agents (Daily 7:00 UTC)
+> - Supervisor Agent v2: ✅ ACTIVE — Monitors all 11 agents (Daily 7:00 UTC)
 >
 > SOCIAL MEDIA ACCOUNTS (Puppeteer Automated):
 > - Reddit: u/AbrardeAhmed — Posts to r/Entrepreneur, r/shopify, r/Etsy, r/ecommerce, r/smallbusiness, r/photography

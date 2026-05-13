@@ -1,7 +1,7 @@
 # BG Remover Digital — MASTER PROMPT (Complete Project Reference)
 
-> **Last Updated:** May 10, 2026
-> **Version:** 5.1 — Growth Agent Live + 20 SEO Keyword Pages + Social Agent v2.0 Bugs Fixed + Supervisor Updated
+> **Last Updated:** May 14, 2026
+> **Version:** 6.0 — Phase 3-5 Complete (bg_V2.0) + SM Executive Agent + Dynamic Twitter GraphQL + Canvas Pin Images + All MDs Updated
 > **Project Owner:** Abrar Ahmed
 > **Contact Email:** craftedminds3@gmail.com
 > **Project:** BG Remover Digital (formerly IBR-Trap)
@@ -59,7 +59,7 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-## 2. ALL 8 AGENTS — COMPLETE STATUS
+## 2. ALL 11 AGENTS — COMPLETE STATUS
 
 ### Agent 1: Monitor Agent ✅ LIVE
 
@@ -278,39 +278,41 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-### Agent 9: Social Agent v2.0 (Puppeteer) ✅ LIVE — BUGS FIXED
+### Agent 9: Social Agent v2.0 (Puppeteer + nodeFetch) ✅ LIVE — bg_V2.0
 
 | Detail | Value |
 |--------|-------|
 | **Workflow File** | `.github/workflows/social-agent.yml` |
-| **Script File** | `.github/workflows/scripts/social-agent.js` (~1,600 lines) |
+| **Script File** | `.github/workflows/scripts/social-agent.js` (2,739 lines) |
 | **Schedule** | Daily at 10:00 UTC (3:00 PM PKT) + manual trigger |
 | **Email Behavior** | ALWAYS sends daily report (posts + engagement summary) |
 | **GitHub Secrets** | GITHUB_TOKEN (auto), GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, REDDIT_USERNAME, REDDIT_PASSWORD, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_EMAIL, PINTEREST_EMAIL, PINTEREST_PASSWORD |
 | **Permissions** | `contents: write` (commits brain.json updates) |
-| **Latest Commit** | `34be5bc` — All 8 bugs fixed (May 10, 2026) |
+| **Latest Commit** | `c4875da` — Phase 3-5 complete, tagged `bg_V2.0` (May 13, 2026) |
 
 **What It Does:**
 - Logs into Reddit, Twitter/X, Pinterest via Puppeteer headless browser
 - Auto-posts content with human-like typing delays (60-140ms per keystroke)
-- Platform rotation — doesn't post to same platform every day
+- Platform rotation: Reddit + Twitter + Pinterest (all 3 scored and rotated)
 - Daily engagement: likes/saves 5-15 posts per platform, occasional retweets
 - Weekly (Mondays): follows 3-5 relevant accounts per platform
-- Pinterest: downloads image, uploads to pin creation tool, fills all fields
-- Anti-detection: webdriver hidden, Chrome/135 UA, random mouse movements, random scrolls
+- Pinterest: generates pin images via Puppeteer HTML-to-PNG canvas (10 topic templates, no external CLI)
+- Anti-detection: headless:false with xvfb (bypasses bot detection), Chrome/135 UA, random mouse/scrolls
+- Twitter: dynamic GraphQL query ID extraction at runtime, x-twitter-auth-type header
+- Reddit: nodeFetch for all API calls (bypasses GH Actions IP blocks)
+- Auth: Cookie files (reddit-cookies.json, twitter-cookies.json, pinterest-cookies.json)
+- Git push: fetch-depth: 0 in workflow + git fetch --unshallow safety net
 
-**Bug Fix History (May 10, 2026):**
-8 bugs found and fixed across 2 commits (`6c0aa6e`, `34be5bc`):
-1. `isContentUnique()` crash — dict vs array `.some()` (CRITICAL)
-2. Reddit `networkidle2` timeout → `domcontentloaded` (CRITICAL)
-3. Reddit wrong post tab `post-link-tab` → `post-text-tab` (CRITICAL)
-4. `:has-text()` selectors invalid in Puppeteer → text-match iteration (MEDIUM)
-5. Pinterest wrong submit button `SignupButton` → submit chain (MEDIUM)
-6. Pinterest inverted login check logic (MEDIUM)
-7. Outdated Chrome UA `120` → `135` (MINOR)
-8. Pinterest no image upload → `downloadPinImage()` + file upload (CRITICAL)
+**Bug Fix History:**
+- May 10: 8 bugs fixed across 2 commits (`6c0aa6e`, `34be5bc`)
+- May 13: 6 live issues fixed in Phase 3-5 (`c4875da`, tagged `bg_V2.0`)
+  - Twitter GraphQL 404 → dynamic query ID extraction
+  - Twitter API 403 → x-twitter-auth-type header
+  - Git push failure → fetch-depth: 0
+  - Pinterest not in rotation → added to allPlatforms
+  - Pinterest image gen → Puppeteer canvas (no z-ai CLI)
 
-See BG-REMOVER-WORKLOG.md for full details. QA Report: `/download/Social-Agent-Expert-QA-Report.pdf`
+See BG-REMOVER-WORKLOG.md for full details.
 
 **Social Accounts:**
 | Platform | Username | Email |
@@ -318,6 +320,32 @@ See BG-REMOVER-WORKLOG.md for full details. QA Report: `/download/Social-Agent-E
 | Reddit | AbrardeAhmed | craft@craftedmindss.com |
 | Twitter/X | @bg_remover | craft@craftedmindss.com |
 | Pinterest | BGRemoverPro (Business) | abrar_a@live.com |
+
+---
+
+### Agent 10: SM Executive (Comment Reply Agent) ✅ LIVE — bg_V2.0
+
+| Detail | Value |
+|--------|-------|
+| **Workflow File** | `.github/workflows/sm-executive.yml` |
+| **Script File** | `.github/workflows/scripts/sm-executive.js` (1,193 lines) |
+| **Schedule** | Every 4 hours (0:00, 4:00, 8:00, 12:00, 16:00, 20:00 UTC) + manual trigger |
+| **Email Behavior** | No email (silent operation, commits state to repo) |
+| **GitHub Secrets** | GITHUB_TOKEN (auto), REDDIT_OAUTH_TOKEN, TWITTER_USERNAME |
+| **Permissions** | `contents: write` (commits sm-executive-brain.json + config) |
+| **Latest Commit** | `c4875da` — Phase 3-5 complete, tagged `bg_V2.0` (May 13, 2026) |
+
+**What It Does:**
+- Fetches recent comments/replies on Reddit posts, Twitter mentions, Pinterest pins
+- Generates intelligent replies using 13-category fallback system (zero external AI/CLI calls)
+- Categories: praise, question_how, question_what, pricing, thanks, criticism, feature_request, comparison, speed, tech_question, greeting, alternative, generic_positive
+- Dual-layer mod/bot filtering: skips AutoModerator, moderator, and bot comments
+- Reddit: OAuth Bearer via nodeFetch
+- Twitter: Cookie-based (ct0 + auth_token) via nodeFetch + dynamic GraphQL query ID
+- Pinterest: Cookie-based engagement via Puppeteer
+- Rate limiting: 5 max/session, 3 per platform, 2-5s randomized delays
+- Platform-specific trim (Twitter replies truncated to 250 chars)
+- State tracking: sm-executive-brain.json (replied IDs + history), sm-executive-config.json (auto-created on first run) |
 
 ---
 
@@ -365,13 +393,17 @@ ibr-deploy/
 │       ├── pm-agent.yml                      # PM Agent v2 (weekly Friday)
 │       ├── growth-agent.yml                  # Growth Agent v1 (daily 8:00 UTC)
 │       ├── supervisor-agent.yml              # Supervisor Agent v2 (daily 7:00 UTC)
+│       ├── social-agent.yml                  # Social Agent v2.0 (daily 10:00 UTC)
+│       ├── sm-executive.yml                  # SM Executive (every 4 hours)
 │       └── scripts/
 │           ├── monitor.js                    # Site monitoring + auto-redeploy
 │           ├── security-audit.js             # v2: npm audit, secrets, headers + instant alert
 │           ├── seo-check.js                  # v2: meta, sitemap, JSON-LD + instant alert
 │           ├── pm-report.js                  # v2: revenue, 6-agent dashboard + instant alert
 │           ├── growth-agent.js               # v1: daily growth tracker, Stripe, recommendations
-│           └── supervisor.js                 # v2: agent compliance + learning patterns
+│           ├── supervisor.js                 # v2: agent compliance + learning patterns
+│           ├── social-agent.js               # v2.0: Puppeteer auto-posting + nodeFetch (2,739 lines)
+│           └── sm-executive.js               # SM Executive: comment replies + engagement (1,193 lines)
 ├── functions/
 │   ├── _middleware.ts                        # Rate limiting + UUID validation
 │   └── api/
