@@ -580,7 +580,7 @@ async function launchBrowser() {
   // - iframe contentWindow
   // - media codecs
   const browser = await puppeteer.launch({
-    headless: false,  // Run headed with xvfb — bypasses headless detection
+    headless: 'new',  // New headless mode — works on GitHub Actions without xvfb issues
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -1343,7 +1343,7 @@ async function twitterPost(page, content) {
             responsive_web_enhance_cards_enabled: false,
           };
 
-          const resp = await nodeFetch('https://x.com/i/api/graphql/Va2lvahdYCP1BLcl18y6pw/CreateTweet', {
+          const resp = await nodeFetch('https://x.com/i/api/graphql/tTsjMKyhajZvK4q76mpIBg/CreateTweet', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1623,7 +1623,7 @@ async function generatePinImage(topic) {
   try {
     log(`Pinterest: Generating AI image for topic: ${topic}`);
     const { execSync } = require('child_process');
-    execSync(`z-ai-generate --prompt "${prompt.replace(/"/g, '\\"')}" --output "${outputPath}" --size 1000x1500`, {
+    execSync(`z-ai-generate --prompt "${prompt.replace(/"/g, '\\"')}" --output "${outputPath}" --size 864x1152`, {
       timeout: 120000, stdio: ['pipe', 'pipe', 'pipe']
     });
     const stats = fs.statSync(outputPath);
@@ -1741,7 +1741,7 @@ async function pinterestCreatePin(page, content) {
         await humanDelay(2000, 3000);
 
         // Method 1: Find file input and set file directly
-        const fileInput = await page.$('input[type="file"]');
+        const fileInput = await page.$('#storyboard-upload-input, input[type="file"]');
         if (fileInput) {
           await fileInput.uploadFile(imagePath);
           log('Pinterest: Image uploaded via file input');
@@ -1752,7 +1752,7 @@ async function pinterestCreatePin(page, content) {
             page.waitForFileChooser({ timeout: 10000 }).catch(() => null),
             // Click the upload area to trigger file chooser
             page.click('div[data-test-id="pin-upload-dropzone"], div[class*="Upload"], label[class*="upload"]')
-              .catch(() => page.click('input[type="file"]'))
+              .catch(() => page.click('#storyboard-upload-input, input[type="file"]'))
               .catch(() => null),
           ]);
           if (fileChooser) {
@@ -1772,6 +1772,7 @@ async function pinterestCreatePin(page, content) {
 
     // Step 3: Fill title
     const titleSelectors = [
+      'input#storyboard-selector-title',
       'div[contenteditable="true"]',
       'input[placeholder*="title" i]',
       'input[placeholder*="Add a title" i]',
@@ -1840,6 +1841,7 @@ async function pinterestCreatePin(page, content) {
 
       // Type the link
       const linkSelectors = [
+        'input#WebsiteField',
         'input[id="pinLink"]',
         'input[name="link"]',
         'input[data-test-id="pin-link-input"]',
