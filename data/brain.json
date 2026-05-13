@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "created": "2026-05-09",
-  "last_updated": "2026-05-12",
+  "last_updated": "2026-05-13",
   "seo": {
     "keywords_tracked": [
       {
@@ -111,57 +111,69 @@
       {
         "slug": "bulk-images",
         "keyword": "bulk background remover"
+      },
+      {
+        "slug": "png",
+        "keyword": "remove background from png"
+      },
+      {
+        "slug": "jpg",
+        "keyword": "remove background from jpg"
+      },
+      {
+        "slug": "no-signup",
+        "keyword": "background remover no signup"
       }
     ],
     "keyword_rankings": {
       "product-photos": {
         "keyword": "background remover for product photos",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       },
       "shoes": {
         "keyword": "remove background from shoes",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       },
       "jewelry": {
         "keyword": "background remover for jewelry",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       },
       "clothing": {
         "keyword": "remove background from clothing",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       },
       "watches": {
         "keyword": "background remover for watches",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       },
       "electronics": {
         "keyword": "remove background from electronics",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       },
       "amazon-listings": {
         "keyword": "background remover for Amazon listings",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       },
       "etsy-shop": {
         "keyword": "background remover for Etsy shop",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       },
       "ebay-photos": {
         "keyword": "remove background for eBay photos",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       },
       "shopify-store": {
         "keyword": "background remover for Shopify store",
-        "date": "2026-05-12",
+        "date": "2026-05-13",
         "note": "GSC API pending - using baseline tracking"
       }
     },
@@ -511,19 +523,19 @@
       "online": true,
       "statusCode": 200,
       "title": "N/A",
-      "checked": "2026-05-12"
+      "checked": "2026-05-13"
     },
     "https://remover.io": {
       "online": true,
       "statusCode": 200,
       "title": "N/A",
-      "checked": "2026-05-12"
+      "checked": "2026-05-13"
     },
     "https://www.slazzer.com": {
       "online": true,
       "statusCode": 200,
       "title": "Remove background from image for free - slazzer.com",
-      "checked": "2026-05-12"
+      "checked": "2026-05-13"
     }
   }
 }
