@@ -2,8 +2,16 @@
 
 > Complete word-for-word transcript of the genetic algorithm, self-rebuilding agents, growth strategy, and defense protocol discussion.
 > Started: May 8, 2026
-> Last Updated: May 14, 2026
-> Status: ALL 4 GROWTH AGENTS DEPLOYED — GA Intelligence ACTIVE — Social Agent v2.0 + SM Executive HARDENED (bg_V2.0) — Charlie Agent v2 FALSE POSITIVE BUGS FIXED
+> Last Updated: May 15, 2026
+> Status: ALL 4 GROWTH AGENTS DEPLOYED — GA Intelligence ACTIVE — Social Agent v2.0 + SM Executive HARDENED (bg_V2.0) — Charlie Agent v2 FALSE POSITIVE BUGS FIXED — **Reddit posting PAUSED 28 days (auto-resume June 12)**
+>
+> REDDIT POSTING PAUSE (May 15, 2026):
+> - Reddit account too new (age 5d, need 7d, karma 1) — blocked by Reddit
+> - Social Agent: Reddit posting PAUSED until June 12, 2026 (28 days)
+> - SM Executive: Reddit comments ACTIVE — builds karma while posts paused
+> - Auto-resume: social-agent.js checks paused_until date, auto-resets status to active
+> - Social Agent now posts to Twitter + Pinterest only (2 platforms in rotation)
+> - Commit: 80e8039
 >
 > PHASE 3-5 COMPLETE (May 13, 2026 — Tag: bg_V2.0):
 > - Twitter dynamic GraphQL query ID extraction (runtime, no more 404s)

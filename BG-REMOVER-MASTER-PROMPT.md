@@ -1,7 +1,7 @@
 # BG Remover Digital — MASTER PROMPT (Complete Project Reference)
 
-> **Last Updated:** May 14, 2026
-> **Version:** 6.0 — Phase 3-5 Complete (bg_V2.0) + SM Executive Agent + Dynamic Twitter GraphQL + Canvas Pin Images + All MDs Updated
+> **Last Updated:** May 15, 2026
+> **Version:** 6.1 — Phase 3-5 Complete (bg_V2.0) + SM Executive Agent + Reddit Posting Paused 28 Days (Auto-Resume June 12) + All MDs Updated
 > **Project Owner:** Abrar Ahmed
 > **Contact Email:** craftedminds3@gmail.com
 > **Project:** BG Remover Digital (formerly IBR-Trap)
@@ -283,17 +283,19 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 | Detail | Value |
 |--------|-------|
 | **Workflow File** | `.github/workflows/social-agent.yml` |
-| **Script File** | `.github/workflows/scripts/social-agent.js` (2,739 lines) |
+| **Script File** | `.github/workflows/scripts/social-agent.js` (2,755 lines) |
 | **Schedule** | Daily at 10:00 UTC (3:00 PM PKT) + manual trigger |
 | **Email Behavior** | ALWAYS sends daily report (posts + engagement summary) |
 | **GitHub Secrets** | GITHUB_TOKEN (auto), GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, REDDIT_USERNAME, REDDIT_PASSWORD, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_EMAIL, PINTEREST_EMAIL, PINTEREST_PASSWORD |
 | **Permissions** | `contents: write` (commits brain.json updates) |
-| **Latest Commit** | `c4875da` — Phase 3-5 complete, tagged `bg_V2.0` (May 13, 2026) |
+| **Latest Commit** | `80e8039` — Reddit paused 28 days (auto-resume June 12) |
 
 **What It Does:**
 - Logs into Reddit, Twitter/X, Pinterest via Puppeteer headless browser
 - Auto-posts content with human-like typing delays (60-140ms per keystroke)
-- Platform rotation: Reddit + Twitter + Pinterest (all 3 scored and rotated)
+- **Reddit posting PAUSED until June 12, 2026** (account too new, building karma via SM Executive)
+- Platform rotation: Twitter + Pinterest active (Reddit auto-resumes on June 12)
+- Auto-resume logic: `selectPlatformsToPost()` checks `paused_until` date, resets to active when reached
 - Daily engagement: likes/saves 5-15 posts per platform, occasional retweets
 - Weekly (Mondays): follows 3-5 relevant accounts per platform
 - Pinterest: generates pin images via Puppeteer HTML-to-PNG canvas (10 topic templates, no external CLI)
@@ -311,6 +313,9 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
   - Git push failure → fetch-depth: 0
   - Pinterest not in rotation → added to allPlatforms
   - Pinterest image gen → Puppeteer canvas (no z-ai CLI)
+- May 15: Reddit posting paused 28 days (`80e8039`, auto-resume June 12)
+  - Reddit account too new (age 5d, need 7d) — SM Executive builds karma via comments
+  - Auto-resume: selectPlatformsToPost() checks paused_until date
 
 See BG-REMOVER-WORKLOG.md for full details.
 
@@ -345,7 +350,8 @@ See BG-REMOVER-WORKLOG.md for full details.
 - Pinterest: Cookie-based engagement via Puppeteer
 - Rate limiting: 5 max/session, 3 per platform, 2-5s randomized delays
 - Platform-specific trim (Twitter replies truncated to 250 chars)
-- State tracking: sm-executive-brain.json (replied IDs + history), sm-executive-config.json (auto-created on first run) |
+- State tracking: sm-executive-brain.json (replied IDs + history), sm-executive-config.json (auto-created on first run)
+- **Reddit comments ACTIVE** — NOT affected by Social Agent Reddit posting pause (builds karma independently) |
 
 ---
 

@@ -1,7 +1,7 @@
 # BG Remover Digital — Continuity Prompt
 
 > **Purpose:** Paste this prompt in a new chat session to continue the project seamlessly.
-> **Last Updated:** May 14, 2026 (Session 5 — Phase 3-5 complete, bg_V2.0 tagged)
+> **Last Updated:** May 15, 2026 (Session 6 — Reddit posting paused 28d, auto-resume June 12)
 
 ---
 
@@ -18,16 +18,15 @@ DEPLOYED AGENTS (11 total, all running on GitHub Actions):
 1. Supervisor v2 — Daily 7:00 UTC — monitors all agents
 2. Growth Agent v2 — Daily 8:00 UTC — SEO intelligence, keyword pages, Sunday evolution
 3. Content Agent — Mon/Wed/Fri 9:00 UTC — blog articles, A/B testing
-4. Social Agent v2.0 — Daily 10:00 UTC (3:00 PM PKT) — Puppeteer auto-posting + engagement (nodeFetch + dynamic GraphQL)
-5. Directory Agent — Weekly Sunday 11:00 UTC — directory submissions, backlinks
+4. Social Agent v2.0 — Daily 10:00 UTC (3:00 PM PKT) — Puppeteer auto-posting + engagement (nodeFetch + dynamic GraphQL) — **Reddit posting PAUSED until June 12 (auto-resume)**
 6. Monitor — Every 6 hours — site uptime
 7. Security Agent — Daily — security audit
 8. SEO Agent — Wednesday — SEO checks
 9. Charlie Agent v2 — Every 6 hours — anti-scraping defense (3 FP bugs fixed)
 10. Bravo Agent — Daily — pattern recognition defense
-11. SM Executive — Every 4 hours — comment replies on Reddit/Twitter/Pinterest (fallback-only, no external AI)
+11. SM Executive — Every 4 hours — comment replies on Reddit/Twitter/Pinterest (fallback-only, no external AI) — **Reddit comments ACTIVE (building karma while posts paused)**
 
-LATEST TAG: bg_V2.0 at HEAD (c4875da) — Phase 3-5 complete
+LATEST TAG: bg_V2.0 at HEAD — Phase 3-5 complete + Reddit paused 28d
 
 KEY FILES:
 - data/brain.json — shared agent memory (includes Pinterest in rotation)
@@ -43,26 +42,25 @@ KEY FILES:
 - SECURITY-ROADMAP.md — defense upgrade path
 - CONTINUITY.md — this file (handoff prompt)
 
-SOCIAL AGENT v2.0 STATUS (as of May 14, 2026 — bg_V2.0):
-- 8 original bugs fixed (May 10) + 6 live issues fixed (May 13)
-- Latest commit: c4875da (Phase 3-5, tagged bg_V2.0)
+SOCIAL AGENT v2.0 STATUS (as of May 15, 2026 — bg_V2.0):
+- 8 original bugs fixed (May 10) + 6 live issues fixed (May 13) + Reddit pause (May 15)
+- Latest commit: 80e8039 (Reddit paused 28 days, auto-resume June 12)
 - Schedule: Daily 10:00 UTC (3:00 PM PKT)
-- Platforms: Reddit, Twitter/X, Pinterest (all 3 in rotation)
-- Twitter: Dynamic GraphQL query ID extraction (runtime), x-twitter-auth-type header
-- Reddit: nodeFetch for all API calls (bypasses GH Actions IP blocks)
-- Pinterest: Puppeteer canvas-based pin image generation (no external CLI needed)
+- **Reddit posting: PAUSED until June 12, 2026** (account too new — building karma via SM Executive comments)
+- Twitter: ACTIVE — Dynamic GraphQL query ID extraction (runtime), x-twitter-auth-type header
+- Pinterest: ACTIVE — Puppeteer canvas-based pin image generation (no external CLI needed)
+- Auto-resume: social-agent.js checks paused_until date, auto-resets to active when reached
 - Auth: Cookie-based (reddit-cookies.json, twitter-cookies.json, pinterest-cookies.json)
 - Git push: fetch-depth: 0 in workflow + git fetch --unshallow safety net
 - Anti-detection: headless:false with xvfb (bypasses bot detection), Chrome/135 UA
-- KNOWN RISKS: Reddit anti-bot (10%), Twitter email verify (5%), Pinterest board (15%)
 
-SM EXECUTIVE STATUS (as of May 14, 2026 — bg_V2.0):
+SM EXECUTIVE STATUS (as of May 15, 2026 — bg_V2.0):
 - Schedule: Every 4 hours (0:00, 4:00, 8:00, 12:00, 16:00, 20:00 UTC)
-- Platforms: Reddit, Twitter/X, Pinterest comment replies
+- Platforms: Reddit (ACTIVE — building karma), Twitter/X, Pinterest comment replies
 - Reply system: 13-category intelligent fallback (80+ variants, zero external AI/CLI)
 - Mod filtering: Dual-layer (content patterns + author names) — skips AutoModerator/bots
 - Twitter: Cookie-based (ct0 + auth_token) via nodeFetch, dynamic GraphQL query ID
-- Reddit: OAuth Bearer via nodeFetch
+- Reddit: OAuth Bearer via nodeFetch — **NOT affected by Social Agent Reddit pause**
 - Rate limits: 5 max/session, 3 per platform, 2-5s randomized delays
 - State files: sm-executive-brain.json, sm-executive-config.json (auto-created on first run)
 
@@ -87,7 +85,7 @@ GA INTELLIGENCE RULES:
 - Budget auto-scales: 2 users=$5, 4=$10, 8=$15, 16=$20 ads/month
 - Never mention img.ly — use "AI technology" or "client-side AI"
 
-CURRENT STATUS: Week 2 (walking phase). All 6 live issues fixed. Tag bg_V2.0 at HEAD.
+CURRENT STATUS: Week 2 (walking phase). Phase 3-5 complete. Reddit posting paused 28 days.
 Phase 3-5 COMPLETE (May 13, 2026):
 - Twitter dynamic GraphQL query ID extraction (no more 404s)
 - Twitter x-twitter-auth-type header (no more 403s)
@@ -96,13 +94,21 @@ Phase 3-5 COMPLETE (May 13, 2026):
 - Pinterest pin images via Puppeteer canvas (no CLI tools needed)
 - SM Executive: z-ai CLI removed, fallback-only replies, mod comment filtering
 
+Reddit Posting Pause (May 15, 2026):
+- Reddit posting PAUSED until June 12 (28 days) — account too new (age 5d, need 7d)
+- SM Executive Reddit comments remain ACTIVE — builds karma while posts paused
+- Auto-resume on June 12: social-agent.js detects paused_until date and resets to active
+- Social Agent now posts to Twitter + Pinterest only (2 platforms in rotation)
+
 NEXT MILESTONES:
-(1) Monitor Social Agent + SM Executive daily runs — verify posts and replies are live
-(2) Review Week 2 data from brain.json
-(3) Advance to Week 3 if indexing positive
-(4) Connect GSC API for rank tracking (blocked by org policy — need personal Gmail)
-(5) First 2 paid users → activate $5 ads budget
-(6) Refresh cookies if sessions expire (reddit-cookies.json, twitter-cookies.json, pinterest-cookies.json)
+(1) Monitor Social Agent daily runs — verify Twitter + Pinterest posts are live
+(2) Monitor SM Executive — verify Reddit comments are being posted (karma building)
+(3) Review Week 2 data from brain.json
+(4) June 12: Reddit auto-resumes posting (check if karma threshold met)
+(5) Advance to Week 3 if indexing positive
+(6) Connect GSC API for rank tracking (blocked by org policy — need personal Gmail)
+(7) First 2 paid users → activate $5 ads budget
+(8) Refresh cookies if sessions expire (reddit-cookies.json, twitter-cookies.json, pinterest-cookies.json)
 
 DEFERRED ITEMS:
 - GSC API: blocked by org policy iam.disableServiceAccountKeyCreation — need personal Gmail or org admin
@@ -119,8 +125,8 @@ Read brain.json, check GitHub Actions runs, and give status report.
 |-------|----------|-------------|
 | Growth v2 | Daily 8:00 UTC | SEO intel, keyword pages, competitor analysis |
 | Content | Mon/Wed/Fri 9:00 UTC | Blog articles, title A/B testing |
-| Social v2.0 | Daily 10:00 UTC | Auto-posts Reddit/Twitter/Pinterest + engagement (nodeFetch + dynamic GraphQL) |
-| SM Executive | Every 4 hours | Comment replies on Reddit/Twitter/Pinterest (fallback-only) |
+| Social v2.0 | Daily 10:00 UTC | Auto-posts Twitter/Pinterest + engagement (**Reddit paused until June 12**) |
+| SM Executive | Every 4 hours | Comment replies on Reddit/Twitter/Pinterest (**Reddit ACTIVE — building karma**) |
 | Directory | Sunday 11:00 UTC | Directory submissions, profile backlinks |
 | Supervisor | Daily 7:00 UTC | Monitors all 11 agents |
 

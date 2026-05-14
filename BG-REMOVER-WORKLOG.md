@@ -295,3 +295,33 @@ After several days of GH Actions runs, 6 live issues were identified from workfl
 
 ### Tag
 - `bg_V2.0` — Annotated tag at `c4875da` (HEAD) — "Phase 3-5 complete: Dynamic Twitter GraphQL, 403 fix, canvas pins, SM Executive hardened"
+
+---
+
+## May 15, 2026 — Reddit Posting Paused 28 Days (Auto-Resume June 12)
+
+### Problem Statement
+Social Agent attempted to post to Reddit (r/UsefulWebsites) but was blocked with `Account not eligible: Account too new: age 5d (need 7d), karma 1`. The account needs to build karma before it can create new posts. The decision was made to pause Reddit posting for 28 days while the SM Executive continues commenting on Reddit to build karma organically.
+
+### What Changed
+- **brain.json**: Set `social.reddit.status` to `"paused"` with `paused_until: "2026-06-12"`
+- **social-agent.js**: Added auto-resume logic in `selectPlatformsToPost()` — when `paused_until` date is reached, status automatically resets to `"active"` and pause fields are removed
+- **SM Executive**: NOT affected — continues commenting on Reddit every 4 hours independently (builds karma while posts are paused)
+
+### Platform Status (as of May 15)
+| Platform | Social Agent (Posts) | SM Executive (Comments) |
+|----------|:--------------------:|:-----------------------:|
+| Reddit | PAUSED until June 12 | ACTIVE (building karma) |
+| Twitter | ACTIVE | ACTIVE |
+| Pinterest | ACTIVE | ACTIVE |
+
+### Auto-Resume Behavior
+On June 12, 2026, when Social Agent runs at 10:00 UTC:
+1. `selectPlatformsToPost()` checks `paused_until` date
+2. Today (June 12) >= paused_until (June 12) → true
+3. Sets `reddit.status = "active"`, removes `paused_until` and `pause_reason`
+4. Reddit re-enters platform rotation normally
+5. Commits updated brain.json to repo
+
+### Commits
+- `80e8039` — fix: pause Reddit posting for 28 days (auto-resume June 12)
