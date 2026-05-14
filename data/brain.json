@@ -244,7 +244,9 @@
       "posts": 17,
       "avg_engagement": 0,
       "best_subreddit": null,
-      "status": "active",
+      "status": "paused",
+      "paused_until": "2026-06-12",
+      "pause_reason": "Account too new (age 5d, need 7d). Paused 28 days to build karma via SM Executive comments first.",
       "posted_count": 1
     },
     "twitter": {

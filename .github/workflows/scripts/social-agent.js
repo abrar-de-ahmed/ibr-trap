@@ -362,6 +362,20 @@ function selectPlatformsToPost(brain, maxPosts) {
   const recentPlatforms = getRecentPlatforms(brain);
   const social = brain.social || {};
 
+  // Auto-resume paused platforms if pause period has expired
+  for (const platform of allPlatforms) {
+    const platformData = social[platform] || {};
+    if (platformData.status === 'paused' && platformData.paused_until) {
+      const today = new Date().toISOString().split('T')[0];
+      if (today >= platformData.paused_until) {
+        log(`Auto-resuming ${platform} posting (paused_until ${platformData.paused_until} reached)`);
+        platformData.status = 'active';
+        delete platformData.paused_until;
+        delete platformData.pause_reason;
+      }
+    }
+  }
+
   const scored = allPlatforms.map(platform => {
     let score = 10;
     const recentCount = recentPlatforms.filter(p => p === platform).length;
