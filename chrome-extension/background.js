@@ -1,7 +1,15 @@
 /**
  * Background Service Worker — WebSocket Relay Hub
  * Connects to ws-bridge on localhost:9876 and routes
- * posting instructions to the correct content script tab.
+ * posting instructions and engagement actions to the correct content script tab.
+ *
+ * Supported actions:
+ *   Posting:      twitter_post, pinterest_post  (→ twitter.js, pinterest.js)
+ *   Engagement:   twitter_follow, twitter_like, twitter_comment, twitter_reply  (→ twitter-engage.js)
+ *                 pinterest_follow, pinterest_comment, pinterest_reply  (→ pinterest-engage.js)
+ *                 reddit_comment, reddit_reply, reddit_upvote  (→ reddit.js)
+ *
+ * All messages use the same protocol: post_request / post_result with platform + requestId.
  */
 
 const WS_URL = 'ws://localhost:9876';
@@ -16,6 +24,36 @@ let reconnectTimer = null;
 let heartbeatTimer = null;
 let pendingRequests = {};  // requestId → { resolve, reject, timer }
 let extensionOnline = false;
+
+// ── Platform → URL pattern mapping ──
+const PLATFORM_URLS = {
+  twitter:   '*://x.com/*',
+  pinterest: '*://*.pinterest.com/*',
+  reddit:    '*://*.reddit.com/*'
+};
+
+// ── Platform → default tab URL (for creating new tabs) ──
+const PLATFORM_DEFAULT_URLS = {
+  twitter:   'https://x.com/compose/post',
+  pinterest: 'https://www.pinterest.com/',
+  reddit:    'https://www.reddit.com/'
+};
+
+// ── Action → platform mapping (for routing when only action is specified) ──
+const ACTION_PLATFORM_MAP = {
+  twitter_follow:  'twitter',
+  twitter_like:    'twitter',
+  twitter_comment: 'twitter',
+  twitter_reply:   'twitter',
+  twitter_post:    'twitter',
+  pinterest_follow:  'pinterest',
+  pinterest_comment: 'pinterest',
+  pinterest_reply:   'pinterest',
+  pinterest_post:    'pinterest',
+  reddit_comment: 'reddit',
+  reddit_reply:   'reddit',
+  reddit_upvote:  'reddit'
+};
 
 // ── Storage helpers ──
 function setStatus(status) {
@@ -48,7 +86,7 @@ function connect() {
     ws.send(JSON.stringify({
       type: 'register',
       clientType: 'extension',
-      version: '1.0.0'
+      version: '1.1.0'
     }));
 
     startHeartbeat();
@@ -72,7 +110,7 @@ function connect() {
       return;
     }
 
-    // Handle post request from agent
+    // Handle post request from agent (posting + engagement actions)
     if (msg.type === 'post_request') {
       handlePostRequest(msg);
       return;
@@ -126,41 +164,48 @@ function stopHeartbeat() {
 // ── Route post request to content script ──
 async function handlePostRequest(msg) {
   const { platform, payload, requestId } = msg;
-  console.log(`[BG] Received post request: platform=${platform}, requestId=${requestId}`);
+  const action = payload?.action || null;
 
-  // Determine which tab to target
-  let urlPattern;
-  if (platform === 'twitter') {
-    urlPattern = '*://x.com/*';
-  } else if (platform === 'pinterest') {
-    urlPattern = '*://*.pinterest.com/*';
-  } else {
-    sendResult(requestId, platform, { success: false, error: `Unknown platform: ${platform}` });
+  console.log(`[BG] Received request: platform=${platform}, action=${action}, requestId=${requestId}`);
+
+  // Resolve platform from action if not explicitly set
+  const resolvedPlatform = platform || (action ? ACTION_PLATFORM_MAP[action] : null);
+
+  if (!resolvedPlatform) {
+    sendResult(requestId, resolvedPlatform || 'unknown', { success: false, error: `Cannot determine platform for action: ${action}` });
+    return;
+  }
+
+  // Get URL pattern for this platform
+  const urlPattern = PLATFORM_URLS[resolvedPlatform];
+  if (!urlPattern) {
+    sendResult(requestId, resolvedPlatform, { success: false, error: `Unknown platform: ${resolvedPlatform}` });
     return;
   }
 
   try {
     // Find or create the right tab
-    const tab = await findOrCreateTab(platform, urlPattern);
+    const tab = await findOrCreateTab(resolvedPlatform, urlPattern);
     if (!tab) {
-      sendResult(requestId, platform, { success: false, error: 'Could not open tab for platform' });
+      sendResult(requestId, resolvedPlatform, { success: false, error: 'Could not open tab for platform' });
       return;
     }
 
     // Send message to content script with timeout
-    const result = await sendToContentScript(tab.id, requestId, platform, payload);
-    sendResult(requestId, platform, result);
+    const result = await sendToContentScript(tab.id, requestId, resolvedPlatform, payload);
+    sendResult(requestId, resolvedPlatform, result);
 
     // Store in storage for popup display
     setLastPost({
-      platform,
+      platform: resolvedPlatform,
+      action,
       timestamp: new Date().toISOString(),
       ...result
     });
 
   } catch (e) {
-    console.error('[BG] Error handling post request:', e.message);
-    sendResult(requestId, platform, { success: false, error: e.message });
+    console.error('[BG] Error handling request:', e.message);
+    sendResult(requestId, resolvedPlatform, { success: false, error: e.message });
   }
 }
 
@@ -181,29 +226,25 @@ async function findOrCreateTab(platform, urlPattern) {
   try {
     const tabs = await chrome.tabs.query({ url: urlPattern });
     if (tabs.length > 0) {
-      // Focus the first matching tab
-      await chrome.tabs.update(tabs[0].id, { active: true });
+      // Bring the tab's window to front
+      const tab = tabs[0];
+      await chrome.windows.update(tab.windowId, { focused: true });
+      await chrome.tabs.update(tab.id, { active: true });
       // Small delay for tab to be ready
       await sleep(500);
-      return tabs[0];
+      return tab;
     }
   } catch (e) {
     // Fall through to create
   }
 
   // Create a new tab
-  let createUrl;
-  if (platform === 'twitter') {
-    createUrl = 'https://x.com/compose/post';
-  } else if (platform === 'pinterest') {
-    createUrl = 'https://www.pinterest.com/pin-creation-tool/';
-  }
-
+  const createUrl = PLATFORM_DEFAULT_URLS[platform];
   if (!createUrl) return null;
 
   try {
     const tab = await chrome.tabs.create({ url: createUrl, active: true });
-    // Wait for the page to load
+    // Wait for the page to load and content script to inject
     await sleep(3000);
     return tab;
   } catch (e) {
@@ -216,6 +257,7 @@ async function findOrCreateTab(platform, urlPattern) {
 function sendToContentScript(tabId, requestId, platform, payload) {
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
+      chrome.runtime.onMessage.removeListener(listener);
       resolve({ success: false, error: 'Content script timeout (65s)' });
     }, REQUEST_TIMEOUT);
 

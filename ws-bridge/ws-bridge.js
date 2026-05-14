@@ -1,9 +1,21 @@
 #!/usr/bin/env node
 /**
- * WebSocket Bridge Server
+ * WebSocket Bridge Server v1.1
  * ─────────────────────────────
  * Relays messages between the Chrome extension (background.js) and
- * the social agent (social-agent.js). Runs on localhost:9876.
+ * the social agent (social-agent.js / sm-executive.js).
+ * Runs on localhost:9876.
+ *
+ * Supported message types (all use post_request / post_result envelope):
+ *
+ *   Posting actions:
+ *     platform: 'twitter'    → payload.action: null  (or 'twitter_post')
+ *     platform: 'pinterest'  → payload.action: null  (or 'pinterest_post')
+ *
+ *   Engagement actions:
+ *     platform: 'twitter'    → payload.action: 'twitter_follow' | 'twitter_like' | 'twitter_comment' | 'twitter_reply'
+ *     platform: 'pinterest'  → payload.action: 'pinterest_follow' | 'pinterest_comment' | 'pinterest_reply'
+ *     platform: 'reddit'     → payload.action: 'reddit_comment' | 'reddit_reply' | 'reddit_upvote'
  *
  * Usage:
  *   node ws-bridge/ws-bridge.js [--port 9876] [--timeout 60000]
@@ -12,7 +24,6 @@
  */
 
 const WebSocket = require('ws');
-const { v4: uuidv4 } = require('crypto'); // Use crypto.randomUUID() if available
 
 const DEFAULT_PORT = 9876;
 const DEFAULT_TIMEOUT = 60000; // 60 seconds per request
@@ -21,6 +32,29 @@ const DEFAULT_TIMEOUT = 60000; // 60 seconds per request
 const args = process.argv.slice(2);
 const port = parseInt(args[args.indexOf('--port') + 1]) || DEFAULT_PORT;
 const timeout = parseInt(args[args.indexOf('--timeout') + 1]) || DEFAULT_TIMEOUT;
+
+// ── Known actions for logging ──
+const KNOWN_ACTIONS = [
+  'twitter_post', 'twitter_follow', 'twitter_like', 'twitter_comment', 'twitter_reply',
+  'pinterest_post', 'pinterest_follow', 'pinterest_comment', 'pinterest_reply',
+  'reddit_comment', 'reddit_reply', 'reddit_upvote'
+];
+
+// ── Action → display name ──
+const ACTION_NAMES = {
+  twitter_post:      'Tweet Post',
+  twitter_follow:    'Twitter Follow',
+  twitter_like:      'Twitter Like',
+  twitter_comment:   'Twitter Comment',
+  twitter_reply:     'Twitter Reply',
+  pinterest_post:    'Pinterest Pin Create',
+  pinterest_follow:  'Pinterest Follow',
+  pinterest_comment: 'Pinterest Comment',
+  pinterest_reply:   'Pinterest Reply',
+  reddit_comment:    'Reddit Comment',
+  reddit_reply:      'Reddit Reply',
+  reddit_upvote:     'Reddit Upvote'
+};
 
 // ── State ──
 let extensionClient = null;  // The Chrome extension's background.js
@@ -31,7 +65,6 @@ function generateId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  // Fallback for older Node.js
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
@@ -41,12 +74,13 @@ function generateId() {
 // ── Create WebSocket server ──
 const wss = new WebSocket.Server({ port });
 
-console.log(`╔══════════════════════════════════════════╗`);
-console.log(`║   WebSocket Bridge Server                ║`);
-console.log(`║   Port: ${String(port).padEnd(34)}║`);
-console.log(`║   Timeout: ${String(timeout + 'ms').padEnd(30)}║`);
-console.log(`║   Waiting for connections...            ║`);
-console.log(`╚══════════════════════════════════════════╝`);
+console.log(`╔══════════════════════════════════════════════╗`);
+console.log(`║   WebSocket Bridge Server v1.1              ║`);
+console.log(`║   Port: ${String(port).padEnd(38)}║`);
+console.log(`║   Timeout: ${String(timeout + 'ms').padEnd(34)}║`);
+console.log(`║   Actions: posting + engagement             ║`);
+console.log(`║   Waiting for connections...                ║`);
+console.log(`╚══════════════════════════════════════════════╝`);
 
 wss.on('connection', (ws, req) => {
   const clientIp = req.socket.remoteAddress;
@@ -98,12 +132,18 @@ wss.on('connection', (ws, req) => {
     }
 
     // Handle post_request from agent → relay to extension
+    // This handles BOTH posting and engagement actions (same protocol)
     if (msg.type === 'post_request' && clientType === 'agent') {
       const { platform, payload, requestId } = msg;
-      console.log(`[→] Agent requests ${platform} post (requestId: ${requestId.substring(0, 8)})`);
+      const action = payload?.action || `${platform}_post`;
+
+      // Log with descriptive action name
+      const actionName = ACTION_NAMES[action] || action;
+      const shortId = requestId.substring(0, 8);
+      console.log(`[→] Agent → ${actionName} (${platform}) [${shortId}]`);
 
       if (!extensionClient || extensionClient.readyState !== WebSocket.OPEN) {
-        console.log(`[!] No extension connected — rejecting ${platform} post request`);
+        console.log(`[!] No extension connected — rejecting ${actionName}`);
         ws.send(JSON.stringify({
           type: 'post_result',
           platform,
@@ -113,7 +153,12 @@ wss.on('connection', (ws, req) => {
         return;
       }
 
-      // Forward to extension
+      // Validate action
+      if (action && !KNOWN_ACTIONS.includes(action) && !action.includes('_')) {
+        console.log(`[!] Unknown action: ${action} — forwarding anyway`);
+      }
+
+      // Forward to extension (same protocol, extension background.js routes by platform)
       extensionClient.send(JSON.stringify({
         type: 'post_request',
         platform,
@@ -121,17 +166,14 @@ wss.on('connection', (ws, req) => {
         requestId
       }));
 
-      // Acknowledge to agent (they'll get the result when extension responds)
+      // Acknowledge to agent
       ws.send(JSON.stringify({ type: 'ack', requestId }));
       console.log(`[→] Forwarded to extension, waiting for result...`);
 
       // Set timeout — if no result comes back in time
       setTimeout(() => {
-        // Only send timeout if we haven't already received a result
-        // (The extension_result_handler below will send the actual result)
-        // We track pending requests per requestId
         if (pendingRequests.has(requestId)) {
-          console.log(`[!] Timeout for request ${requestId.substring(0, 8)}`);
+          console.log(`[!] Timeout for ${actionName} [${shortId}]`);
           pendingRequests.delete(requestId);
           ws.send(JSON.stringify({
             type: 'post_result',
@@ -142,17 +184,25 @@ wss.on('connection', (ws, req) => {
         }
       }, timeout);
 
-      // Track pending request so we can clean up on timeout
-      pendingRequests.set(requestId, { agentWs: ws, platform });
+      // Track pending request
+      pendingRequests.set(requestId, { agentWs: ws, platform, action });
       return;
     }
 
     // Handle post_result from extension → relay to agent
     if (msg.type === 'post_result' && clientType === 'extension') {
       const { platform, requestId, result } = msg;
-      console.log(`[←] Extension result for ${platform} (requestId: ${requestId.substring(0, 8)}): ${result.success ? 'SUCCESS' : 'FAIL'}`);
+      const shortId = requestId.substring(0, 8);
 
-      // Find the agent that made this request and forward the result
+      // Look up the action for better logging
+      const pending = pendingRequests.get(requestId);
+      const actionName = pending?.action ? (ACTION_NAMES[pending.action] || pending.action) : platform;
+
+      const status = result?.success ? 'SUCCESS' : 'FAIL';
+      const detail = result?.error ? ` — ${result.error}` : '';
+      console.log(`[←] ${status}: ${actionName} [${shortId}]${detail}`);
+
+      // Find the agent that made this request and forward
       if (pendingRequests.has(requestId)) {
         const { agentWs } = pendingRequests.get(requestId);
         if (agentWs.readyState === WebSocket.OPEN) {
@@ -160,11 +210,13 @@ wss.on('connection', (ws, req) => {
         }
         pendingRequests.delete(requestId);
       } else {
-        // Maybe agent disconnected — just log
-        console.log(`[!] No pending request found for ${requestId.substring(0, 8)} — agent may have disconnected`);
+        console.log(`[!] No pending request for [${shortId}] — agent may have disconnected`);
       }
       return;
     }
+
+    // Unknown message type — log and ignore
+    console.log(`[?] Unknown message type from ${clientId.substring(0, 8)}: ${msg.type}`);
   });
 
   ws.on('close', (code, reason) => {
@@ -172,7 +224,6 @@ wss.on('connection', (ws, req) => {
 
     if (clientType === 'extension') {
       extensionClient = null;
-      // Notify all agents
       for (const [aid, agent] of agentClients) {
         try {
           agent.send(JSON.stringify({ type: 'extension_status', extensionOnline: false }));
@@ -187,11 +238,11 @@ wss.on('connection', (ws, req) => {
     console.log(`[!] Error from ${clientId.substring(0, 8)}: ${err.message}`);
   });
 
-  // Send welcome message
-  ws.send(JSON.stringify({ type: 'welcome', serverVersion: '1.0.0', port }));
+  // Send welcome
+  ws.send(JSON.stringify({ type: 'welcome', serverVersion: '1.1.0', port }));
 });
 
-// ── Pending request tracking (requestId → { agentWs, platform }) ──
+// ── Pending request tracking ──
 const pendingRequests = new Map();
 
 // ── Graceful shutdown ──

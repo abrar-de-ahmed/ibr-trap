@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "BG Remover Social Agent",
-  "version": "1.0.0",
-  "description": "Chrome extension bridge for automated social media posting via WebSocket. Runs in your real browser — real IP, real sessions, no detection.",
+  "version": "1.1.0",
+  "description": "Chrome extension bridge for automated social media posting and engagement via WebSocket. Runs in your real browser — real IP, real sessions, no detection.",
   "permissions": [
     "activeTab",
     "tabs",
@@ -14,6 +14,8 @@
     "*://twitter.com/*",
     "*://www.pinterest.com/*",
     "*://pinterest.com/*",
+    "*://*.reddit.com/*",
+    "*://*.old.reddit.com/*",
     "http://localhost:9876/*"
   ],
   "background": {
@@ -26,8 +28,23 @@
       "run_at": "document_idle"
     },
     {
+      "matches": ["*://x.com/*", "*://twitter.com/*"],
+      "js": ["content/twitter-engage.js"],
+      "run_at": "document_idle"
+    },
+    {
       "matches": ["*://*.pinterest.com/*"],
       "js": ["content/pinterest.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.pinterest.com/*"],
+      "js": ["content/pinterest-engage.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.reddit.com/*", "*://*.old.reddit.com/*"],
+      "js": ["content/reddit.js"],
       "run_at": "document_idle"
     }
   ],
