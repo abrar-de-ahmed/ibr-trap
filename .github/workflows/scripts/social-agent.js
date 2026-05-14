@@ -277,13 +277,16 @@ async function checkSessionValid(page, platform) {
         }
       }
       // Fallback: browser-based check
-      await page.goto('https://x.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.goto('https://x.com/home', { waitUntil: 'domcontentloaded', timeout: 15000 });
       await humanDelay(2000, 3000);
       const hasTweetButton = await page.$('[data-testid="SideNav_NewTweet_Button"]').catch(() => null);
       const hasLoginElements = await page.$('[data-testid="LoginForm_Login_Button"]').catch(() => null);
       const url = page.url();
-      const isLoggedIn = (hasTweetButton || (!url.includes('login') && !url.includes('flow') && !hasLoginElements));
-      log(`Twitter: Browser session check — URL: ${url}, hasTweetButton: ${!!hasTweetButton}, logged in: ${isLoggedIn}`);
+      // Also check for user-specific elements (avatar, profile) to avoid false positives
+      // Twitter shows homepage to logged-out users too, so requiring SideNav_NewTweet_Button is safer
+      const hasAvatar = await page.$('[data-testid="SideNav_AccountSwitcher_Button"]').catch(() => null);
+      const isLoggedIn = !!hasTweetButton && !hasLoginElements;
+      log(`Twitter: Browser session check — URL: ${url}, hasTweetButton: ${!!hasTweetButton}, hasAvatar: ${!!hasAvatar}, hasLogin: ${!!hasLoginElements}, logged in: ${isLoggedIn}`);
       return isLoggedIn;
     } else if (platform === 'pinterest') {
       await page.goto('https://www.pinterest.com/', { waitUntil: 'domcontentloaded', timeout: 15000 });
@@ -1432,6 +1435,42 @@ async function twitterLogin(page) {
 async function twitterPost(page, content) {
   try {
     log('Twitter: Posting tweet...');
+
+    // ═══ PRE-FLIGHT: Validate API session before attempting anything ═══
+    // This catches stale cookies even if browser session check was a false positive
+    const twCookiesFile = path.join(COOKIES_DIR, 'twitter-cookies.json');
+    let apiSessionValid = false;
+    if (fs.existsSync(twCookiesFile)) {
+      try {
+        const cookieData = readJSON(twCookiesFile);
+        const ct0 = cookieData?.cookies?.find(c => c.name === 'ct0');
+        const authToken = cookieData?.cookies?.find(c => c.name === 'auth_token');
+        if (ct0 && authToken) {
+          const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
+          const preResp = await nodeFetch('https://x.com/i/api/1.1/account/settings.json', {
+            headers: {
+              'Cookie': cookieStr,
+              'X-CSRF-Token': ct0.value,
+              'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+              'X-Twitter-Auth-Type': 'OAuth2Session',
+            }
+          });
+          if (preResp.ok) {
+            log('Twitter: Pre-flight API session check PASSED');
+            apiSessionValid = true;
+          } else {
+            log(`Twitter: Pre-flight API session check FAILED (status: ${preResp.status}) — cookies expired`);
+          }
+        }
+      } catch (e) {
+        log(`Twitter: Pre-flight check error: ${e.message}`);
+      }
+    }
+    if (!apiSessionValid) {
+      log('Twitter: API session invalid — skipping all posting strategies to avoid false positives');
+      return { success: false, error: 'Twitter session expired — cookies need refresh (pre-flight check)' };
+    }
 
     // ═══ STRATEGY 1: API-based tweet via nodeFetch with cookies from file ═══
     const twCookiesFile = path.join(COOKIES_DIR, 'twitter-cookies.json');
