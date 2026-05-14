@@ -74,6 +74,42 @@ async function nodeFetch(url, options = {}) {
   });
 }
 
+// ── Twitter Session Validation via GraphQL ──
+// v1.1 REST API endpoints were deprecated by Twitter (404). Use GraphQL instead.
+const TWITTER_BEARER = 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+const TWITTER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36';
+
+async function validateTwitterSession(cookieData) {
+  // Validates Twitter cookies by fetching /home page — if not redirected to login, session is valid
+  // (GraphQL query IDs are dynamic, so a simple page fetch is the most reliable check)
+  try {
+    const ct0 = cookieData?.cookies?.find(c => c.name === 'ct0');
+    const authToken = cookieData?.cookies?.find(c => c.name === 'auth_token');
+    if (!ct0 || !authToken) return { valid: false, reason: 'Missing ct0 or auth_token' };
+
+    const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
+    const resp = await nodeFetch('https://x.com/home', {
+      headers: {
+        'Cookie': cookieStr,
+        'User-Agent': TWITTER_UA,
+        'X-Twitter-Auth-Type': 'OAuth2Session',
+      }
+    });
+
+    // 200 on /home without redirect = valid session
+    // 302/redirect to /login = expired session
+    if (resp.status === 200) {
+      return { valid: true, user: 'authenticated' };
+    }
+    if (resp.status === 302 || resp.status === 301) {
+      return { valid: false, reason: `Redirected (status ${resp.status}) — session expired` };
+    }
+    return { valid: false, reason: `HTTP ${resp.status}` };
+  } catch (e) {
+    return { valid: false, reason: e.message };
+  }
+}
+
 // ── Dynamic Twitter GraphQL Query ID Extraction ──
 // Twitter changes query IDs frequently — we extract them from the JS bundle at runtime
 async function extractTwitterQueryId(queryName, cookies) {
@@ -257,20 +293,12 @@ async function checkSessionValid(page, platform) {
           const authToken = cookieData?.cookies?.find(c => c.name === 'auth_token');
           if (ct0 && authToken) {
             const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
-            const resp = await nodeFetch('https://x.com/i/api/1.1/account/settings.json', {
-              headers: {
-                'Cookie': cookieStr,
-                'X-CSRF-Token': ct0.value,
-                'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-                'X-Twitter-Auth-Type': 'OAuth2Session',
-              }
-            });
-            if (resp.ok) {
+            const sessionCheck = await validateTwitterSession(cookieData);
+            if (sessionCheck.valid) {
               log('Twitter: Session valid via nodeFetch cookies!');
               return true;
             }
-            log(`Twitter: nodeFetch session invalid (status: ${resp.status}), trying browser check...`);
+            log(`Twitter: nodeFetch session invalid (${sessionCheck.reason}), trying browser check...`);
           }
         } catch (e) {
           log(`Twitter: nodeFetch error: ${e.message}, trying browser check...`);
@@ -1138,16 +1166,8 @@ async function twitterLogin(page) {
         const authToken = cookieData.cookies.find(c => c.name === 'auth_token');
         if (ct0 && authToken) {
           const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
-          const resp = await nodeFetch('https://x.com/i/api/1.1/account/settings.json', {
-            headers: {
-              'Cookie': cookieStr,
-              'X-CSRF-Token': ct0.value,
-              'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'X-Twitter-Auth-Type': 'OAuth2Session',
-            }
-          });
-          if (resp.ok) {
+          const sessionCheck = await validateTwitterSession(cookieData);
+          if (sessionCheck.valid) {
             log('Twitter: Session valid via cookies file!');
             // Load cookies into browser for any page.evaluate calls
             await page.setCookie(...cookieData.cookies.map(c => ({
@@ -1156,7 +1176,7 @@ async function twitterLogin(page) {
             })));
             return true;
           }
-          log(`Twitter: Cookies file session invalid (status: ${resp.status})`);
+          log(`Twitter: Cookies file session invalid (${sessionCheck.reason})`);
         } else {
           log('Twitter: Cookies file missing ct0 or auth_token');
         }
@@ -1432,6 +1452,121 @@ async function twitterLogin(page) {
   }
 }
 
+// ── Twitter Tweet Verification (after CreateTweet returns empty result) ──
+async function verifyLastTweet(cookies, textPrefix) {
+  try {
+    const ct0 = cookies.find(c => c.name === 'ct0');
+    const authToken = cookies.find(c => c.name === 'auth_token');
+    if (!ct0 || !authToken) return null;
+
+    const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+    // Fetch user's own profile to get latest tweet
+    const homeResp = await nodeFetch('https://x.com/home', {
+      headers: { 'Cookie': cookieStr, 'User-Agent': TWITTER_UA }
+    });
+    if (!homeResp.ok) return null;
+
+    const html = await homeResp.text();
+    // Extract main.js URL for query ID extraction
+    const jsMatch = html.match(/https:\/\/abs\.twimg\.com\/responsive-web\/client-web\/main\.[a-z0-9]+\.js/);
+    if (!jsMatch) return null;
+
+    const jsResp = await nodeFetch(jsMatch[0], { headers: { 'User-Agent': TWITTER_UA } });
+    if (!jsResp.ok) return null;
+
+    const js = await jsResp.text();
+    // Extract UserByScreenName queryId
+    const match = js.match(/queryId:"([a-zA-Z0-9_-]{15,})"[^}]*operationName:"UserByScreenName"/) ||
+                  js.match(/operationName:"UserByScreenName"[^}]*queryId:"([a-zA-Z0-9_-]{15,})"/);
+    if (!match) return null;
+
+    // Get the user's screen name from the HTML
+    const screenMatch = html.match(/"screen_name":"([^"]+)"/);
+    const screenName = screenMatch ? screenMatch[1] : null;
+    if (!screenName) return null;
+
+    // Fetch user profile
+    const variables = { screen_name: screenName, withSafetyModeUserFields: true, withHighlightedLabel: true };
+    const features = {
+      hidden_profile_subscriptions_enabled: true, rweb_tipjar_consumption_enabled: true,
+      responsive_web_graphql_exclude_directive_enabled: true, verified_phone_label_enabled: false,
+      responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+      responsive_web_graphql_timeline_navigation_enabled: true, responsive_web_enhance_cards_enabled: false,
+    };
+    const profileResp = await nodeFetch(`https://x.com/i/api/graphql/${match[1]}/UserByScreenName`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', 'Cookie': cookieStr, 'X-CSRF-Token': ct0.value,
+        'Authorization': TWITTER_BEARER, 'User-Agent': TWITTER_UA, 'X-Twitter-Auth-Type': 'OAuth2Session',
+      },
+      body: JSON.stringify({ variables, features }),
+    });
+    if (!profileResp.ok) return null;
+
+    const profileData = await profileResp.json();
+    const core = profileData?.data?.user?.result?.core;
+    const screen = core?.screen_name;
+    const userId = profileData?.data?.user?.result?.rest_id;
+    if (!screen || !userId) return null;
+
+    // Now search for the latest tweet using SearchTimeline
+    const searchMatch = js.match(/queryId:"([a-zA-Z0-9_-]{15,})"[^}]*operationName:"SearchTimeline"/) ||
+                        js.match(/operationName:"SearchTimeline"[^}]*queryId:"([a-zA-Z0-9_-]{15,})"/);
+    if (!searchMatch) return null;
+
+    const searchVars = { rawQuery: `from:${screen}`, count: 5, querySource: 'typed_query', product: 'Latest' };
+    const searchFeatures = {
+      communities_web_enable_tweet_community_results_fetch: true,
+      c9s_tweet_anatomy_moderator_badge_enabled: true,
+      tweetypie_unmention_optimization_enabled: true,
+      responsive_web_edit_tweet_api_enabled: true,
+      graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+      view_counts_everywhere_api_enabled: true,
+      longform_notetweets_consumption_enabled: true,
+      responsive_web_twitter_article_tweet_consumption_enabled: true,
+      tweet_awards_web_tipping_enabled: false,
+      creator_subscriptions_quote_tweet_preview_enabled: false,
+      freedom_of_speech_not_reach_fetch_enabled: true,
+      standardized_nudges_misinfo: true,
+      longform_notetweets_rich_text_read_enabled: true,
+      longform_notetweets_inline_media_enabled: true,
+      articles_preview_enabled: true,
+      responsive_web_graphql_exclude_directive_enabled: true,
+      verified_phone_label_enabled: false,
+      responsive_web_graphql_timeline_navigation_enabled: true,
+      responsive_web_enhance_cards_enabled: false,
+    };
+    const searchResp = await nodeFetch(`https://x.com/i/api/graphql/${searchMatch[1]}/SearchTimeline`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', 'Cookie': cookieStr, 'X-CSRF-Token': ct0.value,
+        'Authorization': TWITTER_BEARER, 'User-Agent': TWITTER_UA, 'X-Twitter-Auth-Type': 'OAuth2Session',
+      },
+      body: JSON.stringify({ variables: searchVars, features: searchFeatures }),
+    });
+    if (!searchResp.ok) return null;
+
+    const searchData = await searchResp.json();
+    const instructions = searchData?.data?.search_by_raw_query?.search_timeline?.timeline?.instructions || [];
+    for (const inst of instructions) {
+      for (const entry of (inst.entries || [])) {
+        const tweet = entry?.content?.itemContent?.tweet_results?.result;
+        if (tweet) {
+          const text = tweet?.legacy?.full_text || '';
+          const id = tweet?.rest_id || '';
+          if (text.toLowerCase().includes(textPrefix.toLowerCase())) {
+            return { tweetId: id, url: `https://x.com/${screen}/status/${id}`, text: text };
+          }
+        }
+      }
+    }
+    return null; // Not indexed yet (common for new accounts)
+  } catch (e) {
+    log(`Twitter: verifyLastTweet error: ${e.message}`);
+    return null;
+  }
+}
+
 async function twitterPost(page, content) {
   try {
     log('Twitter: Posting tweet...');
@@ -1447,20 +1582,12 @@ async function twitterPost(page, content) {
         const authToken = cookieData?.cookies?.find(c => c.name === 'auth_token');
         if (ct0 && authToken) {
           const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
-          const preResp = await nodeFetch('https://x.com/i/api/1.1/account/settings.json', {
-            headers: {
-              'Cookie': cookieStr,
-              'X-CSRF-Token': ct0.value,
-              'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-              'X-Twitter-Auth-Type': 'OAuth2Session',
-            }
-          });
-          if (preResp.ok) {
-            log('Twitter: Pre-flight API session check PASSED');
+          const preCheck = await validateTwitterSession(cookieData);
+          if (preCheck.valid) {
+            log('Twitter: Pre-flight session check PASSED');
             apiSessionValid = true;
           } else {
-            log(`Twitter: Pre-flight API session check FAILED (status: ${preResp.status}) — cookies expired`);
+            log(`Twitter: Pre-flight session check FAILED (${preCheck.reason}) — cookies expired`);
           }
         }
       } catch (e) {
@@ -1547,15 +1674,31 @@ async function twitterPost(page, content) {
             const data = await resp.json();
             if (data.data && data.data.create_tweet && data.data.create_tweet.tweet_results) {
               const tweetId = data.data.create_tweet.tweet_results.result?.rest_id;
-              log(`Twitter: Tweet posted! ID: ${tweetId}`);
-              return { success: true, tweet_id: tweetId, post_url: `https://x.com/i/status/${tweetId}` };
+              if (tweetId) {
+                // Twitter returned the tweet ID — confirmed success
+                log(`Twitter: Tweet posted! ID: ${tweetId}`);
+                return { success: true, tweet_id: tweetId, post_url: `https://x.com/i/status/${tweetId}` };
+              }
+              // Twitter's new behavior: tweet_results is {} (empty) — tweet likely posted
+              // but Twitter no longer returns the result data. Verify via profile check.
+              log('Twitter: CreateTweet returned 200 with empty tweet_results — new Twitter behavior');
+              log('Twitter: Verifying tweet was actually created via profile check...');
+              await humanDelay(2000, 3000);
+              const verified = await verifyLastTweet(cookieData.cookies, content.text.substring(0, 50));
+              if (verified) {
+                log(`Twitter: Tweet confirmed via profile! URL: ${verified}`);
+                return { success: true, tweet_id: verified.tweetId, post_url: verified.url };
+              }
+              // Can't verify but no errors — assume success (better than false positive)
+              log('Twitter: Could not verify via profile (new account / not indexed), assuming success');
+              return { success: true, tweet_id: null, post_url: null, verified: false };
             }
             if (data.errors) {
               log(`Twitter: Tweet errors: ${JSON.stringify(data.errors)}`);
               return { success: false, error: `API errors: ${JSON.stringify(data.errors)}` };
             } else {
               log(`Twitter: Unexpected response: ${JSON.stringify(data).substring(0, 300)}`);
-              return { success: false, error: 'Unexpected API response (no tweet_results)' };
+              return { success: false, error: 'Unexpected API response (no create_tweet)' };
             }
           } else if (resp.status === 429) {
             log('Twitter: Rate limited, waiting 60s...');

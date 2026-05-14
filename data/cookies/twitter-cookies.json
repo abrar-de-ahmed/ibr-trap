@@ -2,16 +2,17 @@
   "cookies": [
     {
       "name": "ct0",
-      "value": "c227a373c6795bfbbe0b4e23b49cf6d357054e00e8daede6625a1e4c92e21876c234cee4968e17a7a3e751bd43ed6c13a4a4f1b4673c4caa9467072181051e99ac7279da3d327207aec71ac738cbadce",
+      "value": "007931f196f2a7345343126f8e723bb9a7b29504b256ffd1c710bb8618d71883cba659806329f3f8b8767e1d2461f13925b606597da5e1e45cacc71005da4c950ffa8484ea78066ad7fb8c3dd0f6c83e",
       "domain": ".x.com",
       "path": "/"
     },
     {
       "name": "auth_token",
-      "value": "d6634040254440ec14df5ee18e4e5bbf905b7500",
+      "value": "9d2806422b0bbcbc0523e091a7f9b22f65d280db",
       "domain": ".x.com",
       "path": "/"
     }
   ],
-  "saved_at": "2026-05-14T03:30:00.000Z"
+  "saved_at": "2026-05-15T08:00:00.000Z",
+  "captured_from": "manual-cookie-refresh"
 }
