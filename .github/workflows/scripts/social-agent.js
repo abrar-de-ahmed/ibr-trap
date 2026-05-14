@@ -1571,45 +1571,113 @@ async function twitterPost(page, content) {
   try {
     log('Twitter: Posting tweet...');
 
-    // ═══ PRE-FLIGHT: Validate API session before attempting anything ═══
-    // This catches stale cookies even if browser session check was a false positive
+    // ═══ PRE-FLIGHT: Validate session before attempting anything ═══
     const twCookiesFile = path.join(COOKIES_DIR, 'twitter-cookies.json');
-    let apiSessionValid = false;
     if (fs.existsSync(twCookiesFile)) {
       try {
         const cookieData = readJSON(twCookiesFile);
-        const ct0 = cookieData?.cookies?.find(c => c.name === 'ct0');
-        const authToken = cookieData?.cookies?.find(c => c.name === 'auth_token');
-        if (ct0 && authToken) {
-          const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
-          const preCheck = await validateTwitterSession(cookieData);
-          if (preCheck.valid) {
-            log('Twitter: Pre-flight session check PASSED');
-            apiSessionValid = true;
-          } else {
-            log(`Twitter: Pre-flight session check FAILED (${preCheck.reason}) — cookies expired`);
-          }
+        const preCheck = await validateTwitterSession(cookieData);
+        if (!preCheck.valid) {
+          log(`Twitter: Pre-flight session check FAILED (${preCheck.reason}) — skipping`);
+          return { success: false, error: `Twitter session expired — ${preCheck.reason}` };
         }
+        log('Twitter: Pre-flight session check PASSED');
       } catch (e) {
         log(`Twitter: Pre-flight check error: ${e.message}`);
       }
     }
-    if (!apiSessionValid) {
-      log('Twitter: API session invalid — skipping all posting strategies to avoid false positives');
-      return { success: false, error: 'Twitter session expired — cookies need refresh (pre-flight check)' };
+
+    // ═══ STRATEGY 1: Browser-based tweet (PRIMARY — proven reliable) ═══
+    // Twitter's GraphQL API now returns empty tweet_results ({}) even when
+    // the tweet is NOT actually posted. Browser automation is the only
+    // reliable way to post and verify.
+    log('Twitter: Attempting browser-based posting (primary strategy)...');
+    try {
+      // Navigate to compose
+      await page.goto('https://x.com/compose/post', { waitUntil: 'domcontentloaded', timeout: 25000 });
+      await humanDelay(2000, 3000);
+
+      // Find the compose box
+      const tweetBox = await page.$('[data-testid="tweetTextarea_0"]') ||
+                        await page.$('[contenteditable="true"][role="textbox"]');
+      if (tweetBox) {
+        await tweetBox.click();
+        await humanDelay(500, 1000);
+
+        // Type the tweet text with human-like delays
+        await page.keyboard.type(content.text, { delay: 25 + Math.floor(rand() * 35) });
+        await humanDelay(1000, 2000);
+
+        // Click the tweet button
+        const tweetBtn = await page.$('[data-testid="tweetButton"]');
+        if (tweetBtn) {
+          const isDisabled = await tweetBtn.evaluate(el => el.disabled || el.getAttribute('aria-disabled'));
+          if (isDisabled) {
+            log('Twitter: Tweet button is disabled — possibly duplicate or invalid content');
+          } else {
+            await tweetBtn.click();
+            await humanDelay(4000, 6000);
+
+            // Verify: check for error toasts
+            const errorToast = await page.$('[data-testid="toast"] [role="alert"]').catch(() => null);
+            if (errorToast) {
+              const errorText = await page.evaluate(el => el.textContent, errorToast).catch(() => 'Unknown error');
+              log(`Twitter: Browser tweet failed — toast error: ${errorText}`);
+              return { success: false, error: `Browser tweet error: ${errorText}` };
+            }
+
+            // Verify: check if compose area is empty (tweet was sent)
+            const remainingText = await page.$eval(
+              '[data-testid="tweetTextarea_0"]', el => el.textContent || ''
+            ).catch(() => 'check-failed');
+            if (remainingText && remainingText !== 'check-failed' && remainingText.trim().length > 0) {
+              log('Twitter: Tweet text still in compose box — tweet may not have sent');
+              return { success: false, error: 'Tweet text still present after clicking — likely failed' };
+            }
+
+            // Success! Now try to get the tweet URL from the profile
+            log('Twitter: Tweet submitted via browser (compose area cleared — verified)');
+            await humanDelay(2000, 3000);
+
+            // Navigate to profile to find the tweet URL
+            try {
+              await page.goto('https://x.com/bg_remover', { waitUntil: 'domcontentloaded', timeout: 20000 });
+              await humanDelay(2000, 3000);
+              const tweetLinks = await page.$$eval('a[href*="/bg_remover/status/"]', els =>
+                els.map(el => el.href).filter(h => h.includes('/status/'))
+              );
+              if (tweetLinks.length > 0) {
+                const latestUrl = tweetLinks[0];
+                const tweetId = latestUrl.split('/status/')[1]?.split('?')[0];
+                log(`Twitter: Found tweet URL: ${latestUrl}`);
+                return { success: true, tweet_id: tweetId, post_url: latestUrl };
+              }
+              log('Twitter: Could not extract tweet URL from profile (new account indexing delay)');
+              return { success: true, tweet_id: null, post_url: null };
+            } catch (profileErr) {
+              log(`Twitter: Profile check skipped: ${profileErr.message}`);
+              return { success: true, tweet_id: null, post_url: null };
+            }
+          }
+        } else {
+          log('Twitter: Tweet button not found on compose page');
+        }
+      } else {
+        log('Twitter: Compose box not found — may not be logged in after all');
+      }
+    } catch (e) {
+      log(`Twitter: Browser posting error: ${e.message}`);
     }
 
-    // ═══ STRATEGY 1: API-based tweet via nodeFetch with cookies from file ═══
-    const twCookiesFile = path.join(COOKIES_DIR, 'twitter-cookies.json');
+    // ═══ STRATEGY 2: API-based tweet (FALLBACK — unreliable, empty tweet_results) ═══
+    log('Twitter: Browser failed, falling back to API (may be unreliable)...');
     if (fs.existsSync(twCookiesFile)) {
-      log('Twitter: Attempting API tweet via nodeFetch...');
       try {
         const cookieData = readJSON(twCookiesFile);
         const ct0 = cookieData?.cookies?.find(c => c.name === 'ct0');
         const authToken = cookieData?.cookies?.find(c => c.name === 'auth_token');
         if (ct0 && authToken) {
           const cookieStr = cookieData.cookies.map(c => `${c.name}=${c.value}`).join('; ');
-
           const variables = {
             tweet_text: content.text,
             dark_request: false,
@@ -1641,19 +1709,8 @@ async function twitterPost(page, content) {
             responsive_web_graphql_timeline_navigation_enabled: true,
             responsive_web_enhance_cards_enabled: false,
           };
-
-          // ═══ Dynamic Query ID extraction — Twitter changes these frequently ═══
           let queryId = await extractTwitterQueryId('CreateTweet', cookieData.cookies);
-          if (!queryId) {
-            // Fallback query IDs to try (update these if all fail)
-            const fallbackIds = ['Va2lvahdYCP1BLcl18y6pw', 'bDE2rBtZb3uyrczSZ_pOfA', 'TlMG_yLQG2CLYkhe6O8pIA'];
-            for (const fid of fallbackIds) {
-              log(`Twitter: Trying fallback queryId: ${fid}`);
-              // We'll try the first fallback; if it fails, the browser fallback takes over
-              queryId = fid;
-              break;
-            }
-          }
+          if (!queryId) queryId = 'Va2lvahdYCP1BLcl18y6pw';
 
           const resp = await nodeFetch(`https://x.com/i/api/graphql/${queryId}/CreateTweet`, {
             method: 'POST',
@@ -1661,8 +1718,8 @@ async function twitterPost(page, content) {
               'Content-Type': 'application/json',
               'Cookie': cookieStr,
               'X-CSRF-Token': ct0.value,
-              'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Authorization': TWITTER_BEARER,
+              'User-Agent': TWITTER_UA,
               'X-Twitter-Active-User': 'yes',
               'X-Twitter-Client-Language': 'en',
               'X-Twitter-Auth-Type': 'OAuth2Session',
@@ -1672,90 +1729,23 @@ async function twitterPost(page, content) {
 
           if (resp.ok) {
             const data = await resp.json();
-            if (data.data && data.data.create_tweet && data.data.create_tweet.tweet_results) {
-              const tweetId = data.data.create_tweet.tweet_results.result?.rest_id;
-              if (tweetId) {
-                // Twitter returned the tweet ID — confirmed success
-                log(`Twitter: Tweet posted! ID: ${tweetId}`);
-                return { success: true, tweet_id: tweetId, post_url: `https://x.com/i/status/${tweetId}` };
-              }
-              // Twitter's new behavior: tweet_results is {} (empty) — tweet likely posted
-              // but Twitter no longer returns the result data. Verify via profile check.
-              log('Twitter: CreateTweet returned 200 with empty tweet_results — new Twitter behavior');
-              log('Twitter: Verifying tweet was actually created via profile check...');
-              await humanDelay(2000, 3000);
-              const verified = await verifyLastTweet(cookieData.cookies, content.text.substring(0, 50));
-              if (verified) {
-                log(`Twitter: Tweet confirmed via profile! URL: ${verified}`);
-                return { success: true, tweet_id: verified.tweetId, post_url: verified.url };
-              }
-              // Can't verify but no errors — assume success (better than false positive)
-              log('Twitter: Could not verify via profile (new account / not indexed), assuming success');
-              return { success: true, tweet_id: null, post_url: null, verified: false };
+            const tweetId = data.data?.create_tweet?.tweet_results?.result?.rest_id;
+            if (tweetId) {
+              log(`Twitter: API tweet posted! ID: ${tweetId}`);
+              return { success: true, tweet_id: tweetId, post_url: `https://x.com/i/status/${tweetId}` };
             }
             if (data.errors) {
-              log(`Twitter: Tweet errors: ${JSON.stringify(data.errors)}`);
               return { success: false, error: `API errors: ${JSON.stringify(data.errors)}` };
-            } else {
-              log(`Twitter: Unexpected response: ${JSON.stringify(data).substring(0, 300)}`);
-              return { success: false, error: 'Unexpected API response (no create_tweet)' };
             }
-          } else if (resp.status === 429) {
-            log('Twitter: Rate limited, waiting 60s...');
-            await new Promise(r => setTimeout(r, 60000));
-            return { success: false, error: 'Rate limited (429)' };
-          } else {
-            log(`Twitter: API tweet failed (status: ${resp.status})`);
-            return { success: false, error: `API status ${resp.status}` };
+            // Empty tweet_results — unreliable, don't trust it
+            log('Twitter: API returned empty tweet_results (unreliable) — cannot confirm');
+            return { success: false, error: 'API returned empty tweet_results — use browser instead' };
           }
-        } else {
-          log('Twitter: Missing ct0 or auth_token in cookies file');
+          return { success: false, error: `API status ${resp.status}` };
         }
       } catch (e) {
-        log(`Twitter: API tweet error: ${e.message}`);
+        log(`Twitter: API fallback error: ${e.message}`);
       }
-    } else {
-      log('Twitter: No cookies file found');
-    }
-
-    // ═══ STRATEGY 2: Browser-based tweet (fallback) ═══
-    // ... keep the existing browser-based fallback code ...
-    log('Twitter: Falling back to browser-based posting...');
-    // Navigate to twitter compose
-    try {
-      await page.goto('https://x.com/compose/post', { waitUntil: 'domcontentloaded', timeout: 20000 });
-      await humanDelay(2000, 3000);
-      // Try to find the tweet compose box
-      const tweetBox = await page.$('[data-testid="tweetTextarea_0"]') || await page.$('[contenteditable="true"][role="textbox"]');
-      if (tweetBox) {
-        await tweetBox.click();
-        await humanDelay(500, 1000);
-        await page.keyboard.type(content.text, { delay: 30 + Math.floor(rand() * 40) });
-        await humanDelay(1000, 2000);
-        // Click tweet button
-        const tweetBtn = await page.$('[data-testid="tweetButton"]');
-        if (tweetBtn) {
-          await tweetBtn.click();
-          await humanDelay(3000, 5000);
-          // Verify tweet was actually posted — check for error toasts
-          const errorToast = await page.$('[data-testid="toast"] [role="alert"]').catch(() => null);
-          if (errorToast) {
-            const errorText = await page.evaluate(el => el.textContent, errorToast).catch(() => 'Unknown error');
-            log(`Twitter: Browser tweet failed — toast error: ${errorText}`);
-            return { success: false, error: `Browser tweet error: ${errorText}` };
-          }
-          // Check if compose area is now empty (indicates tweet was sent)
-          const remainingText = await page.$eval('[data-testid="tweetTextarea_0"]', el => el.textContent || '').catch(() => 'check-failed');
-          if (remainingText && remainingText !== 'check-failed' && remainingText.trim().length > 0) {
-            log('Twitter: Tweet text still in compose box — tweet may not have sent');
-            return { success: false, error: 'Tweet text still present after clicking — likely failed' };
-          }
-          log('Twitter: Tweet submitted via browser (verified — compose area cleared)');
-          return { success: true, post_url: null };
-        }
-      }
-    } catch (e) {
-      log(`Twitter: Browser fallback error: ${e.message}`);
     }
 
     return { success: false, error: 'All posting strategies failed' };
