@@ -371,9 +371,10 @@
           "platform": "twitter",
           "date": "2026-05-14",
           "title": "Remove any background in seconds — free, no signup, works right in your browser. Your images never leave your device. https://bgremoverdigital.craftedmindss.com\n#BackgroundRemover #FreeTool",
-          "status": "posted",
+          "status": "failed",
           "is_experiment": false,
-          "post_url": null
+          "post_url": null,
+          "error": "False positive — browser fallback returned success without verification. Fixed in v2.1."
         }
       ]
     },

@@ -1513,14 +1513,18 @@ async function twitterPost(page, content) {
             }
             if (data.errors) {
               log(`Twitter: Tweet errors: ${JSON.stringify(data.errors)}`);
+              return { success: false, error: `API errors: ${JSON.stringify(data.errors)}` };
             } else {
               log(`Twitter: Unexpected response: ${JSON.stringify(data).substring(0, 300)}`);
+              return { success: false, error: 'Unexpected API response (no tweet_results)' };
             }
           } else if (resp.status === 429) {
             log('Twitter: Rate limited, waiting 60s...');
             await new Promise(r => setTimeout(r, 60000));
+            return { success: false, error: 'Rate limited (429)' };
           } else {
             log(`Twitter: API tweet failed (status: ${resp.status})`);
+            return { success: false, error: `API status ${resp.status}` };
           }
         } else {
           log('Twitter: Missing ct0 or auth_token in cookies file');
@@ -1551,7 +1555,20 @@ async function twitterPost(page, content) {
         if (tweetBtn) {
           await tweetBtn.click();
           await humanDelay(3000, 5000);
-          log('Twitter: Tweet submitted via browser (cannot verify URL)');
+          // Verify tweet was actually posted — check for error toasts
+          const errorToast = await page.$('[data-testid="toast"] [role="alert"]').catch(() => null);
+          if (errorToast) {
+            const errorText = await page.evaluate(el => el.textContent, errorToast).catch(() => 'Unknown error');
+            log(`Twitter: Browser tweet failed — toast error: ${errorText}`);
+            return { success: false, error: `Browser tweet error: ${errorText}` };
+          }
+          // Check if compose area is now empty (indicates tweet was sent)
+          const remainingText = await page.$eval('[data-testid="tweetTextarea_0"]', el => el.textContent || '').catch(() => 'check-failed');
+          if (remainingText && remainingText !== 'check-failed' && remainingText.trim().length > 0) {
+            log('Twitter: Tweet text still in compose box — tweet may not have sent');
+            return { success: false, error: 'Tweet text still present after clicking — likely failed' };
+          }
+          log('Twitter: Tweet submitted via browser (verified — compose area cleared)');
           return { success: true, post_url: null };
         }
       }
@@ -2683,6 +2700,7 @@ async function main() {
           content.status = 'prepared';
           const postResult = await twitterPost(page, content);
           content.status = postResult.success ? 'posted' : 'failed';
+          if (postResult.success && postResult.post_url) content.post_url = postResult.post_url;
           if (!postResult.success) content.error = postResult.error;
           results.posts.push(content);
         }
