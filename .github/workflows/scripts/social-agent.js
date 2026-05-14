@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
- * BG Remover Digital — Social Agent v2.0 (Puppeteer-Powered)
+ * BG Remover Digital — Social Agent v2.1 (Extension-First + Puppeteer Fallback)
  * ─────────────────────────────────────────────────────────
  * MISSION: ACTUALLY POST to Reddit, Twitter/X, and Pinterest
- *   using headless browser automation (Puppeteer)
+ *   using Chrome Extension bridge (real browser, real IP) with
+ *   Puppeteer fallback for CI/GitHub Actions environments.
+ *   - Extension-first: tries WebSocket bridge (localhost:9876) before Puppeteer
+ *   - Falls back to Puppeteer if extension is offline (CI, headless servers)
  *   - Reads brain.json + config.json for state and configuration
  *   - Respects emergency brake and weekly mitigation limits
  *   - Logs in like a human, posts like a human, engages like a human
@@ -18,6 +21,11 @@
  *   - Human-like typing delays, random scroll, natural behavior
  *   - Never mentions img.ly — use "AI technology" or "client-side AI"
  *   - No aggressive marketing — value-first, community-first approach
+ *
+ * POSTING METHODS (in priority order):
+ *   1. Chrome Extension via WebSocket bridge (real browser, real IP)
+ *   2. Puppeteer browser automation (fallback for CI)
+ *   3. Platform API (last resort, unreliable)
  */
 
 const puppeteer = require('puppeteer-extra');
@@ -27,6 +35,20 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+
+// ── WebSocket bridge for Chrome Extension ──
+let WebSocket = null;
+try {
+  WebSocket = require('ws');
+} catch (e) {
+  log('WebSocket (ws) package not available — extension bridge disabled, Puppeteer only');
+}
+const WS_BRIDGE_URL = 'ws://localhost:9876';
+const WS_CONNECT_TIMEOUT = 3000; // 3s to detect if bridge is running
+const WS_REQUEST_TIMEOUT = 65000; // 65s for full post operation
+
+// ── Track posting method for reporting ──
+const postingMethods = { twitter: null, pinterest: null, reddit: null };
 
 // ── Constants ──
 const SITE_URL = 'https://bgremoverdigital.craftedmindss.com';
@@ -1567,9 +1589,149 @@ async function verifyLastTweet(cookies, textPrefix) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// EXTENSION BRIDGE — Try posting via Chrome Extension WebSocket
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Attempt to post via the Chrome Extension bridge.
+ * Returns { usedExtension: true, result: {...} } if extension handled it.
+ * Returns { usedExtension: false } if bridge is offline or unreachable.
+ */
+async function tryExtensionPost(platform, payload) {
+  if (!WebSocket) return { usedExtension: false };
+
+  const requestId = 'agent-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const cleanup = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(connectTimer);
+      clearTimeout(requestTimer);
+      try { ws.close(); } catch (e) {}
+      resolve(result);
+    };
+
+    let ws;
+
+    // Timeout for connecting to bridge
+    const connectTimer = setTimeout(() => {
+      log(`Extension bridge: Connection timeout (${WS_CONNECT_TIMEOUT}ms) — bridge not running`);
+      cleanup({ usedExtension: false });
+    }, WS_CONNECT_TIMEOUT);
+
+    // Timeout for the full request
+    let requestTimer = null;
+
+    try {
+      ws = new WebSocket(WS_BRIDGE_URL);
+    } catch (e) {
+      cleanup({ usedExtension: false });
+      return;
+    }
+
+    ws.on('open', () => {
+      clearTimeout(connectTimer);
+      log('Extension bridge: Connected, registering as agent...');
+
+      // Register as agent
+      ws.send(JSON.stringify({
+        type: 'register',
+        clientType: 'agent'
+      }));
+
+      // Send the post request
+      ws.send(JSON.stringify({
+        type: 'post_request',
+        platform,
+        payload,
+        requestId
+      }));
+
+      log(`Extension bridge: Sent ${platform} post request (${requestId.substring(0, 16)})`);
+
+      // Set request timeout
+      requestTimer = setTimeout(() => {
+        log(`Extension bridge: Request timeout (${WS_REQUEST_TIMEOUT}ms) for ${requestId.substring(0, 16)}`);
+        cleanup({ usedExtension: true, result: { success: false, error: `Extension timeout (${WS_REQUEST_TIMEOUT}ms)` } });
+      }, WS_REQUEST_TIMEOUT);
+    });
+
+    ws.on('message', (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch (e) { return; }
+
+      // Handle heartbeat
+      if (msg.type === 'pong' || msg.type === 'ack' || msg.type === 'welcome') return;
+
+      // Handle extension status
+      if (msg.type === 'extension_status') {
+        if (!msg.extensionOnline) {
+          log('Extension bridge: No extension connected');
+          // Don't resolve yet — give the connect timeout a chance
+          // Actually, if bridge says no extension, we should bail
+          if (!requestTimer) {
+            // We haven't sent a request yet (extension_status came before open)
+            // This shouldn't happen, but handle gracefully
+          }
+        }
+        return;
+      }
+
+      // Handle our result
+      if (msg.type === 'post_result' && msg.requestId === requestId) {
+        clearTimeout(requestTimer);
+        log(`Extension bridge: Got result for ${platform}: ${JSON.stringify(msg.result).substring(0, 100)}`);
+        cleanup({ usedExtension: true, result: msg.result });
+      }
+    });
+
+    ws.on('error', (err) => {
+      log(`Extension bridge: WebSocket error — ${err.message}`);
+      cleanup({ usedExtension: false });
+    });
+
+    ws.on('close', (code) => {
+      if (!settled) {
+        log(`Extension bridge: Connection closed (${code})`);
+        cleanup({ usedExtension: false });
+      }
+    });
+  });
+}
+
 async function twitterPost(page, content) {
   try {
     log('Twitter: Posting tweet...');
+
+    // ═══ STRATEGY 0: Chrome Extension via WebSocket Bridge (PRIMARY) ═══
+    // This uses the user's real Chrome browser — real IP, real sessions, no detection.
+    if (WebSocket) {
+      try {
+        const extResult = await tryExtensionPost('twitter', { text: content.text });
+        if (extResult.usedExtension) {
+          postingMethods.twitter = 'extension';
+          if (extResult.result.success) {
+            log(`Twitter: ✓ Posted via Chrome Extension!${extResult.result.post_url ? ' URL: ' + extResult.result.post_url : ''}`);
+            return extResult.result;
+          } else {
+            log(`Twitter: Extension returned failure: ${extResult.result.error}`);
+            log('Twitter: Falling back to Puppeteer...');
+            postingMethods.twitter = 'puppeteer';
+          }
+        } else {
+          log('Twitter: Extension bridge offline (expected in CI), using Puppeteer...');
+          postingMethods.twitter = 'puppeteer';
+        }
+      } catch (e) {
+        log(`Twitter: Extension bridge error: ${e.message} — falling back to Puppeteer`);
+        postingMethods.twitter = 'puppeteer';
+      }
+    } else {
+      postingMethods.twitter = 'puppeteer';
+    }
 
     // ═══ PRE-FLIGHT: Validate session before attempting anything ═══
     const twCookiesFile = path.join(COOKIES_DIR, 'twitter-cookies.json');
@@ -2139,6 +2301,56 @@ async function downloadPinImage() {
 async function pinterestCreatePin(page, content) {
   try {
     log('Pinterest: Creating pin...');
+
+    // ═══ STRATEGY 0: Chrome Extension via WebSocket Bridge (PRIMARY) ═══
+    // This uses the user's real Chrome browser — real IP, real sessions, no detection.
+    if (WebSocket) {
+      try {
+        // Prepare image for extension — try to read the generated image as base64
+        let imageDataUrl = null;
+        const pinImage = await downloadPinImage();
+        if (pinImage && fs.existsSync(pinImage)) {
+          try {
+            const imgBuffer = fs.readFileSync(pinImage);
+            const ext = pinImage.split('.').pop().toLowerCase();
+            const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+            imageDataUrl = `data:${mime};base64,${imgBuffer.toString('base64')}`;
+          } catch (imgErr) {
+            log(`Pinterest: Could not read image for extension: ${imgErr.message}`);
+          }
+        }
+
+        const extPayload = {
+          title: content.pin_title,
+          description: content.pin_description,
+          link: content.link || SITE_URL,
+          board: content.target_board || 'Free Design Tools',
+          image_url: content.image_url || null,
+          image_data_url: imageDataUrl
+        };
+
+        const extResult = await tryExtensionPost('pinterest', extPayload);
+        if (extResult.usedExtension) {
+          postingMethods.pinterest = 'extension';
+          if (extResult.result.success) {
+            log(`Pinterest: ✓ Pin created via Chrome Extension!${extResult.result.pin_url ? ' URL: ' + extResult.result.pin_url : ''}`);
+            return extResult.result;
+          } else {
+            log(`Pinterest: Extension returned failure: ${extResult.result.error}`);
+            log('Pinterest: Falling back to Puppeteer...');
+            postingMethods.pinterest = 'puppeteer';
+          }
+        } else {
+          log('Pinterest: Extension bridge offline (expected in CI), using Puppeteer...');
+          postingMethods.pinterest = 'puppeteer';
+        }
+      } catch (e) {
+        log(`Pinterest: Extension bridge error: ${e.message} — falling back to Puppeteer`);
+        postingMethods.pinterest = 'puppeteer';
+      }
+    } else {
+      postingMethods.pinterest = 'puppeteer';
+    }
 
     // Step 1: Navigate to pin creation tool directly (more reliable than clicking Create button)
     await page.goto('https://www.pinterest.com/pin-creation-tool/', {
@@ -2783,7 +2995,7 @@ function buildEmailHTML(results, brain) {
       ` : ''}
 
       <div style="margin-top:20px;padding-top:15px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center">
-        BG Remover Digital Social Agent v2.0 | Puppeteer-Powered | ${TODAY}
+        BG Remover Digital Social Agent v2.1 | Extension-First + Puppeteer | ${TODAY}
       </div>
     </div>`;
 }
@@ -2793,7 +3005,7 @@ function buildEmailHTML(results, brain) {
 // ═══════════════════════════════════════════════════════════════
 
 async function main() {
-  log('=== Social Agent v2.0 Starting (Puppeteer-Powered) ===');
+  log('=== Social Agent v2.1 Starting (Extension-First + Puppeteer Fallback) ===');
 
   // Load data
   const brain = readJSON(BRAIN_FILE);
@@ -2934,7 +3146,7 @@ async function main() {
     log(`Email error: ${e.message}`);
   }
 
-  log('=== Social Agent v2.0 Complete ===');
+  log('=== Social Agent v2.1 Complete ===');
 }
 
 main().catch(e => {

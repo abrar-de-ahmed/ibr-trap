@@ -1,4 +1,4 @@
-name: Social Agent - Puppeteer Auto-Posting + Engagement
+name: Social Agent - Extension Bridge + Puppeteer Auto-Posting
 
 on:
   schedule:
@@ -36,10 +36,10 @@ jobs:
             libxshmfence1 libx11-xcb1 \
             xvfb
 
-      - name: Install Puppeteer + dependencies
-        run: npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth nodemailer
+      - name: Install Puppeteer + dependencies + ws bridge
+        run: npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth nodemailer ws
 
-      - name: Run Social Agent v2.0
+      - name: Run Social Agent v2.1 (Extension-First + Puppeteer Fallback)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
