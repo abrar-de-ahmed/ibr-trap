@@ -2,8 +2,8 @@ name: Social Agent - Extension Bridge + Puppeteer Auto-Posting
 
 on:
   schedule:
-    # Daily at 10:00 UTC (3:00 PM PKT)
-    - cron: '0 10 * * *'
+    # Mon-Fri at 10:00 UTC (3:00 PM PKT), no weekends
+    - cron: '0 10 * * 1-5'
   workflow_dispatch:
 
 permissions:

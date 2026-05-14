@@ -3,7 +3,7 @@
 > Complete word-for-word transcript of the genetic algorithm, self-rebuilding agents, growth strategy, and defense protocol discussion.
 > Started: May 8, 2026
 > Last Updated: May 15, 2026
-> Status: ALL 4 GROWTH AGENTS DEPLOYED — GA Intelligence ACTIVE — Social Agent v2.0 + SM Executive HARDENED (bg_V2.0) — Charlie Agent v2 FALSE POSITIVE BUGS FIXED — **Reddit posting PAUSED 28 days (auto-resume June 12)**
+> Status: ALL 4 GROWTH AGENTS DEPLOYED — GA Intelligence ACTIVE — Social Agent v2.1 + SM Executive HARDENED (bg_V2.1) — Charlie Agent v2 FALSE POSITIVE BUGS FIXED — **Reddit posting PAUSED 28 days (auto-resume June 12)**
 >
 > REDDIT POSTING PAUSE (May 15, 2026):
 > - Reddit account too new (age 5d, need 7d, karma 1) — blocked by Reddit
@@ -14,6 +14,15 @@
 > - Commit: 80e8039
 >
 > PHASE 3-5 COMPLETE (May 13, 2026 — Tag: bg_V2.0):
+>
+> V2.1 UPDATE (May 15, 2026 — Tag: bg_V2.1):
+> - Chrome Extension (Manifest V3) + WebSocket bridge architecture (localhost:9876)
+> - Extension-first with Puppeteer fallback for all engagement functions
+> - 5 content scripts: twitter.js, twitter-engage.js, pinterest.js, pinterest-engage.js, reddit.js
+> - 10 message types via post_request/post_result protocol
+> - Cron updated: Mon-Fri only (no weekends) for Social Agent and SM Executive
+> - SM Executive: tryExtensionReply() + `ws` package + defensive weekend/time checks
+> - Bug fix: ws-bridge.js pendingRequests scope issue
 > - Twitter dynamic GraphQL query ID extraction (runtime, no more 404s)
 > - Twitter x-twitter-auth-type: OAuth2Session header (no more 403s)
 > - Git push fixed: fetch-depth: 0 in both workflow YAMLs + git fetch --unshallow safety net
@@ -32,26 +41,33 @@
 > - State file reset: all previous alerts were false positives
 > - Site verified 100% clean (full security scan performed)
 >
-> SOCIAL AGENT v2.0 STATUS (May 14, 2026 — bg_V2.0):
-> - 8 original bugs fixed (May 10) + 6 live issues fixed (May 13)
+> SOCIAL AGENT v2.1 STATUS (May 15, 2026 — bg_V2.1):
+> - 8 original bugs fixed (May 10) + 6 live issues fixed (May 13) + v2.1 extension engagement
 > - Twitter: dynamic GraphQL query ID + x-twitter-auth-type header + cookie-based nodeFetch
 > - Reddit: nodeFetch for all API calls (bypasses GH Actions IP blocks)
 > - Pinterest: canvas-based pin image generation + added to rotation
 > - Git push: fetch-depth: 0 + --unshallow safety net
-> - Next scheduled run: Daily 10:00 UTC (3:00 PM PKT)
+> - Next scheduled run: Mon-Fri 10:00 UTC (3:00 PM PKT) — no weekends
+> - Chrome Extension (Manifest V3) + WebSocket bridge on localhost:9876
+> - Extension-first with Puppeteer fallback for all engagement functions
+> - 5 content scripts: twitter.js, twitter-engage.js, pinterest.js, pinterest-engage.js, reddit.js
+> - 10 message types: twitter_follow/like/comment/reply, pinterest_follow/comment/reply, reddit_comment/reply/upvote
 >
-> SM EXECUTIVE STATUS (May 14, 2026 — bg_V2.0):
-> - Schedule: Every 4 hours (6x daily)
+> SM EXECUTIVE STATUS (May 15, 2026 — bg_V2.1):
+> - Schedule: Mon-Fri 08:00 and 10:00 UTC (1:00 PM and 3:00 PM PKT) — no weekends
 > - Fallback-only replies: 13 categories, 80+ variants, zero external AI/CLI
 > - Mod filtering: Dual-layer skip (content patterns + author names)
 > - Platforms: Reddit (OAuth), Twitter (cookies), Pinterest (cookies)
 > - State files: sm-executive-brain.json, sm-executive-config.json (auto-created)
+> - v2.1: tryExtensionReply() — extension-first for comment replies
+> - v2.1: sm-executive.yml now installs `ws` package
+> - v2.1: Defensive weekend + time-of-day checks in both agent JS files
 >
 > GROWTH AGENT ARMY — DEPLOYMENT STATUS:
 > - Growth Agent v2: ✅ ACTIVE — `.github/workflows/growth-agent.yml` (Daily 8:00 UTC)
 > - Content Agent: ✅ ACTIVE — `.github/workflows/content-agent.yml` (Mon/Wed/Fri 9:00 UTC)
-> - Social Agent v2.0: ✅ ACTIVE — `.github/workflows/social-agent.yml` (Daily 10:00 UTC) — **nodeFetch + dynamic GraphQL + canvas pins**
-> - SM Executive: ✅ ACTIVE — `.github/workflows/sm-executive.yml` (Every 4 hours) — **Fallback-only replies + mod filtering**
+> - Social Agent v2.1: ✅ ACTIVE — `.github/workflows/social-agent.yml` (Mon-Fri 10:00 UTC) — **Chrome Extension + nodeFetch + dynamic GraphQL + canvas pins**
+> - SM Executive: ✅ ACTIVE — `.github/workflows/sm-executive.yml` (Mon-Fri 08:00 & 10:00 UTC) — **Extension-first replies + mod filtering + weekend checks**
 > - Directory Agent: ✅ ACTIVE — `.github/workflows/directory-agent.yml` (Weekly Sunday 11:00 UTC)
 > - Supervisor Agent v2: ✅ ACTIVE — Monitors all 11 agents (Daily 7:00 UTC)
 >

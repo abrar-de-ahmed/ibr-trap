@@ -2,6 +2,47 @@
 
 ---
 
+## May 15, 2026 — v2.1: Extension Engagement + QA + Cron Updates (Tag: bg_V2.1)
+
+### What Changed
+Chrome Extension (Manifest V3) architecture added for direct browser-based platform interaction. All engagement functions now try the extension first and fall back to Puppeteer. Cron schedules updated to Mon-Fri only (no weekends) for both Social Agent and SM Executive. Critical bug fix in ws-bridge.js.
+
+### Chrome Extension Architecture
+- **Extension location:** `chrome-extension/` folder
+- **Manifest V3** with 5 content scripts:
+  - `twitter.js` — posting (tweets, retweets)
+  - `twitter-engage.js` — follow, like, comment, reply
+  - `pinterest.js` — posting (pin creation)
+  - `pinterest-engage.js` — follow, comment, reply
+  - `reddit.js` — comment, reply, upvote (supports both new + old Reddit layouts)
+- **WebSocket Bridge:** `ws-bridge/ws-bridge.js` relay on localhost:9876
+- **10 message types:** twitter_follow, twitter_like, twitter_comment, twitter_reply, pinterest_follow, pinterest_comment, pinterest_reply, reddit_comment, reddit_reply, reddit_upvote
+- **Message protocol:** post_request / post_result via WebSocket relay
+- **Pattern:** Extension-first with Puppeteer fallback
+
+### Cron Schedule Updates
+- **social-agent.yml:** Mon-Fri 10:00 UTC (3:00 PM PKT) — no weekends
+- **sm-executive.yml:** Mon-Fri 08:00 and 10:00 UTC (1:00 PM and 3:00 PM PKT) — no weekends
+- Defensive weekend + time-of-day checks added to both `social-agent.js` and `sm-executive.js`
+
+### SM Executive v2.1 Updates
+- `tryExtensionReply()` — extension-first for comment replies (falls back to Puppeteer)
+- `sm-executive.yml` now installs `ws` package for WebSocket bridge communication
+- Defensive weekend + time-of-day checks
+
+### Extension Engagement Features
+- 3 new engagement content scripts: `twitter-engage.js`, `pinterest-engage.js`, `reddit.js`
+- Engagement functions now try Chrome Extension first, fall back to Puppeteer
+- Reddit content script supports both new and old Reddit layouts
+
+### Critical Bug Fix
+- `ws-bridge.js`: Fixed `pendingRequests` used before declaration (moved to proper scope)
+
+### Tag
+- `bg_V2.1` — Annotated tag at HEAD — "Extension Engagement + QA + Cron Updates"
+
+---
+
 ## May 9, 2026 — Growth Agent Army Deployment
 
 ### 4 Growth Agents Deployed

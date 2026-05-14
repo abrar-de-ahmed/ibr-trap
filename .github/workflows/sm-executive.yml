@@ -2,8 +2,8 @@ name: SM Executive - Comment Reply & Engagement
 
 on:
   schedule:
-    # Every 4 hours
-    - cron: '0 */4 * * *'
+    # Mon-Fri at 08:00 and 10:00 UTC (1:00 PM and 3:00 PM PKT), no weekends
+    - cron: '0 8,10 * * 1-5'
   workflow_dispatch:
 
 permissions:
@@ -36,8 +36,8 @@ jobs:
             libxshmfence1 libx11-xcb1 \
             xvfb
 
-      - name: Install Puppeteer + dependencies
-        run: npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+      - name: Install Puppeteer + dependencies + ws bridge
+        run: npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth ws
 
       - name: Run SM Executive
         env:

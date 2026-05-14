@@ -1,7 +1,7 @@
 # BG Remover Digital — MASTER PROMPT (Complete Project Reference)
 
 > **Last Updated:** May 15, 2026
-> **Version:** 6.1 — Phase 3-5 Complete (bg_V2.0) + SM Executive Agent + Reddit Posting Paused 28 Days (Auto-Resume June 12) + All MDs Updated
+> **Version:** 6.2 — Extension Engagement + QA + Cron Updates (bg_V2.1) + SM Executive Agent + Reddit Posting Paused 28 Days (Auto-Resume June 12) + All MDs Updated
 > **Project Owner:** Abrar Ahmed
 > **Contact Email:** craftedminds3@gmail.com
 > **Project:** BG Remover Digital (formerly IBR-Trap)
@@ -278,22 +278,29 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 
 ---
 
-### Agent 9: Social Agent v2.0 (Puppeteer + nodeFetch) ✅ LIVE — bg_V2.0
+### Agent 9: Social Agent v2.1 (Chrome Extension + Puppeteer + nodeFetch) ✅ LIVE — bg_V2.1
 
 | Detail | Value |
 |--------|-------|
 | **Workflow File** | `.github/workflows/social-agent.yml` |
 | **Script File** | `.github/workflows/scripts/social-agent.js` (2,755 lines) |
-| **Schedule** | Daily at 10:00 UTC (3:00 PM PKT) + manual trigger |
+| **Schedule** | Mon-Fri at 10:00 UTC (3:00 PM PKT) — no weekends + manual trigger |
 | **Email Behavior** | ALWAYS sends daily report (posts + engagement summary) |
 | **GitHub Secrets** | GITHUB_TOKEN (auto), GMAIL_USER, GMAIL_APP_PASS, ALERT_EMAIL, REDDIT_USERNAME, REDDIT_PASSWORD, TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_EMAIL, PINTEREST_EMAIL, PINTEREST_PASSWORD |
 | **Permissions** | `contents: write` (commits brain.json updates) |
-| **Latest Commit** | `80e8039` — Reddit paused 28 days (auto-resume June 12) |
+| **Latest Commit** | `bg_V2.1` — Extension Engagement + QA + Cron Updates (Mon-Fri cron, ws-bridge bug fix) |
 
 **What It Does:**
+- **Chrome Extension (Manifest V3)**: Extension-first architecture with WebSocket bridge on localhost:9876
+  - 5 content scripts: twitter.js, twitter-engage.js, pinterest.js, pinterest-engage.js, reddit.js
+  - 10 message types: twitter_follow/like/comment/reply, pinterest_follow/comment/reply, reddit_comment/reply/upvote
+  - Message protocol: post_request/post_result via ws-bridge/ws-bridge.js
+  - Reddit supports both new and old Reddit layouts
+- Engagement functions try extension first, fall back to Puppeteer
 - Logs into Reddit, Twitter/X, Pinterest via Puppeteer headless browser
 - Auto-posts content with human-like typing delays (60-140ms per keystroke)
 - **Reddit posting PAUSED until June 12, 2026** (account too new, building karma via SM Executive)
+- **Schedule: Mon-Fri only** — no weekend runs (defensive weekend checks in agent JS)
 - Platform rotation: Twitter + Pinterest active (Reddit auto-resumes on June 12)
 - Auto-resume logic: `selectPlatformsToPost()` checks `paused_until` date, resets to active when reached
 - Daily engagement: likes/saves 5-15 posts per platform, occasional retweets
@@ -316,6 +323,12 @@ BG Remover Digital is an AI-powered background image removal web app. Users uplo
 - May 15: Reddit posting paused 28 days (`80e8039`, auto-resume June 12)
   - Reddit account too new (age 5d, need 7d) — SM Executive builds karma via comments
   - Auto-resume: selectPlatformsToPost() checks paused_until date
+- May 15: v2.1 — Extension Engagement + QA + Cron Updates (`bg_V2.1`)
+  - Chrome Extension (Manifest V3) + WebSocket bridge architecture
+  - Extension-first with Puppeteer fallback for all engagement functions
+  - Cron updated: Mon-Fri only (no weekends) for Social Agent and SM Executive
+  - SM Executive: tryExtensionReply() + `ws` package + defensive weekend/time checks
+  - Bug fix: ws-bridge.js pendingRequests scope issue
 
 See BG-REMOVER-WORKLOG.md for full details.
 
@@ -328,17 +341,17 @@ See BG-REMOVER-WORKLOG.md for full details.
 
 ---
 
-### Agent 10: SM Executive (Comment Reply Agent) ✅ LIVE — bg_V2.0
+### Agent 10: SM Executive (Comment Reply Agent) ✅ LIVE — bg_V2.1
 
 | Detail | Value |
 |--------|-------|
 | **Workflow File** | `.github/workflows/sm-executive.yml` |
 | **Script File** | `.github/workflows/scripts/sm-executive.js` (1,193 lines) |
-| **Schedule** | Every 4 hours (0:00, 4:00, 8:00, 12:00, 16:00, 20:00 UTC) + manual trigger |
+| **Schedule** | Mon-Fri at 08:00 and 10:00 UTC (1:00 PM and 3:00 PM PKT) — no weekends + manual trigger |
 | **Email Behavior** | No email (silent operation, commits state to repo) |
 | **GitHub Secrets** | GITHUB_TOKEN (auto), REDDIT_OAUTH_TOKEN, TWITTER_USERNAME |
 | **Permissions** | `contents: write` (commits sm-executive-brain.json + config) |
-| **Latest Commit** | `c4875da` — Phase 3-5 complete, tagged `bg_V2.0` (May 13, 2026) |
+| **Latest Commit** | `bg_V2.1` — Extension Engagement + Cron Updates (May 15, 2026) |
 
 **What It Does:**
 - Fetches recent comments/replies on Reddit posts, Twitter mentions, Pinterest pins
@@ -351,7 +364,10 @@ See BG-REMOVER-WORKLOG.md for full details.
 - Rate limiting: 5 max/session, 3 per platform, 2-5s randomized delays
 - Platform-specific trim (Twitter replies truncated to 250 chars)
 - State tracking: sm-executive-brain.json (replied IDs + history), sm-executive-config.json (auto-created on first run)
-- **Reddit comments ACTIVE** — NOT affected by Social Agent Reddit posting pause (builds karma independently) |
+- **Reddit comments ACTIVE** — NOT affected by Social Agent Reddit posting pause (builds karma independently)
+- v2.1: `tryExtensionReply()` — extension-first for comment replies (falls back to Puppeteer)
+- v2.1: `sm-executive.yml` now installs `ws` package for WebSocket bridge communication
+- v2.1: Defensive weekend + time-of-day checks (no weekend runs, respects business hours)
 
 ---
 
@@ -399,7 +415,7 @@ ibr-deploy/
 │       ├── pm-agent.yml                      # PM Agent v2 (weekly Friday)
 │       ├── growth-agent.yml                  # Growth Agent v1 (daily 8:00 UTC)
 │       ├── supervisor-agent.yml              # Supervisor Agent v2 (daily 7:00 UTC)
-│       ├── social-agent.yml                  # Social Agent v2.0 (daily 10:00 UTC)
+│       ├── social-agent.yml                  # Social Agent v2.1 (Mon-Fri 10:00 UTC)
 │       ├── sm-executive.yml                  # SM Executive (every 4 hours)
 │       └── scripts/
 │           ├── monitor.js                    # Site monitoring + auto-redeploy
@@ -408,7 +424,7 @@ ibr-deploy/
 │           ├── pm-report.js                  # v2: revenue, 6-agent dashboard + instant alert
 │           ├── growth-agent.js               # v1: daily growth tracker, Stripe, recommendations
 │           ├── supervisor.js                 # v2: agent compliance + learning patterns
-│           ├── social-agent.js               # v2.0: Puppeteer auto-posting + nodeFetch (2,739 lines)
+│           ├── social-agent.js               # v2.1: Chrome Extension + Puppeteer auto-posting + nodeFetch (2,739 lines)
 │           └── sm-executive.js               # SM Executive: comment replies + engagement (1,193 lines)
 ├── functions/
 │   ├── _middleware.ts                        # Rate limiting + UUID validation

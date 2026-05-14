@@ -1,7 +1,7 @@
 # BG Remover Digital — SEO Strategy
 
 > **Last Updated:** May 15, 2026
-> **Status:** Phase A COMPLETE — Phase B IN PROGRESS — **GA Growth Agents ACTIVE** — **Social Agent v2.0 + SM Executive LIVE (bg_V2.0)** — **Reddit posting PAUSED 28 days (auto-resume June 12)**
+> **Status:** Phase A COMPLETE — Phase B IN PROGRESS — **GA Growth Agents ACTIVE** — **Social Agent v2.1 + SM Executive LIVE (bg_V2.1)** — **Reddit posting PAUSED 28 days (auto-resume June 12)**
 > **Live URL:** https://bgremoverdigital.craftedmindss.com
 > **Target Keywords:** background remover, remove background, free background remover
 
@@ -15,8 +15,8 @@
 |-------|----------|------|------|
 | **Growth Agent v2** | Daily 8:00 UTC | `growth-agent.yml` | SEO intelligence, keyword pages, competitor analysis, Sunday evolution |
 | **Content Agent** | Mon/Wed/Fri 9:00 UTC | `content-agent.yml` | Blog articles (800-1500 words), title A/B testing, FAQ content |
-| **Social Agent v2.0** | Daily 10:00 UTC | `social-agent.yml` | **Puppeteer + nodeFetch** auto-posting to Twitter/X, Pinterest + engagement — **Reddit posting PAUSED until June 12 (auto-resume)** — Dynamic Twitter GraphQL, canvas pin images |
-| **SM Executive** | Every 4 hours | `sm-executive.yml` | **Comment replies** on Reddit/Twitter/Pinterest — 13-category fallback system, mod/bot filtering — **Reddit comments ACTIVE (building karma while posts paused)** |
+| **Social Agent v2.1** | Mon-Fri 10:00 UTC | `social-agent.yml` | **Chrome Extension (Manifest V3) + Puppeteer + nodeFetch** auto-posting to Twitter/X, Pinterest + engagement — **Reddit posting PAUSED until June 12 (auto-resume)** — Dynamic Twitter GraphQL, canvas pin images, extension-first engagement |
+| **SM Executive** | Mon-Fri 08:00 & 10:00 UTC | `sm-executive.yml` | **Comment replies** on Reddit/Twitter/Pinterest — 13-category fallback system, mod/bot filtering, extension-first — **Reddit comments ACTIVE (building karma while posts paused)** |
 | **Directory Agent** | Weekly Sunday 11:00 UTC | `directory-agent.yml` | Directory submissions, profile backlinks, Web 2.0 content |
 
 **Shared Intelligence:**

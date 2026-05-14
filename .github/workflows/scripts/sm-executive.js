@@ -29,6 +29,17 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { URL } = require('url');
 
+// ── WebSocket bridge for Chrome Extension ──
+let WebSocket = null;
+try {
+  WebSocket = require('ws');
+} catch (e) {
+  log('WebSocket (ws) package not available — extension bridge disabled, Puppeteer only');
+}
+const WS_BRIDGE_URL = 'ws://localhost:9876';
+const WS_CONNECT_TIMEOUT = 3000; // 3s to detect if bridge is running
+const WS_REQUEST_TIMEOUT = 65000; // 65s for full reply operation
+
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════
@@ -1083,13 +1094,123 @@ async function launchBrowser() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// EXTENSION BRIDGE — Try reply via Chrome Extension WebSocket
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Attempt a reply action via the Chrome Extension bridge.
+ * Same pattern as social-agent.js tryExtensionPost/Engage.
+ * Returns { usedExtension: true, result: {...} } if extension handled it.
+ * Returns { usedExtension: false } if bridge is offline or unreachable.
+ */
+async function tryExtensionReply(action, payload) {
+  if (!WebSocket) return { usedExtension: false };
+
+  const requestId = 'reply-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const cleanup = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(connectTimer);
+      clearTimeout(requestTimer);
+      try { ws.close(); } catch (e) {}
+      resolve(result);
+    };
+
+    let ws;
+
+    const connectTimer = setTimeout(() => {
+      log(`Extension reply: Connection timeout (${WS_CONNECT_TIMEOUT}ms) — bridge not running`);
+      cleanup({ usedExtension: false });
+    }, WS_CONNECT_TIMEOUT);
+
+    let requestTimer = null;
+
+    try {
+      ws = new WebSocket(WS_BRIDGE_URL);
+    } catch (e) {
+      cleanup({ usedExtension: false });
+      return;
+    }
+
+    ws.on('open', () => {
+      clearTimeout(connectTimer);
+      log(`Extension reply: Connected for action ${action}`);
+
+      ws.send(JSON.stringify({ type: 'register', clientType: 'agent' }));
+
+      // Determine platform from action prefix
+      const platform = action.split('_')[0]; // 'twitter', 'pinterest', or 'reddit'
+
+      ws.send(JSON.stringify({
+        type: 'post_request',
+        platform,
+        payload: { action, ...payload },
+        requestId
+      }));
+
+      log(`Extension reply: Sent ${action} request (${requestId.substring(0, 16)})`);
+
+      requestTimer = setTimeout(() => {
+        log(`Extension reply: Request timeout (${WS_REQUEST_TIMEOUT}ms) for ${action}`);
+        cleanup({ usedExtension: true, result: { success: false, error: `Extension reply timeout (${WS_REQUEST_TIMEOUT}ms)` } });
+      }, WS_REQUEST_TIMEOUT);
+    });
+
+    ws.on('message', (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch (e) { return; }
+      if (msg.type === 'pong' || msg.type === 'ack' || msg.type === 'welcome' || msg.type === 'extension_status') return;
+
+      if (msg.type === 'post_result' && msg.requestId === requestId) {
+        clearTimeout(requestTimer);
+        const status = msg.result?.success ? 'SUCCESS' : 'FAIL';
+        log(`Extension reply: ${action} ${status}: ${JSON.stringify(msg.result).substring(0, 100)}`);
+        cleanup({ usedExtension: true, result: msg.result });
+      }
+    });
+
+    ws.on('error', (err) => {
+      log(`Extension reply: WebSocket error — ${err.message}`);
+      cleanup({ usedExtension: false });
+    });
+
+    ws.on('close', (code) => {
+      if (!settled) {
+        log(`Extension reply: Connection closed (${code})`);
+        cleanup({ usedExtension: false });
+      }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════════════════
 
 async function main() {
   log('═══════════════════════════════════════════════════');
-  log('═══ SM Executive Agent v1.0 Starting ═══');
+  log('═══ SM Executive Agent v1.1 Starting ═══');
   log('═══════════════════════════════════════════════════');
+
+  // ── Defensive weekend check (PKT = UTC+5) ──
+  const PKT_OFFSET = 5;
+  const nowPKT = new Date(NOW.getTime() + PKT_OFFSET * 60 * 60 * 1000);
+  const dayOfWeek = nowPKT.getUTCDay(); // 0=Sun, 6=Sat
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  if (isWeekend) {
+    log('Today is weekend (Sat/Sun) — skipping as per schedule');
+    process.exit(0);
+  }
+
+  // ── Time-of-day check (should only run between 1PM-5PM PKT) ──
+  const hourPKT = nowPKT.getUTCHours();
+  if (hourPKT < 13 || hourPKT >= 17) {
+    log(`Current PKT hour: ${hourPKT} — outside 1PM-5PM window, skipping`);
+    process.exit(0);
+  }
 
   // Initialize state
   let brain = initBrain();

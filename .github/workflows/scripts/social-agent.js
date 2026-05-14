@@ -1115,11 +1115,24 @@ async function redditEngage(page, brain, limits) {
     await humanScroll(page);
     await humanDelay(1000, 2000);
 
-    // Like posts (upvote)
+    // Like posts (upvote) — try extension first
     const maxLikes = Math.min(limits.dailyLikes, 5);
     for (let i = 0; i < maxLikes; i++) {
       try {
-        // Find upvote buttons (arrow up)
+        // Try extension-based upvote
+        const extResult = await tryExtensionEngage('reddit_upvote', { url: page.url() });
+        if (extResult.usedExtension && extResult.result?.success) {
+          results.likes++;
+          log(`Reddit: Upvoted via Extension`);
+          await humanDelay(1500, 3000);
+          await humanScroll(page, 200, 500);
+          continue;
+        }
+        if (extResult.usedExtension) {
+          log(`Reddit: Extension upvote failed (${extResult.result?.error}), using Puppeteer`);
+        }
+
+        // Puppeteer fallback
         const upvoteBtns = await page.$$('button[aria-label="upvote"], button[aria-label="Upvote"], .upvote, [data-click-id="upvote"]');
         if (upvoteBtns.length > i) {
           await randomMouseMove(page);
@@ -1702,6 +1715,95 @@ async function tryExtensionPost(platform, payload) {
   });
 }
 
+/**
+ * Attempt an engagement action via the Chrome Extension bridge.
+ * Same pattern as tryExtensionPost but uses engagement action types.
+ * Returns { usedExtension: true, result: {...} } if extension handled it.
+ * Returns { usedExtension: false } if bridge is offline or unreachable.
+ */
+async function tryExtensionEngage(action, payload) {
+  if (!WebSocket) return { usedExtension: false };
+
+  const requestId = 'engage-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const cleanup = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(connectTimer);
+      clearTimeout(requestTimer);
+      try { ws.close(); } catch (e) {}
+      resolve(result);
+    };
+
+    let ws;
+
+    const connectTimer = setTimeout(() => {
+      log(`Extension engage: Connection timeout (${WS_CONNECT_TIMEOUT}ms) — bridge not running`);
+      cleanup({ usedExtension: false });
+    }, WS_CONNECT_TIMEOUT);
+
+    let requestTimer = null;
+
+    try {
+      ws = new WebSocket(WS_BRIDGE_URL);
+    } catch (e) {
+      cleanup({ usedExtension: false });
+      return;
+    }
+
+    ws.on('open', () => {
+      clearTimeout(connectTimer);
+      log(`Extension engage: Connected for action ${action}`);
+
+      ws.send(JSON.stringify({ type: 'register', clientType: 'agent' }));
+
+      // Determine platform from action prefix
+      const platform = action.split('_')[0]; // 'twitter', 'pinterest', or 'reddit'
+
+      ws.send(JSON.stringify({
+        type: 'post_request',
+        platform,
+        payload: { action, ...payload },
+        requestId
+      }));
+
+      log(`Extension engage: Sent ${action} request (${requestId.substring(0, 16)})`);
+
+      requestTimer = setTimeout(() => {
+        log(`Extension engage: Request timeout (${WS_REQUEST_TIMEOUT}ms) for ${action}`);
+        cleanup({ usedExtension: true, result: { success: false, error: `Extension engage timeout (${WS_REQUEST_TIMEOUT}ms)` } });
+      }, WS_REQUEST_TIMEOUT);
+    });
+
+    ws.on('message', (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch (e) { return; }
+      if (msg.type === 'pong' || msg.type === 'ack' || msg.type === 'welcome' || msg.type === 'extension_status') return;
+
+      if (msg.type === 'post_result' && msg.requestId === requestId) {
+        clearTimeout(requestTimer);
+        const status = msg.result?.success ? 'SUCCESS' : 'FAIL';
+        log(`Extension engage: ${action} ${status}: ${JSON.stringify(msg.result).substring(0, 100)}`);
+        cleanup({ usedExtension: true, result: msg.result });
+      }
+    });
+
+    ws.on('error', (err) => {
+      log(`Extension engage: WebSocket error — ${err.message}`);
+      cleanup({ usedExtension: false });
+    });
+
+    ws.on('close', (code) => {
+      if (!settled) {
+        log(`Extension engage: Connection closed (${code})`);
+        cleanup({ usedExtension: false });
+      }
+    });
+  });
+}
+
 async function twitterPost(page, content) {
   try {
     log('Twitter: Posting tweet...');
@@ -1929,11 +2031,34 @@ async function twitterEngage(page, brain, limits) {
     await humanScroll(page);
     await humanDelay(1000, 2000);
 
-    // Like tweets
+    // Like tweets — try extension first
     const maxLikes = Math.min(limits.dailyLikes, 8);
     for (let i = 0; i < maxLikes; i++) {
       try {
-        // Find like buttons that aren't already liked
+        // Try extension-based like
+        const tweets = await page.$$('article[data-testid="tweet"]');
+        if (tweets.length > i) {
+          const tweetHref = await page.evaluate(el => {
+            const a = el.querySelector('a[href*="/status/"]');
+            return a ? a.getAttribute('href') : null;
+          }, tweets[i]);
+          if (tweetHref) {
+            const fullUrl = tweetHref.startsWith('http') ? tweetHref : `https://x.com${tweetHref}`;
+            const extResult = await tryExtensionEngage('twitter_like', { tweet_url: fullUrl });
+            if (extResult.usedExtension && extResult.result?.success) {
+              results.likes++;
+              log(`Twitter: Liked via Extension`);
+              await humanDelay(1500, 3000);
+              await humanScroll(page, 100, 300);
+              continue;
+            }
+            if (extResult.usedExtension) {
+              log(`Twitter: Extension like failed (${extResult.result?.error}), using Puppeteer`);
+            }
+          }
+        }
+
+        // Puppeteer fallback
         const likeBtns = await page.$$('button[data-testid="like"]:not([data-testid="unlike"])');
         if (likeBtns.length > i) {
           await randomMouseMove(page);
@@ -1945,7 +2070,7 @@ async function twitterEngage(page, brain, limits) {
       } catch (e) { /* skip */ }
     }
 
-    // Retweet (1-2 per day)
+    // Retweet (1-2 per day) — Puppeteer only (no extension action for retweet yet)
     const maxRetweets = limits.dailyComments >= 1 ? 1 : 0;
     for (let i = 0; i < maxRetweets; i++) {
       try {
@@ -1961,7 +2086,7 @@ async function twitterEngage(page, brain, limits) {
       } catch (e) { /* skip */ }
     }
 
-    // Follow accounts (if Monday)
+    // Follow accounts (if Monday) — try extension first
     if (IS_MONDAY && limits.weeklyFollows > 0) {
       const maxFollows = Math.min(limits.weeklyFollows, 4);
 
@@ -1977,12 +2102,36 @@ async function twitterEngage(page, brain, limits) {
 
       for (let i = 0; i < maxFollows; i++) {
         try {
+          // Try extension-based follow
+          const userLinks = await page.$$('a[role="link"][href^="/"]');
+          let targetUsername = null;
+          for (const link of userLinks) {
+            const href = await page.evaluate(el => el.getAttribute('href'), link);
+            if (href && href.match(/^\/[A-Za-z0-9_]+$/) && href.length > 2) {
+              targetUsername = href.substring(1);
+              break;
+            }
+          }
+          if (targetUsername) {
+            const extResult = await tryExtensionEngage('twitter_follow', { username: targetUsername });
+            if (extResult.usedExtension && extResult.result?.success) {
+              results.follows++;
+              log(`Twitter: Followed @${targetUsername} via Extension`);
+              await humanDelay(2000, 4000);
+              continue;
+            }
+            if (extResult.usedExtension) {
+              log(`Twitter: Extension follow failed (${extResult.result?.error}), using Puppeteer`);
+            }
+          }
+
+          // Puppeteer fallback
           const followBtns = await page.$$('button[data-testid$="-follow"]:not([data-testid$="-unfollow"])');
           if (followBtns.length > i) {
             await randomMouseMove(page);
             await followBtns[i].click();
             results.follows++;
-            log(`Twitter: Followed account ${i + 1}`);
+            log(`Twitter: Followed account ${i + 1} via Puppeteer`);
             await humanDelay(2000, 4000);
           }
         } catch (e) { /* skip */ }
@@ -2738,7 +2887,7 @@ async function pinterestEngage(page, brain, limits) {
       } catch (e) { /* skip */ }
     }
 
-    // Follow boards/users (if Monday)
+    // Follow boards/users (if Monday) — try extension first
     if (IS_MONDAY && limits.weeklyFollows > 0) {
       const maxFollows = Math.min(limits.weeklyFollows, 4);
 
@@ -2754,12 +2903,36 @@ async function pinterestEngage(page, brain, limits) {
 
       for (let i = 0; i < maxFollows; i++) {
         try {
+          // Try extension-based follow
+          const profiles = await page.$$('a[href*="/"]');
+          let targetUser = null;
+          for (const prof of profiles) {
+            const href = await page.evaluate(el => el.getAttribute('href'), prof);
+            if (href && href.match(/^\/[A-Za-z0-9_]+\/$/) && href.length > 2 && href !== '/search/') {
+              targetUser = href.replace('/', '');
+              break;
+            }
+          }
+          if (targetUser) {
+            const extResult = await tryExtensionEngage('pinterest_follow', { username: targetUser });
+            if (extResult.usedExtension && extResult.result?.success) {
+              results.follows++;
+              log(`Pinterest: Followed @${targetUser} via Extension`);
+              await humanDelay(2000, 4000);
+              continue;
+            }
+            if (extResult.usedExtension) {
+              log(`Pinterest: Extension follow failed (${extResult.result?.error}), using Puppeteer`);
+            }
+          }
+
+          // Puppeteer fallback
           const followBtns = await page.$$('button[aria-label="Follow"], div[class*="FollowButton"]');
           if (followBtns.length > i) {
             await randomMouseMove(page);
             await followBtns[i].click();
             results.follows++;
-            log(`Pinterest: Followed board/user ${i + 1}`);
+            log(`Pinterest: Followed board/user ${i + 1} via Puppeteer`);
             await humanDelay(2000, 4000);
           }
         } catch (e) { /* skip */ }
@@ -3006,6 +3179,16 @@ function buildEmailHTML(results, brain) {
 
 async function main() {
   log('=== Social Agent v2.1 Starting (Extension-First + Puppeteer Fallback) ===');
+
+  // ── Defensive weekend check (PKT = UTC+5) ──
+  const PKT_OFFSET = 5;
+  const nowPKT = new Date(NOW.getTime() + PKT_OFFSET * 60 * 60 * 1000);
+  const dayOfWeek = nowPKT.getUTCDay(); // 0=Sun, 6=Sat
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  if (isWeekend) {
+    log('Today is weekend (Sat/Sun) — skipping as per schedule');
+    process.exit(0);
+  }
 
   // Load data
   const brain = readJSON(BRAIN_FILE);

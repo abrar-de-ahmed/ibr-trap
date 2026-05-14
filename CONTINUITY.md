@@ -1,7 +1,7 @@
 # BG Remover Digital — Continuity Prompt
 
 > **Purpose:** Paste this prompt in a new chat session to continue the project seamlessly.
-> **Last Updated:** May 15, 2026 (Session 6 — Reddit posting paused 28d, auto-resume June 12)
+> **Last Updated:** May 15, 2026 (Session 7 — v2.1: Extension Engagement + QA + Cron Updates)
 
 ---
 
@@ -18,15 +18,15 @@ DEPLOYED AGENTS (11 total, all running on GitHub Actions):
 1. Supervisor v2 — Daily 7:00 UTC — monitors all agents
 2. Growth Agent v2 — Daily 8:00 UTC — SEO intelligence, keyword pages, Sunday evolution
 3. Content Agent — Mon/Wed/Fri 9:00 UTC — blog articles, A/B testing
-4. Social Agent v2.0 — Daily 10:00 UTC (3:00 PM PKT) — Puppeteer auto-posting + engagement (nodeFetch + dynamic GraphQL) — **Reddit posting PAUSED until June 12 (auto-resume)**
+4. Social Agent v2.1 — Mon-Fri 10:00 UTC (3:00 PM PKT) — Chrome Extension (Manifest V3) + Puppeteer auto-posting + engagement (nodeFetch + dynamic GraphQL) — **Reddit posting PAUSED until June 12 (auto-resume)**
 6. Monitor — Every 6 hours — site uptime
 7. Security Agent — Daily — security audit
 8. SEO Agent — Wednesday — SEO checks
 9. Charlie Agent v2 — Every 6 hours — anti-scraping defense (3 FP bugs fixed)
 10. Bravo Agent — Daily — pattern recognition defense
-11. SM Executive — Every 4 hours — comment replies on Reddit/Twitter/Pinterest (fallback-only, no external AI) — **Reddit comments ACTIVE (building karma while posts paused)**
+11. SM Executive — Mon-Fri 08:00 & 10:00 UTC (1:00 PM & 3:00 PM PKT) — comment replies on Reddit/Twitter/Pinterest (extension-first, fallback-only, no external AI) — **Reddit comments ACTIVE (building karma while posts paused)**
 
-LATEST TAG: bg_V2.0 at HEAD — Phase 3-5 complete + Reddit paused 28d
+LATEST TAG: bg_V2.1 at HEAD — Extension Engagement + QA + Cron Updates + Reddit paused 28d
 
 KEY FILES:
 - data/brain.json — shared agent memory (includes Pinterest in rotation)
@@ -42,10 +42,10 @@ KEY FILES:
 - SECURITY-ROADMAP.md — defense upgrade path
 - CONTINUITY.md — this file (handoff prompt)
 
-SOCIAL AGENT v2.0 STATUS (as of May 15, 2026 — bg_V2.0):
+SOCIAL AGENT v2.1 STATUS (as of May 15, 2026 — bg_V2.1):
 - 8 original bugs fixed (May 10) + 6 live issues fixed (May 13) + Reddit pause (May 15)
 - Latest commit: 80e8039 (Reddit paused 28 days, auto-resume June 12)
-- Schedule: Daily 10:00 UTC (3:00 PM PKT)
+- Schedule: Mon-Fri 10:00 UTC (3:00 PM PKT) — no weekends
 - **Reddit posting: PAUSED until June 12, 2026** (account too new — building karma via SM Executive comments)
 - Twitter: ACTIVE — Dynamic GraphQL query ID extraction (runtime), x-twitter-auth-type header
 - Pinterest: ACTIVE — Puppeteer canvas-based pin image generation (no external CLI needed)
@@ -53,9 +53,16 @@ SOCIAL AGENT v2.0 STATUS (as of May 15, 2026 — bg_V2.0):
 - Auth: Cookie-based (reddit-cookies.json, twitter-cookies.json, pinterest-cookies.json)
 - Git push: fetch-depth: 0 in workflow + git fetch --unshallow safety net
 - Anti-detection: headless:false with xvfb (bypasses bot detection), Chrome/135 UA
+- Chrome Extension Architecture: Manifest V3 extension + WebSocket bridge on localhost:9876
+- Extension-first pattern: engagement tries Chrome Extension first, falls back to Puppeteer
+- Extension location: `chrome-extension/` folder, bridge: `ws-bridge/ws-bridge.js`
+- 5 content scripts: twitter.js, twitter-engage.js, pinterest.js, pinterest-engage.js, reddit.js
+- 10 message types: twitter_follow/like/comment/reply, pinterest_follow/comment/reply, reddit_comment/reply/upvote
+- Message protocol: post_request/post_result via WebSocket relay
+- Reddit content script supports both new and old Reddit layouts
 
-SM EXECUTIVE STATUS (as of May 15, 2026 — bg_V2.0):
-- Schedule: Every 4 hours (0:00, 4:00, 8:00, 12:00, 16:00, 20:00 UTC)
+SM EXECUTIVE STATUS (as of May 15, 2026 — bg_V2.1):
+- Schedule: Mon-Fri 08:00 and 10:00 UTC (1:00 PM and 3:00 PM PKT) — no weekends
 - Platforms: Reddit (ACTIVE — building karma), Twitter/X, Pinterest comment replies
 - Reply system: 13-category intelligent fallback (80+ variants, zero external AI/CLI)
 - Mod filtering: Dual-layer (content patterns + author names) — skips AutoModerator/bots
@@ -63,6 +70,12 @@ SM EXECUTIVE STATUS (as of May 15, 2026 — bg_V2.0):
 - Reddit: OAuth Bearer via nodeFetch — **NOT affected by Social Agent Reddit pause**
 - Rate limits: 5 max/session, 3 per platform, 2-5s randomized delays
 - State files: sm-executive-brain.json, sm-executive-config.json (auto-created on first run)
+- v2.1: tryExtensionReply() — extension-first for comment replies (falls back to Puppeteer)
+- v2.1: sm-executive.yml now installs `ws` package for WebSocket bridge communication
+- v2.1: Defensive weekend + time-of-day checks in both agent JS files
+
+BUG FIX (v2.1):
+- ws-bridge.js: Fixed `pendingRequests` used before declaration (moved to proper scope)
 
 CHARLIE AGENT v2 STATUS (as of May 10, 2026):
 - 3 false positive bugs found and fixed (commit: 696fe19)
@@ -85,7 +98,7 @@ GA INTELLIGENCE RULES:
 - Budget auto-scales: 2 users=$5, 4=$10, 8=$15, 16=$20 ads/month
 - Never mention img.ly — use "AI technology" or "client-side AI"
 
-CURRENT STATUS: Week 2 (walking phase). Phase 3-5 complete. Reddit posting paused 28 days.
+CURRENT STATUS: Week 2 (walking phase). Phase 3-5 complete. v2.1 Extension Engagement live. Reddit posting paused 28 days.
 Phase 3-5 COMPLETE (May 13, 2026):
 - Twitter dynamic GraphQL query ID extraction (no more 404s)
 - Twitter x-twitter-auth-type header (no more 403s)
@@ -93,6 +106,15 @@ Phase 3-5 COMPLETE (May 13, 2026):
 - Pinterest in platform rotation (all 3 platforms scored)
 - Pinterest pin images via Puppeteer canvas (no CLI tools needed)
 - SM Executive: z-ai CLI removed, fallback-only replies, mod comment filtering
+
+V2.1 EXTENSION ENGAGEMENT + QA + CRON UPDATES (May 15, 2026):
+- Chrome Extension (Manifest V3) + WebSocket bridge on localhost:9876
+- Extension-first with Puppeteer fallback for all engagement functions
+- 5 content scripts: twitter.js, twitter-engage.js, pinterest.js, pinterest-engage.js, reddit.js
+- 10 message types: twitter_follow/like/comment/reply, pinterest_follow/comment/reply, reddit_comment/reply/upvote
+- Cron updated: Mon-Fri only (no weekends) for Social Agent and SM Executive
+- SM Executive: tryExtensionReply() + `ws` package + defensive weekend/time checks
+- Bug fix: ws-bridge.js pendingRequests scope issue
 
 Reddit Posting Pause (May 15, 2026):
 - Reddit posting PAUSED until June 12 (28 days) — account too new (age 5d, need 7d)
@@ -125,8 +147,8 @@ Read brain.json, check GitHub Actions runs, and give status report.
 |-------|----------|-------------|
 | Growth v2 | Daily 8:00 UTC | SEO intel, keyword pages, competitor analysis |
 | Content | Mon/Wed/Fri 9:00 UTC | Blog articles, title A/B testing |
-| Social v2.0 | Daily 10:00 UTC | Auto-posts Twitter/Pinterest + engagement (**Reddit paused until June 12**) |
-| SM Executive | Every 4 hours | Comment replies on Reddit/Twitter/Pinterest (**Reddit ACTIVE — building karma**) |
+| Social v2.1 | Mon-Fri 10:00 UTC | Extension-first auto-posts Twitter/Pinterest + engagement (**Reddit paused until June 12**) |
+| SM Executive | Mon-Fri 08:00 & 10:00 UTC | Extension-first comment replies on Reddit/Twitter/Pinterest (**Reddit ACTIVE — building karma**) |
 | Directory | Sunday 11:00 UTC | Directory submissions, profile backlinks |
 | Supervisor | Daily 7:00 UTC | Monitors all 11 agents |
 

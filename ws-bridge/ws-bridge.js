@@ -59,6 +59,7 @@ const ACTION_NAMES = {
 // ── State ──
 let extensionClient = null;  // The Chrome extension's background.js
 let agentClients = new Map(); // social-agent.js connections (usually 1)
+const pendingRequests = new Map(); // requestId → { agentWs, platform, action }
 
 // ── Generate unique request ID ──
 function generateId() {
@@ -241,9 +242,6 @@ wss.on('connection', (ws, req) => {
   // Send welcome
   ws.send(JSON.stringify({ type: 'welcome', serverVersion: '1.1.0', port }));
 });
-
-// ── Pending request tracking ──
-const pendingRequests = new Map();
 
 // ── Graceful shutdown ──
 process.on('SIGINT', () => {
