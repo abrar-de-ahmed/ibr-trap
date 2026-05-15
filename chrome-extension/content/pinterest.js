@@ -184,13 +184,17 @@
   async function attemptPinCreation(payload) {
     const { title, description, link, board, image_url, image_data_url } = payload;
 
-    // Step 1: Navigate to pin creation tool
+    // Step 1: Ensure we're on pin creation tool — wait instead of navigate
+    // (navigating away would kill the message channel)
     const currentUrl = window.location.href;
     if (!currentUrl.includes('pin-creation-tool')) {
-      window.location.href = 'https://www.pinterest.com/pin-creation-tool/';
-      await sleep(4000);
-      await humanDelay(1000, 2000);
+      console.log('[Pinterest CS] Not on pin creation page — agent must navigate first');
+      return { success: false, error: 'Not on pin-creation-tool page. Navigate to https://www.pinterest.com/pin-creation-tool/ before posting.' };
     }
+
+    // Wait for page to fully load
+    await sleep(3000);
+    await humanDelay(1000, 2000);
 
     // Step 2: Get image file
     let imageFile = null;

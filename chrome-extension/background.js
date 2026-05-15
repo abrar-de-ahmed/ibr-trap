@@ -35,7 +35,7 @@ const PLATFORM_URLS = {
 // ── Platform → default tab URL (for creating new tabs) ──
 const PLATFORM_DEFAULT_URLS = {
   twitter:   'https://x.com/compose/post',
-  pinterest: 'https://www.pinterest.com/',
+  pinterest: 'https://www.pinterest.com/pin-creation-tool/',
   reddit:    'https://www.reddit.com/'
 };
 
@@ -245,7 +245,8 @@ async function findOrCreateTab(platform, urlPattern) {
   try {
     const tab = await chrome.tabs.create({ url: createUrl, active: true });
     // Wait for the page to load and content script to inject
-    await sleep(3000);
+    // Pinterest pin-creation-tool needs extra time to load
+    await sleep(platform === 'pinterest' ? 6000 : 3000);
     return tab;
   } catch (e) {
     console.error('[BG] Error creating tab:', e.message);

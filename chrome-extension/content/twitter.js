@@ -154,6 +154,17 @@
       return { success: false, error: 'Compose box not found — may not be logged in' };
     }
 
+    // Step 2.5: Clear any existing text in compose box (prevents duplicate detection)
+    if (tweetBox.textContent?.trim().length > 0) {
+      console.log('[Twitter CS] Compose box has existing text, clearing...');
+      tweetBox.focus();
+      tweetBox.textContent = '';
+      await humanDelay(300, 500);
+      // Trigger input event so Twitter knows it's empty
+      tweetBox.dispatchEvent(new Event('input', { bubbles: true }));
+      await humanDelay(1000, 2000);
+    }
+
     // Step 3: Type tweet text with human-like delays
     await humanType(tweetBox, text);
     console.log('[Twitter CS] Text typed successfully');
