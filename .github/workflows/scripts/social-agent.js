@@ -61,6 +61,7 @@ const TODAY = new Date().toISOString().split('T')[0];
 const NOW = new Date();
 const DAY_OF_WEEK = NOW.getUTCDay(); // 0=Sun, 6=Sat
 const IS_MONDAY = DAY_OF_WEEK === 1; // Monday = weekly engagement day
+const IS_LOCAL_MODE = process.argv.includes('--local'); // v2.2: Local Runner skips Puppeteer
 
 // ── Node.js-level fetch (bypasses browser/GitHub Actions IP blocking) ──
 async function nodeFetch(url, options = {}) {
@@ -3228,7 +3229,7 @@ function buildEmailHTML(results, brain) {
 // ═══════════════════════════════════════════════════════════════
 
 async function main() {
-  log('=== Social Agent v2.1 Starting (Extension-First + Puppeteer Fallback) ===');
+  log(`=== Social Agent v2.1 Starting (${IS_LOCAL_MODE ? 'LOCAL MODE — Extension Only, No Puppeteer' : 'Extension-First + Puppeteer Fallback'}) ===`);
 
   // ── Defensive weekend check (PKT = UTC+5) ──
   const PKT_OFFSET = 5;
@@ -3237,14 +3238,15 @@ async function main() {
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
   if (isWeekend) {
     log('Today is weekend (Sat/Sun) — skipping as per schedule');
+    if (IS_LOCAL_MODE) return; // v2.2: graceful return for local runner
     process.exit(0);
   }
 
   // Load data
   const brain = readJSON(BRAIN_FILE);
   const config = readJSON(CONFIG_FILE);
-  if (!brain) { log('FATAL: Cannot read brain.json'); process.exit(1); }
-  if (!config) { log('FATAL: Cannot read config.json'); process.exit(1); }
+  if (!brain) { log('FATAL: Cannot read brain.json'); if (IS_LOCAL_MODE) return; process.exit(1); }
+  if (!config) { log('FATAL: Cannot read config.json'); if (IS_LOCAL_MODE) return; process.exit(1); }
 
   // Emergency brake check
   if (isEmergencyBrake(brain)) {
@@ -3273,12 +3275,22 @@ async function main() {
     engagement: { reddit: { likes: 0, follows: 0, comments: 0 }, twitter: { likes: 0, follows: 0, retweets: 0, comments: 0 }, pinterest: { likes: 0, follows: 0, saves: 0 } },
   };
 
-  let browser, page;
+  let browser = null, page = null;
   try {
-    // Launch browser
-    const browserCtx = await launchBrowser();
-    browser = browserCtx.browser;
-    page = browserCtx.page;
+    // v2.2: In local mode, skip Puppeteer — extension bridge handles everything
+    if (IS_LOCAL_MODE) {
+      log('LOCAL MODE: Skipping Puppeteer launch — using Chrome Extension bridge only');
+      if (!WebSocket) {
+        log('LOCAL MODE: WebSocket (ws) package not available — cannot communicate with extension bridge!');
+        log('  Run: npm install ws');
+        return;
+      }
+    } else {
+      // Launch browser (CI/GitHub Actions mode)
+      const browserCtx = await launchBrowser();
+      browser = browserCtx.browser;
+      page = browserCtx.page;
+    }
 
     // ── REDDIT ──
     if (platformsToPost.includes('reddit')) {

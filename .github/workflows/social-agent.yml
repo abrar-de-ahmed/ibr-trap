@@ -1,9 +1,10 @@
 name: Social Agent - Extension Bridge + Puppeteer Auto-Posting
 
 on:
-  schedule:
-    # Mon-Fri at 10:00 UTC (3:00 PM PKT), no weekends
-    - cron: '0 10 * * 1-5'
+  # v2.2: Cron DISABLED — posting now runs from local PC via local-runner.js
+  # schedule:
+  #   # Mon-Fri at 10:00 UTC (3:00 PM PKT), no weekends
+  #   - cron: '0 10 * * 1-5'
   workflow_dispatch:
 
 permissions:

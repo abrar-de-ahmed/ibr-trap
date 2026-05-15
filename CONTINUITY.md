@@ -1,7 +1,7 @@
 # BG Remover Digital — Continuity Prompt
 
 > **Purpose:** Paste this prompt in a new chat session to continue the project seamlessly.
-> **Last Updated:** May 15, 2026 (Session 7 — v2.1: Extension Engagement + QA + Cron Updates)
+> **Last Updated:** May 16, 2026 (Session 8 — v2.2: Local Runner Architecture)
 
 ---
 
@@ -14,21 +14,33 @@ Repo: abrar-de-ahmed/ibr-trap (cloned at /home/z/my-project/ibr-deploy)
 Site: bgremoverdigital.craftedmindss.com (Next.js on Cloudflare Pages)
 Owner: Abrar (email: craftedminds3@gmail.com / abrar@craftedmindss.com)
 
-DEPLOYED AGENTS (11 total, all running on GitHub Actions):
+DEPLOYED AGENTS (11 total, 9 on GitHub Actions, 2 on LOCAL PC via Local Runner):
 1. Supervisor v2 — Daily 7:00 UTC — monitors all agents
 2. Growth Agent v2 — Daily 8:00 UTC — SEO intelligence, keyword pages, Sunday evolution
 3. Content Agent — Mon/Wed/Fri 9:00 UTC — blog articles, A/B testing
-4. Social Agent v2.1 — Mon-Fri 10:00 UTC (3:00 PM PKT) — Chrome Extension (Manifest V3) + Puppeteer auto-posting + engagement (nodeFetch + dynamic GraphQL) — **Reddit posting PAUSED until June 12 (auto-resume)**
+4. **Social Agent v2.2** — Mon-Fri hourly 1-5PM PKT via LOCAL RUNNER — Chrome Extension only, no Puppeteer, no CI — **Reddit posting PAUSED until June 12 (auto-resume)**
 6. Monitor — Every 6 hours — site uptime
 7. Security Agent — Daily — security audit
 8. SEO Agent — Wednesday — SEO checks
 9. Charlie Agent v2 — Every 6 hours — anti-scraping defense (3 FP bugs fixed)
 10. Bravo Agent — Daily — pattern recognition defense
-11. SM Executive — Mon-Fri 08:00 & 10:00 UTC (1:00 PM & 3:00 PM PKT) — comment replies on Reddit/Twitter/Pinterest (extension-first, fallback-only, no external AI) — **Reddit comments ACTIVE (building karma while posts paused)**
+11. **SM Executive v1.1** — Mon-Fri hourly 1-5PM PKT via LOCAL RUNNER — Chrome Extension only, no Puppeteer, no CI — **Reddit comments ACTIVE (building karma while posts paused)**
 
-LATEST TAG: bg_V2.1 at HEAD — Extension Engagement + QA + Cron Updates + Reddit paused 28d
+LOCAL RUNNER v2.2 (NEW):
+- local-runner.js — Node.js script that runs Social Agent and SM Executive from local PC
+- Windows Task Scheduler triggers hourly Mon-Fri 1PM-5PM PKT
+- Auto-detects and starts ws-bridge.js on localhost:9876
+- Runs agents with --local flag (skips Puppeteer, extension-only mode)
+- Git pushes results after each run
+- Logs to local-runner.log
+- SETUP.md has full Windows setup guide
+
+LATEST TAG: bg_V2.2 at HEAD — Local Runner Architecture + CI cron disabled
 
 KEY FILES:
+- local-runner.js — Local Runner entry point (runs agents from local PC)
+- SETUP.md — Windows setup guide for Local Runner
+- local-runner.log — Execution log (append mode)
 - data/brain.json — shared agent memory (includes Pinterest in rotation)
 - data/config.json — behavior config, mitigation rules, budget scaling
 - data/sm-executive-brain.json — SM Executive replied IDs + conversation history (auto-created on first run)
@@ -42,27 +54,28 @@ KEY FILES:
 - SECURITY-ROADMAP.md — defense upgrade path
 - CONTINUITY.md — this file (handoff prompt)
 
-SOCIAL AGENT v2.1 STATUS (as of May 15, 2026 — bg_V2.1):
-- 8 original bugs fixed (May 10) + 6 live issues fixed (May 13) + Reddit pause (May 15)
-- Latest commit: 80e8039 (Reddit paused 28 days, auto-resume June 12)
-- Schedule: Mon-Fri 10:00 UTC (3:00 PM PKT) — no weekends
+SOCIAL AGENT v2.2 STATUS (as of May 16, 2026 — bg_V2.2):
+- **NOW RUNS FROM LOCAL PC via local-runner.js** (CI cron DISABLED)
+- Schedule: Mon-Fri hourly 1PM-5PM PKT via Windows Task Scheduler
+- --local flag: skips Puppeteer entirely, extension-only mode
+- All previous features preserved (extension-first, nodeFetch, dynamic GraphQL, etc.)
 - **Reddit posting: PAUSED until June 12, 2026** (account too new — building karma via SM Executive comments)
 - Twitter: ACTIVE — Dynamic GraphQL query ID extraction (runtime), x-twitter-auth-type header
 - Pinterest: ACTIVE — Puppeteer canvas-based pin image generation (no external CLI needed)
 - Auto-resume: social-agent.js checks paused_until date, auto-resets to active when reached
 - Auth: Cookie-based (reddit-cookies.json, twitter-cookies.json, pinterest-cookies.json)
-- Git push: fetch-depth: 0 in workflow + git fetch --unshallow safety net
-- Anti-detection: headless:false with xvfb (bypasses bot detection), Chrome/135 UA
 - Chrome Extension Architecture: Manifest V3 extension + WebSocket bridge on localhost:9876
-- Extension-first pattern: engagement tries Chrome Extension first, falls back to Puppeteer
+- Extension-only in local mode: NO Puppeteer fallback (real browser = real IP = no blocks)
 - Extension location: `chrome-extension/` folder, bridge: `ws-bridge/ws-bridge.js`
 - 5 content scripts: twitter.js, twitter-engage.js, pinterest.js, pinterest-engage.js, reddit.js
 - 10 message types: twitter_follow/like/comment/reply, pinterest_follow/comment/reply, reddit_comment/reply/upvote
 - Message protocol: post_request/post_result via WebSocket relay
-- Reddit content script supports both new and old Reddit layouts
+- CI workflow: social-agent.yml cron commented out, workflow_dispatch kept for manual triggers
 
-SM EXECUTIVE STATUS (as of May 15, 2026 — bg_V2.1):
-- Schedule: Mon-Fri 08:00 and 10:00 UTC (1:00 PM and 3:00 PM PKT) — no weekends
+SM EXECUTIVE v1.1 STATUS (as of May 16, 2026 — bg_V2.2):
+- **NOW RUNS FROM LOCAL PC via local-runner.js** (CI cron DISABLED)
+- Schedule: Mon-Fri hourly 1PM-5PM PKT via Windows Task Scheduler
+- --local flag: skips Puppeteer entirely, extension-only mode
 - Platforms: Reddit (ACTIVE — building karma), Twitter/X, Pinterest comment replies
 - Reply system: 13-category intelligent fallback (80+ variants, zero external AI/CLI)
 - Mod filtering: Dual-layer (content patterns + author names) — skips AutoModerator/bots
@@ -70,9 +83,21 @@ SM EXECUTIVE STATUS (as of May 15, 2026 — bg_V2.1):
 - Reddit: OAuth Bearer via nodeFetch — **NOT affected by Social Agent Reddit pause**
 - Rate limits: 5 max/session, 3 per platform, 2-5s randomized delays
 - State files: sm-executive-brain.json, sm-executive-config.json (auto-created on first run)
-- v2.1: tryExtensionReply() — extension-first for comment replies (falls back to Puppeteer)
-- v2.1: sm-executive.yml now installs `ws` package for WebSocket bridge communication
-- v2.1: Defensive weekend + time-of-day checks in both agent JS files
+- Extension-only in local mode: NO Puppeteer fallback
+- CI workflow: sm-executive.yml cron commented out, workflow_dispatch kept for manual triggers
+
+V2.2 LOCAL RUNNER ARCHITECTURE (May 16, 2026):
+- PROBLEM: GitHub Actions CI = headless Puppeteer = blocked by Twitter/Pinterest (0% success)
+- SOLUTION: Move posting from CI cron to local PC via local-runner.js
+- local-runner.js: --agent flag, PKT timezone check, ws-bridge auto-start, --local flag passthrough
+- social-agent.js: Added IS_LOCAL_MODE + --local flag + skip Puppeteer + graceful returns
+- sm-executive.js: Added IS_LOCAL_MODE + --local flag + skip Puppeteer + graceful returns
+- social-agent.yml: Cron DISABLED (commented out), workflow_dispatch kept
+- sm-executive.yml: Cron DISABLED (commented out), workflow_dispatch kept
+- SETUP.md: Full Windows setup guide (Node.js, Chrome, extension, Task Scheduler)
+- 2 new files: local-runner.js, SETUP.md
+- 4 modified files: social-agent.js, sm-executive.js, social-agent.yml, sm-executive.yml
+- DO NOT MODIFY: chrome-extension/*, ws-bridge.js, brain.json, config.json, all other workflows
 
 BUG FIX (v2.1):
 - ws-bridge.js: Fixed `pendingRequests` used before declaration (moved to proper scope)
@@ -98,7 +123,14 @@ GA INTELLIGENCE RULES:
 - Budget auto-scales: 2 users=$5, 4=$10, 8=$15, 16=$20 ads/month
 - Never mention img.ly — use "AI technology" or "client-side AI"
 
-CURRENT STATUS: Week 2 (walking phase). Phase 3-5 complete. v2.1 Extension Engagement live. Reddit posting paused 28 days.
+CURRENT STATUS: Week 2 (walking phase). Phase 3-5 complete. v2.2 Local Runner live. Reddit posting paused 28 days.
+
+V2.2 LOCAL RUNNER ARCHITECTURE (May 16, 2026):
+- Social Agent + SM Executive moved from CI cron to local PC
+- local-runner.js manages scheduling, bridge startup, agent execution
+- Extension-only mode: real Chrome browser, real IP, zero bot detection
+- CI workflows still available via workflow_dispatch for manual triggers
+- Full Windows setup documented in SETUP.md
 Phase 3-5 COMPLETE (May 13, 2026):
 - Twitter dynamic GraphQL query ID extraction (no more 404s)
 - Twitter x-twitter-auth-type header (no more 403s)
@@ -147,8 +179,8 @@ Read brain.json, check GitHub Actions runs, and give status report.
 |-------|----------|-------------|
 | Growth v2 | Daily 8:00 UTC | SEO intel, keyword pages, competitor analysis |
 | Content | Mon/Wed/Fri 9:00 UTC | Blog articles, title A/B testing |
-| Social v2.1 | Mon-Fri 10:00 UTC | Extension-first auto-posts Twitter/Pinterest + engagement (**Reddit paused until June 12**) |
-| SM Executive | Mon-Fri 08:00 & 10:00 UTC | Extension-first comment replies on Reddit/Twitter/Pinterest (**Reddit ACTIVE — building karma**) |
+| Social v2.2 | LOCAL: Mon-Fri hourly 1-5PM PKT | Extension-only auto-posts Twitter/Pinterest + engagement (**Reddit paused until June 12**) |
+| SM Executive | LOCAL: Mon-Fri hourly 1-5PM PKT | Extension-only comment replies on Reddit/Twitter/Pinterest (**Reddit ACTIVE — building karma**) |
 | Directory | Sunday 11:00 UTC | Directory submissions, profile backlinks |
 | Supervisor | Daily 7:00 UTC | Monitors all 11 agents |
 

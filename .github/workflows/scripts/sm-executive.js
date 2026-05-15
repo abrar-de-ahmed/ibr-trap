@@ -52,6 +52,7 @@ const BRAIN_FILE = path.join(DATA_DIR, 'sm-executive-brain.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'sm-executive-config.json');
 const TODAY = new Date().toISOString().split('T')[0];
 const NOW = new Date();
+const IS_LOCAL_MODE = process.argv.includes('--local'); // v2.2: Local Runner skips Puppeteer
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -1192,7 +1193,7 @@ async function tryExtensionReply(action, payload) {
 
 async function main() {
   log('═══════════════════════════════════════════════════');
-  log('═══ SM Executive Agent v1.1 Starting ═══');
+  log(`═══ SM Executive Agent v1.1 Starting (${IS_LOCAL_MODE ? 'LOCAL MODE' : 'CI Mode'}) ═══`);
   log('═══════════════════════════════════════════════════');
 
   // ── Defensive weekend check (PKT = UTC+5) ──
@@ -1202,6 +1203,7 @@ async function main() {
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
   if (isWeekend) {
     log('Today is weekend (Sat/Sun) — skipping as per schedule');
+    if (IS_LOCAL_MODE) return; // v2.2: graceful return for local runner
     process.exit(0);
   }
 
@@ -1209,6 +1211,7 @@ async function main() {
   const hourPKT = nowPKT.getUTCHours();
   if (hourPKT < 13 || hourPKT >= 17) {
     log(`Current PKT hour: ${hourPKT} — outside 1PM-5PM window, skipping`);
+    if (IS_LOCAL_MODE) return; // v2.2: graceful return for local runner
     process.exit(0);
   }
 
@@ -1233,8 +1236,21 @@ async function main() {
   }
 
   // Launch browser
-  log('Launching browser...');
-  const { browser, page } = await launchBrowser();
+  // v2.2: In local mode, skip Puppeteer — extension bridge handles everything
+  let browser = null, page = null;
+  if (IS_LOCAL_MODE) {
+    log('LOCAL MODE: Skipping Puppeteer launch — using Chrome Extension bridge only');
+    if (!WebSocket) {
+      log('LOCAL MODE: WebSocket (ws) package not available — cannot communicate with extension bridge!');
+      log('  Run: npm install ws');
+      return;
+    }
+  } else {
+    log('Launching browser...');
+    const browserCtx = await launchBrowser();
+    browser = browserCtx.browser;
+    page = browserCtx.page;
+  }
 
   try {
     // Reddit engagement
@@ -1292,7 +1308,7 @@ async function main() {
   }
 
   // Close browser
-  await browser.close();
+  if (browser) await browser.close();
   log('Browser closed');
 
   // Final summary

@@ -1,9 +1,10 @@
 name: SM Executive - Comment Reply & Engagement
 
 on:
-  schedule:
-    # Mon-Fri at 08:00 and 10:00 UTC (1:00 PM and 3:00 PM PKT), no weekends
-    - cron: '0 8,10 * * 1-5'
+  # v2.2: Cron DISABLED — comment replies now run from local PC via local-runner.js
+  # schedule:
+  #   # Mon-Fri at 08:00 and 10:00 UTC (1:00 PM and 3:00 PM PKT), no weekends
+  #   - cron: '0 8,10 * * 1-5'
   workflow_dispatch:
 
 permissions:
