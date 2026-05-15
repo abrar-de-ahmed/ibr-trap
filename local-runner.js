@@ -6,19 +6,22 @@
  *   instead of GitHub Actions CI. The Chrome Extension bridge
  *   (localhost:9876) works on a real browser with a real IP,
  *   bypassing the Puppeteer-detection blocks on Twitter/Pinterest.
+ *   brain.json is the single source of truth for daily limits —
+ *   if the daily cap is reached, the agent skips automatically.
  *
  * USAGE:
  *   node local-runner.js --agent social      # Run Social Agent
  *   node local-runner.js --agent executive   # Run SM Executive
  *
  * SCHEDULE:
- *   Mon-Fri, 1:00 PM - 5:00 PM PKT (UTC+5)
- *   Set up Windows Task Scheduler for hourly execution.
+ *   Mon-Sun, every 1 hour (all day)
+ *   Windows Task Scheduler handles scheduling.
+ *   brain.json controls daily post/engagement limits (no hard schedule).
  *
  * FLOW:
- *   1. Check PKT timezone → skip weekends
- *   2. Check if ws-bridge.js is running → start if not
- *   3. Run the requested agent with --local flag
+ *   1. Check if ws-bridge.js is running → start if not
+ *   2. Run the requested agent with --local flag
+ *   3. Agent checks brain.json → if daily limit reached, skips automatically
  *   4. Git push results (brain.json updates)
  *   5. Log everything to local-runner.log
  */
@@ -34,7 +37,6 @@ const SCRIPTS_DIR = path.join(PROJECT_ROOT, '.github', 'workflows', 'scripts');
 const WS_BRIDGE_SCRIPT = path.join(PROJECT_ROOT, 'ws-bridge', 'ws-bridge.js');
 const WS_BRIDGE_PORT = 9876;
 const LOG_FILE = path.join(PROJECT_ROOT, 'local-runner.log');
-const PKT_OFFSET = 5;
 
 // ── Parse CLI args ──
 const args = process.argv.slice(2);
@@ -66,32 +68,6 @@ function log(msg) {
 // ═══════════════════════════════════════════════════════════════
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
-
-/**
- * Get current time in PKT timezone
- */
-function getPKTNow() {
-  const now = new Date();
-  return new Date(now.getTime() + PKT_OFFSET * 60 * 60 * 1000);
-}
-
-/**
- * Check if today is a weekend (Saturday/Sunday) in PKT
- */
-function isWeekendPKT() {
-  const pktNow = getPKTNow();
-  const day = pktNow.getUTCDay(); // 0=Sun, 6=Sat
-  return day === 0 || day === 6;
-}
-
-/**
- * Check if current PKT hour is within business window (1PM-5PM PKT = 08:00-12:00 UTC)
- */
-function isWithinBusinessHours() {
-  const pktNow = getPKTNow();
-  const hour = pktNow.getUTCHours();
-  return hour >= 13 && hour < 17;
-}
 
 /**
  * Check if a TCP port is open (used to detect if ws-bridge is running)
@@ -208,24 +184,9 @@ async function main() {
   log(`═══ Local Runner v2.2 — Agent: ${agentName} ═══`);
   log('═══════════════════════════════════════════════════');
 
-  // ── 1. Weekend check ──
-  if (isWeekendPKT()) {
-    const pktNow = getPKTNow();
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    log(`Today is ${dayNames[pktNow.getUTCDay()]} (PKT) — weekend, skipping.`);
-    log('Local Runner only runs Mon-Fri as per schedule.');
-    return;
-  }
-
-  // ── 2. Business hours check ──
-  if (!isWithinBusinessHours()) {
-    const pktNow = getPKTNow();
-    log(`Current PKT hour: ${pktNow.getUTCHours()} — outside 1PM-5PM window.`);
-    log('Agent will still run (local mode is flexible), but engagement may be suboptimal outside peak hours.');
-    // Note: We don't skip — local mode is flexible. CI mode skips but local mode runs on demand.
-  }
-
-  // ── 3. Check/start ws-bridge ──
+  // ── 1. Check/start ws-bridge ──
+  log('No schedule restrictions — brain.json controls daily limits.');
+  log('Agent will check brain.json and skip if daily cap already reached.');
   const bridgeRunning = await isPortOpen(WS_BRIDGE_PORT);
   if (bridgeRunning) {
     log('ws-bridge.js is already running on localhost:9876');

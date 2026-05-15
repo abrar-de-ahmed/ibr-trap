@@ -3236,9 +3236,9 @@ async function main() {
   const nowPKT = new Date(NOW.getTime() + PKT_OFFSET * 60 * 60 * 1000);
   const dayOfWeek = nowPKT.getUTCDay(); // 0=Sun, 6=Sat
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-  if (isWeekend) {
-    log('Today is weekend (Sat/Sun) — skipping as per schedule');
-    if (IS_LOCAL_MODE) return; // v2.2: graceful return for local runner
+  if (isWeekend && !IS_LOCAL_MODE) {
+    // CI mode only: skip weekends. Local mode trusts brain.json for limits.
+    log('Today is weekend (Sat/Sun) — skipping as per CI schedule');
     process.exit(0);
   }
 

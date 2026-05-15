@@ -151,10 +151,9 @@ node local-runner.js --agent executive
 4. **Triggers tab:**
    - Click **New**
    - Begin the task: **On a schedule**
-   - Settings: **Weekly**
-   - Select: **Monday through Friday**
-   - Repeat task every: **1 hour** for a duration of **4 hours**
-   - Start time: **1:00 PM** (13:00)
+   - Settings: **Daily** (runs every day of the week)
+   - Repeat task every: **1 hour** for a duration of **24 hours** (all day)
+   - Start time: **12:00 AM** (midnight)
 5. **Actions tab:**
    - Click **New**
    - Action: **Start a program**
@@ -172,22 +171,22 @@ node local-runner.js --agent executive
 Repeat the same for SM Executive with:
 - Name: `BG Remover - Local Runner - SM Executive`
 - Arguments: `local-runner.js --agent executive`
-- Start time: **1:00 PM** (13:00)
+- Same trigger: Daily, every 1 hour, all day
 
 ### Option B: PowerShell Setup
 
 Run these commands in an elevated PowerShell:
 
 ```powershell
-# Social Agent — hourly Mon-Fri 1PM-5PM PKT
+# Social Agent — hourly, Mon-Sun, all day
 $action = New-ScheduledTaskAction -Execute "node.exe" -Argument "local-runner.js --agent social" -WorkingDirectory "C:\Projects\ibr-trap-check"
-$trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At "1:00PM" -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Hours 4)
+$trigger = New-ScheduledTaskTrigger -Daily -At "12:00AM" -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Hours 24)
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 5)
 Register-ScheduledTask -TaskName "BG Remover - Local Runner - Social" -Action $action -Trigger $trigger -Settings $settings -RunLevel Highest
 
-# SM Executive — hourly Mon-Fri 1PM-5PM PKT
+# SM Executive — hourly, Mon-Sun, all day
 $action2 = New-ScheduledTaskAction -Execute "node.exe" -Argument "local-runner.js --agent executive" -WorkingDirectory "C:\Projects\ibr-trap-check"
-$trigger2 = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At "1:00PM" -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Hours 4)
+$trigger2 = New-ScheduledTaskTrigger -Daily -At "12:00AM" -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Hours 24)
 Register-ScheduledTask -TaskName "BG Remover - Local Runner - Executive" -Action $action2 -Trigger $trigger2 -Settings $settings2 -RunLevel Highest
 ```
 
@@ -208,7 +207,7 @@ The Chrome Extension must be active for the WebSocket bridge to relay commands. 
 ## Architecture Diagram
 
 ```
-Windows Task Scheduler (hourly, Mon-Fri 1-5PM PKT)
+Windows Task Scheduler (hourly, Mon-Sun, all day)
     │
     ▼
 local-runner.js

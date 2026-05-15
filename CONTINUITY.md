@@ -18,19 +18,21 @@ DEPLOYED AGENTS (11 total, 9 on GitHub Actions, 2 on LOCAL PC via Local Runner):
 1. Supervisor v2 — Daily 7:00 UTC — monitors all agents
 2. Growth Agent v2 — Daily 8:00 UTC — SEO intelligence, keyword pages, Sunday evolution
 3. Content Agent — Mon/Wed/Fri 9:00 UTC — blog articles, A/B testing
-4. **Social Agent v2.2** — Mon-Fri hourly 1-5PM PKT via LOCAL RUNNER — Chrome Extension only, no Puppeteer, no CI — **Reddit posting PAUSED until June 12 (auto-resume)**
+4. **Social Agent v2.2** — Mon-Sun hourly via LOCAL RUNNER — Chrome Extension only, no Puppeteer, no CI — **Reddit posting PAUSED until June 12 (auto-resume)**
 6. Monitor — Every 6 hours — site uptime
 7. Security Agent — Daily — security audit
 8. SEO Agent — Wednesday — SEO checks
 9. Charlie Agent v2 — Every 6 hours — anti-scraping defense (3 FP bugs fixed)
 10. Bravo Agent — Daily — pattern recognition defense
-11. **SM Executive v1.1** — Mon-Fri hourly 1-5PM PKT via LOCAL RUNNER — Chrome Extension only, no Puppeteer, no CI — **Reddit comments ACTIVE (building karma while posts paused)**
+11. **SM Executive v1.1** — Mon-Sun hourly via LOCAL RUNNER — Chrome Extension only, no Puppeteer, no CI — **Reddit comments ACTIVE (building karma while posts paused)** — **Thread depth limit: 3 replies max per conversation**
 
 LOCAL RUNNER v2.2 (NEW):
 - local-runner.js — Node.js script that runs Social Agent and SM Executive from local PC
-- Windows Task Scheduler triggers hourly Mon-Fri 1PM-5PM PKT
+- Windows Task Scheduler triggers hourly Mon-Sun, all day (24/7)
 - Auto-detects and starts ws-bridge.js on localhost:9876
 - Runs agents with --local flag (skips Puppeteer, extension-only mode)
+- brain.json is the single source of truth for daily limits (posts, likes, comments, follows)
+- No weekend/time restrictions in local mode — agent checks brain.json each run
 - Git pushes results after each run
 - Logs to local-runner.log
 - SETUP.md has full Windows setup guide
@@ -74,8 +76,10 @@ SOCIAL AGENT v2.2 STATUS (as of May 16, 2026 — bg_V2.2):
 
 SM EXECUTIVE v1.1 STATUS (as of May 16, 2026 — bg_V2.2):
 - **NOW RUNS FROM LOCAL PC via local-runner.js** (CI cron DISABLED)
-- Schedule: Mon-Fri hourly 1PM-5PM PKT via Windows Task Scheduler
+- Schedule: Mon-Sun hourly via Windows Task Scheduler (all day)
 - --local flag: skips Puppeteer entirely, extension-only mode
+- No weekend/time restrictions in local mode — brain.json controls daily limits
+- **Thread depth limit: max 3 replies per conversation thread** (Reddit/Twitter/Pinterest)
 - Platforms: Reddit (ACTIVE — building karma), Twitter/X, Pinterest comment replies
 - Reply system: 13-category intelligent fallback (80+ variants, zero external AI/CLI)
 - Mod filtering: Dual-layer (content patterns + author names) — skips AutoModerator/bots
@@ -89,12 +93,14 @@ SM EXECUTIVE v1.1 STATUS (as of May 16, 2026 — bg_V2.2):
 V2.2 LOCAL RUNNER ARCHITECTURE (May 16, 2026):
 - PROBLEM: GitHub Actions CI = headless Puppeteer = blocked by Twitter/Pinterest (0% success)
 - SOLUTION: Move posting from CI cron to local PC via local-runner.js
-- local-runner.js: --agent flag, PKT timezone check, ws-bridge auto-start, --local flag passthrough
-- social-agent.js: Added IS_LOCAL_MODE + --local flag + skip Puppeteer + graceful returns
-- sm-executive.js: Added IS_LOCAL_MODE + --local flag + skip Puppeteer + graceful returns
+- local-runner.js: --agent flag, ws-bridge auto-start, --local flag passthrough
+- NO schedule restrictions in local mode — brain.json controls daily limits
+- social-agent.js: IS_LOCAL_MODE skips weekend check, Puppeteer, uses extension only
+- sm-executive.js: IS_LOCAL_MODE skips weekend/time checks, Puppeteer, uses extension only
+- sm-executive.js: Thread depth limit — max 3 replies per conversation (Reddit/Twitter/Pinterest)
 - social-agent.yml: Cron DISABLED (commented out), workflow_dispatch kept
 - sm-executive.yml: Cron DISABLED (commented out), workflow_dispatch kept
-- SETUP.md: Full Windows setup guide (Node.js, Chrome, extension, Task Scheduler)
+- SETUP.md: Full Windows setup guide (Node.js, Chrome, extension, Task Scheduler 24/7)
 - 2 new files: local-runner.js, SETUP.md
 - 4 modified files: social-agent.js, sm-executive.js, social-agent.yml, sm-executive.yml
 - DO NOT MODIFY: chrome-extension/*, ws-bridge.js, brain.json, config.json, all other workflows
@@ -179,8 +185,8 @@ Read brain.json, check GitHub Actions runs, and give status report.
 |-------|----------|-------------|
 | Growth v2 | Daily 8:00 UTC | SEO intel, keyword pages, competitor analysis |
 | Content | Mon/Wed/Fri 9:00 UTC | Blog articles, title A/B testing |
-| Social v2.2 | LOCAL: Mon-Fri hourly 1-5PM PKT | Extension-only auto-posts Twitter/Pinterest + engagement (**Reddit paused until June 12**) |
-| SM Executive | LOCAL: Mon-Fri hourly 1-5PM PKT | Extension-only comment replies on Reddit/Twitter/Pinterest (**Reddit ACTIVE — building karma**) |
+| Social v2.2 | LOCAL: Mon-Sun hourly (all day) | Extension-only auto-posts Twitter/Pinterest + engagement (**Reddit paused until June 12**) |
+| SM Executive | LOCAL: Mon-Sun hourly (all day) | Extension-only comment replies on Reddit/Twitter/Pinterest (**Reddit ACTIVE — building karma**) — **Thread depth: 3 max** |
 | Directory | Sunday 11:00 UTC | Directory submissions, profile backlinks |
 | Supervisor | Daily 7:00 UTC | Monitors all 11 agents |
 

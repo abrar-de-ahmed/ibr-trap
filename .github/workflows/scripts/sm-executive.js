@@ -497,6 +497,14 @@ async function redditEngage(page, brain, config) {
       if (modBotAuthors.some(m => author.toLowerCase().includes(m))) continue;
       // Skip if already replied
       if (brain.replied_comments.some(r => r.comment_id === commentId)) continue;
+      // v2.2: Thread depth limit — max 3 replies per conversation thread
+      const threadRepliesCount = brain.replied_comments.filter(r =>
+        r.platform === 'reddit' && r.post_id === postId
+      ).length;
+      if (threadRepliesCount >= 3) {
+        log(`Reddit: Thread depth limit reached for post ${postId} (${threadRepliesCount}/3 replies) — skipping`);
+        continue;
+      }
       // Skip very short comments (likely noise)
       if (body.length < 3) continue;
 
@@ -680,13 +688,32 @@ async function twitterEngage(page, brain, config) {
 
       // Skip if already replied
       if (brain.replied_comments.some(r => r.comment_id === tweetId)) continue;
+      // v2.2: Thread depth limit — max 3 replies per conversation thread
+      const threadRepliesCount = brain.replied_comments.filter(r =>
+        r.platform === 'twitter' && r.comment_id.startsWith(tweet.in_reply_to_status_id_str ? 't_' + tweet.in_reply_to_status_id_str : '')
+      ).length || brain.replied_comments.filter(r =>
+        r.platform === 'twitter' && (r.in_reply_to === tweetId || tweet.full_text?.includes('@bg_remover'))
+      ).length;
+      // For Twitter, count replies that are part of the same conversation
+      const twitterThreadCount = brain.replied_comments.filter(r =>
+        r.platform === 'twitter' && r.our_reply_id
+      ).length;
+      // Simple heuristic: if we already replied to this tweet's parent, count as thread
+      const parentId = tweet.in_reply_to_status_id_str;
+      const parentThreadCount = parentId
+        ? brain.replied_comments.filter(r => r.platform === 'twitter' && r.comment_id === parentId).length
+        : 0;
+      const totalTwitterThread = threadRepliesCount + parentThreadCount;
+      if (totalTwitterThread >= 3) {
+        log(`Twitter: Thread depth limit reached (${totalTwitterThread}/3 replies) — skipping`);
+        continue;
+      }
 
       const text = tweet.full_text || tweet.text || '';
       if (text.length < 2) continue;
 
-      // Build context from prior replies in this thread
+      // Build context from prior replies in this thread (parentId already declared above)
       let context = '';
-      const parentId = tweet.in_reply_to_status_id_str;
       if (parentId && tweets[parentId]) {
         const parentText = tweets[parentId].full_text || tweets[parentId].text || '';
         context = `Original post: "${parentText.substring(0, 150)}"`;
@@ -895,6 +922,15 @@ async function pinterestEngage(page, brain, config) {
           const commentKey = `pin-${pinUrl}-${comment.text.substring(0, 40)}`;
 
           if (brain.replied_comments.some(r => r.comment_id === commentKey)) continue;
+
+          // v2.2: Thread depth limit — max 3 replies per pin
+          const pinThreadCount = brain.replied_comments.filter(r =>
+            r.platform === 'pinterest' && r.pin_url === pinUrl
+          ).length;
+          if (pinThreadCount >= 3) {
+            log(`Pinterest: Thread depth limit reached for pin (${pinThreadCount}/3 replies) — skipping`);
+            continue;
+          }
 
           const reply = generateReply(comment.text, '', 'pinterest');
           if (!reply) continue;
@@ -1201,17 +1237,17 @@ async function main() {
   const nowPKT = new Date(NOW.getTime() + PKT_OFFSET * 60 * 60 * 1000);
   const dayOfWeek = nowPKT.getUTCDay(); // 0=Sun, 6=Sat
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-  if (isWeekend) {
-    log('Today is weekend (Sat/Sun) — skipping as per schedule');
-    if (IS_LOCAL_MODE) return; // v2.2: graceful return for local runner
+  if (isWeekend && !IS_LOCAL_MODE) {
+    // CI mode only: skip weekends. Local mode trusts brain.json for limits.
+    log('Today is weekend (Sat/Sun) — skipping as per CI schedule');
     process.exit(0);
   }
 
   // ── Time-of-day check (should only run between 1PM-5PM PKT) ──
   const hourPKT = nowPKT.getUTCHours();
-  if (hourPKT < 13 || hourPKT >= 17) {
-    log(`Current PKT hour: ${hourPKT} — outside 1PM-5PM window, skipping`);
-    if (IS_LOCAL_MODE) return; // v2.2: graceful return for local runner
+  if ((hourPKT < 13 || hourPKT >= 17) && !IS_LOCAL_MODE) {
+    // CI mode only: skip outside business hours. Local mode runs anytime.
+    log(`Current PKT hour: ${hourPKT} — outside 1PM-5PM window, skipping (CI only)`);
     process.exit(0);
   }
 
