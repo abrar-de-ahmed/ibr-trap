@@ -58,7 +58,7 @@ KEY FILES:
 
 SOCIAL AGENT v2.2 STATUS (as of May 16, 2026 — bg_V2.2):
 - **NOW RUNS FROM LOCAL PC via local-runner.js** (CI cron DISABLED)
-- Schedule: Mon-Fri hourly 1PM-5PM PKT via Windows Task Scheduler
+- Schedule: Mon-Sun hourly (all day) via Windows Task Scheduler — brain.json controls daily limits
 - --local flag: skips Puppeteer entirely, extension-only mode
 - All previous features preserved (extension-first, nodeFetch, dynamic GraphQL, etc.)
 - **Reddit posting: PAUSED until June 12, 2026** (account too new — building karma via SM Executive comments)

@@ -212,7 +212,7 @@ Windows Task Scheduler (hourly, Mon-Sun, all day)
     ▼
 local-runner.js
     │
-    ├─ Check: Is it weekend? → Skip
+    ├─ No schedule restrictions — brain.json controls daily limits
     ├─ Check: Is ws-bridge running? → Start if not
     ├─ Run: node social-agent.js --local  OR  node sm-executive.js --local
     │       │
