@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "created": "2026-05-09",
-  "last_updated": "2026-05-14",
+  "last_updated": "2026-05-15",
   "seo": {
     "keywords_tracked": [
       {
@@ -250,14 +250,14 @@
       "posted_count": 1
     },
     "twitter": {
-      "posts": 9,
+      "posts": 11,
       "avg_engagement": 0,
       "best_time": null,
       "status": "active",
       "posted_count": 1
     },
     "pinterest": {
-      "pins": 8,
+      "pins": 10,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
@@ -376,6 +376,40 @@
           "post_url": null,
           "error": "False positive — browser fallback returned success without verification. Fixed in v2.1."
         }
+      ],
+      "2026-05-15": [
+        {
+          "platform": "twitter",
+          "date": "2026-05-15",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-05-15",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "twitter",
+          "date": "2026-05-15",
+          "title": "Pro tip: Clean white backgrounds on product photos can boost sales by up to 30%. Remove backgrounds free -> https://bgremoverdigital.craftedmindss.com #SmallBusiness #PhotographyTip\n#NoSignup #PhotographyTip #PhotoEditing",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-05-15",
+          "title": "ID Photo Background Remover - Free Online Tool",
+          "status": "failed",
+          "is_experiment": true,
+          "post_url": null
+        }
       ]
     },
     "engagement": {
@@ -486,6 +520,24 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-05-15": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 0,
+          "follows": 0,
+          "retweets": 0,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
@@ -499,18 +551,18 @@
     "account_status": {
       "reddit": {
         "created": true,
-        "username": "AbrardeAhmed",
-        "last_active": "2026-05-14"
+        "username": "configured",
+        "last_active": "2026-05-15"
       },
       "twitter": {
         "created": true,
-        "username": "bg_remover",
-        "last_active": "2026-05-14"
+        "username": "configured",
+        "last_active": "2026-05-15"
       },
       "pinterest": {
         "created": true,
-        "username": "BGRemoverPro",
-        "last_active": "2026-05-14"
+        "username": "configured",
+        "last_active": "2026-05-15"
       },
       "medium": {
         "created": false,
