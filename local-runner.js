@@ -162,13 +162,21 @@ function runAgent(scriptPath) {
 function gitPushResults() {
   try {
     log('Committing and pushing results...');
-    execSync(
-      `cd "${PROJECT_ROOT}" && git add data/ 2>/dev/null && ` +
-      `git commit -m "local-runner: ${agentName} update - ${new Date().toISOString().split('T')[0]} [skip ci]" 2>/dev/null || true`,
-      { stdio: 'pipe', timeout: 30000 }
-    );
-    execSync(`cd "${PROJECT_ROOT}" && git push 2>/dev/null`, { stdio: 'pipe', timeout: 60000 });
-    log('Git push successful.');
+    // Cross-platform git commands (no bash-specific redirects)
+    try {
+      execSync(`git add data/`, { cwd: PROJECT_ROOT, stdio: 'pipe', timeout: 15000 });
+      execSync(
+        `git commit -m "local-runner: ${agentName} update - ${new Date().toISOString().split('T')[0]} [skip ci]"`,
+        { cwd: PROJECT_ROOT, stdio: 'pipe', timeout: 15000 }
+      );
+    } catch (e) { /* nothing to commit or already committed */ }
+    try {
+      execSync('git push', { cwd: PROJECT_ROOT, stdio: 'pipe', timeout: 60000 });
+      log('Git push successful.');
+    } catch (e) {
+      log(`Git push failed: ${e.message}`);
+      log('  This is non-fatal — data is saved locally and will sync next time.');
+    }
   } catch (e) {
     log(`Git push failed: ${e.message}`);
     log('  This is non-fatal — data is saved locally and will sync next time.');

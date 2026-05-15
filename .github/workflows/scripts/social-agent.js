@@ -805,6 +805,13 @@ async function launchBrowser() {
 
 // ── Login with cookie persistence ──
 async function loginWithCookies(platform, page, loginFn) {
+  // v2.2: In local mode, page is null — skip Puppeteer cookie loading, go straight to loginFn
+  if (IS_LOCAL_MODE && !page) {
+    log(`${platform}: LOCAL MODE — skipping Puppeteer cookies, using nodeFetch validation`);
+    const loginOk = await loginFn(page);
+    return loginOk;
+  }
+
   // Step 1: Try loading saved cookies
   const loaded = await loadCookiesIntoPage(page, platform);
   if (loaded) {
@@ -1205,6 +1212,8 @@ async function twitterLogin(page) {
           const sessionCheck = await validateTwitterSession(cookieData);
           if (sessionCheck.valid) {
             log('Twitter: Session valid via cookies file!');
+            // v2.2: In local mode, skip setCookie (no Puppeteer page) — extension has real session
+            if (IS_LOCAL_MODE || !page) return true;
             // Load cookies into browser for any page.evaluate calls
             await page.setCookie(...cookieData.cookies.map(c => ({
               name: c.name, value: c.value, domain: c.domain || '.x.com',
@@ -2170,6 +2179,20 @@ async function twitterEngage(page, brain, limits) {
 // ═══════════════════════════════════════════════════════════════
 
 async function pinterestLogin(page) {
+  // v2.2: In local mode, extension handles Pinterest — validate via cookies file
+  if (IS_LOCAL_MODE && !page) {
+    const cookiesFile = path.join(COOKIES_DIR, 'pinterest-cookies.json');
+    if (fs.existsSync(cookiesFile)) {
+      const cookieData = readJSON(cookiesFile);
+      if (cookieData && cookieData.cookies && cookieData.cookies.length > 0) {
+        log(`Pinterest: LOCAL MODE — ${cookieData.cookies.length} cookies found, extension will handle posting`);
+        return true;
+      }
+    }
+    log('Pinterest: LOCAL MODE — no cookies file found, cannot validate session');
+    return false;
+  }
+
   const email = process.env.PINTEREST_EMAIL;
   const password = process.env.PINTEREST_PASSWORD;
   if (!email || !password) {
@@ -3099,14 +3122,17 @@ function commitAndPush() {
     execSync('git config user.name "Social Agent"', { stdio: 'pipe' });
     execSync('git config user.email "social-agent[bot]@users.noreply.github.com"', { stdio: 'pipe' });
     // Ensure we have a proper git remote for pushing (GH Actions shallow clone fix)
-    execSync('git fetch origin --unshallow 2>/dev/null || true', { stdio: 'pipe' });
-    execSync('mkdir -p data/cookies 2>/dev/null; git add data/brain.json data/cookies/ 2>/dev/null', { stdio: 'pipe' });
+    try { execSync('git fetch origin --unshallow', { stdio: 'pipe' }); } catch(e) { /* already unshallow or no network */ }
+    // Ensure data dirs exist (cross-platform)
+    const dirs = [path.join(DATA_DIR, 'cookies')];
+    dirs.forEach(d => { try { fs.mkdirSync(d, { recursive: true }); } catch(e) {} });
+    try { execSync('git add data/brain.json data/cookies/', { stdio: 'pipe' }); } catch(e) {}
 
-    const status = execSync('git status --porcelain data/brain.json data/cookies/ 2>/dev/null', { stdio: 'pipe' }).toString().trim();
+    let status = '';
+    try { status = execSync('git status --porcelain data/brain.json data/cookies/', { stdio: 'pipe' }).toString().trim(); } catch(e) {}
     if (status) {
       execSync(`git commit -m "social-agent: ${TODAY} auto-post + engagement [skip ci]"`, { stdio: 'pipe' });
-      execSync('git push', { stdio: 'pipe' });
-      log('Changes committed and pushed.');
+      try { execSync('git push', { stdio: 'pipe' }); log('Changes committed and pushed.'); } catch(e) { log(`Git push error: ${e.message}`); }
     } else {
       log('No changes to commit.');
     }
