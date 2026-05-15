@@ -1880,22 +1880,40 @@ async function twitterPost(page, content) {
             log('Twitter: Tweet button is disabled — possibly duplicate or invalid content');
           } else {
             await tweetBtn.click();
-            await humanDelay(4000, 6000);
+            await humanDelay(5000, 8000);
 
-            // Verify: check for error toasts
+            // Verify: check for error toasts FIRST (only real failures)
             const errorToast = await page.$('[data-testid="toast"] [role="alert"]').catch(() => null);
             if (errorToast) {
               const errorText = await page.evaluate(el => el.textContent, errorToast).catch(() => 'Unknown error');
-              log(`Twitter: Browser tweet failed — toast error: ${errorText}`);
-              return { success: false, error: `Browser tweet error: ${errorText}` };
+              // Filter out non-error toasts (e.g. "Who to follow" suggestions)
+              const errorPatterns = ['failed', 'error', 'try again', 'duplicate', 'limit', 'suspended', 'write less'];
+              const isRealError = errorPatterns.some(p => errorText.toLowerCase().includes(p));
+              if (isRealError) {
+                log(`Twitter: Browser tweet failed — toast error: ${errorText}`);
+                return { success: false, error: `Browser tweet error: ${errorText}` };
+              }
+              log(`Twitter: Toast present but not an error ("${errorText}") — continuing`);
             }
 
-            // Verify: check if compose area is empty (tweet was sent)
-            const remainingText = await page.$eval(
+            // Verify: check compose area (retry once with extra wait if text still present)
+            let remainingText = await page.$eval(
               '[data-testid="tweetTextarea_0"]', el => el.textContent || ''
             ).catch(() => 'check-failed');
             if (remainingText && remainingText !== 'check-failed' && remainingText.trim().length > 0) {
-              log('Twitter: Tweet text still in compose box — tweet may not have sent');
+              // Wait longer — DOM might update slowly in headless CI
+              log('Twitter: Text still in compose box, waiting extra 5s for DOM update...');
+              await humanDelay(5000, 7000);
+              remainingText = await page.$eval(
+                '[data-testid="tweetTextarea_0"]', el => el.textContent || ''
+              ).catch(() => 'check-failed');
+            }
+            if (remainingText && remainingText !== 'check-failed' && remainingText.trim().length > 0) {
+              // Final check — also look for the "Post" button to see if it re-appeared
+              const postBtn = await page.$('[data-testid="tweetButton"]').catch(() => null);
+              const btnText = postBtn ? await page.evaluate(el => el.getAttribute('data-testid') || 'found', postBtn).catch(() => null) : null;
+              // If tweet button is still showing "tweetButton", compose is still active — truly failed
+              log(`Twitter: Compose area still has text ("${remainingText.substring(0, 40)}...") — likely failed`);
               return { success: false, error: 'Tweet text still present after clicking — likely failed' };
             }
 
@@ -2158,95 +2176,127 @@ async function pinterestLogin(page) {
     return false;
   }
 
-  try {
-    log('Pinterest: Logging in...');
-    await page.goto('https://www.pinterest.com/login/', { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await humanDelay(2000, 4000);
-
-    // Enter email
-    await humanType(page, '#email, input[type="email"], input[name="email"]', email, { delay: 100 });
-    await humanDelay(800, 1500);
-
-    // Enter password
-    await humanType(page, '#password, input[type="password"], input[name="password"]', password, { delay: 100 });
-    await humanDelay(800, 1500);
-
-    // Click login button
-    let loginClicked = await safeClick(page, 'button[type="submit"]');
-    if (!loginClicked) {
-      loginClicked = await safeClick(page, 'button[data-testid="login-btn"]');
-    }
-    if (!loginClicked) {
-      // Fallback: find button by text content
-      try {
-        const buttons = await page.$$('button');
-        for (const btn of buttons) {
-          const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
-          if (btnText.includes('log in') || btnText.includes('login')) {
-            await btn.click();
-            log(`Pinterest: Login button clicked via text match: "${btnText}"`);
-            break;
-          }
-        }
-      } catch (e) { /* ignore */ }
-    }
-    await waitForNav(page);
-    await humanDelay(3000, 5000);
-
-    // Check login — if URL still contains 'login', login failed
-    const url = page.url();
-    if (url.includes('login')) {
-      log('Pinterest: Login may have failed (still on login page)');
-      await takeScreenshot(page, 'pinterest-login-fail');
-      return false;
-    }
-
-    // Check for visible login error messages (NOT raw HTML — too many false positives)
+  // Try up to 2 attempts (Pinterest often shows captcha on first try in CI)
+  for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const visibleErrors = await page.evaluate(() => {
-        // Only check visible text in the body — not scripts, styles, or hidden elements
-        const bodyText = document.body.innerText.toLowerCase();
-        // Look for actual Pinterest error messages shown to the user
-        const errorPatterns = [
-          'incorrect password',
-          'invalid email or password',
-          'wrong password',
-          'account not found',
-          'too many attempts',
-          'your account was suspended',
-          'couldn\'t log you in',
-          'something went wrong',
-        ];
-        for (const pattern of errorPatterns) {
-          if (bodyText.includes(pattern)) return pattern;
-        }
-        return null;
+      log(`Pinterest: Login attempt ${attempt}/2...`);
+      await page.goto('https://www.pinterest.com/login/', { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await humanDelay(2000, 4000);
+
+      // Clear any pre-filled input fields first
+      await page.evaluate(() => {
+        const emailInput = document.querySelector('#email, input[type="email"], input[name="email"]');
+        const passInput = document.querySelector('#password, input[type="password"], input[name="password"]');
+        if (emailInput) { emailInput.value = ''; emailInput.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (passInput) { passInput.value = ''; passInput.dispatchEvent(new Event('input', { bubbles: true })); }
       });
-      if (visibleErrors) {
-        log(`Pinterest: Login error detected: "${visibleErrors}"`);
-        await takeScreenshot(page, 'pinterest-login-error-content');
+      await humanDelay(500, 1000);
+
+      // Enter email
+      await humanType(page, '#email, input[type="email"], input[name="email"]', email, { delay: 100 });
+      await humanDelay(800, 1500);
+
+      // Enter password
+      await humanType(page, '#password, input[type="password"], input[name="password"]', password, { delay: 100 });
+      await humanDelay(800, 1500);
+
+      // Click login button
+      let loginClicked = await safeClick(page, 'button[type="submit"]');
+      if (!loginClicked) {
+        loginClicked = await safeClick(page, 'button[data-testid="login-btn"]');
+      }
+      if (!loginClicked) {
+        // Fallback: find button by text content
+        try {
+          const buttons = await page.$$('button');
+          for (const btn of buttons) {
+            const btnText = await page.evaluate(el => el.textContent.trim().toLowerCase(), btn);
+            if (btnText.includes('log in') || btnText.includes('login')) {
+              await btn.click();
+              log(`Pinterest: Login button clicked via text match: "${btnText}"`);
+              break;
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }
+      await waitForNav(page);
+      await humanDelay(3000, 5000);
+
+      // Check login — if URL still contains 'login', retry
+      const url = page.url();
+      if (url.includes('login')) {
+        if (attempt < 2) {
+          log(`Pinterest: Still on login page (attempt ${attempt}), retrying in 5s...`);
+          await takeScreenshot(page, `pinterest-login-fail-attempt-${attempt}`);
+          await humanDelay(5000, 8000);
+          continue; // retry
+        }
+        log('Pinterest: Login may have failed (still on login page after 2 attempts)');
+        await takeScreenshot(page, 'pinterest-login-fail-final');
         return false;
       }
-    } catch (e) {
-      log(`Pinterest: Error check failed: ${e.message}`);
-    }
 
-    // Also verify we actually navigated away from login
-    const finalUrl = page.url();
-    log(`Pinterest: Post-login URL: ${finalUrl}`);
-    if (finalUrl.includes('login') || finalUrl.includes('login?')) {
-      log('Pinterest: Still on login page — login failed');
-      await takeScreenshot(page, 'pinterest-still-on-login');
+      // Check for visible login error messages
+      try {
+        const visibleErrors = await page.evaluate(() => {
+          const bodyText = document.body.innerText.toLowerCase();
+          const errorPatterns = [
+            'incorrect password',
+            'invalid email or password',
+            'wrong password',
+            'account not found',
+            'too many attempts',
+            'your account was suspended',
+            'couldn\'t log you in',
+            'something went wrong',
+          ];
+          for (const pattern of errorPatterns) {
+            if (bodyText.includes(pattern)) return pattern;
+          }
+          return null;
+        });
+        if (visibleErrors) {
+          if (attempt < 2) {
+            log(`Pinterest: Error "${visibleErrors}" (attempt ${attempt}), retrying...`);
+            await humanDelay(5000, 8000);
+            continue; // retry
+          }
+          log(`Pinterest: Login error detected: "${visibleErrors}"`);
+          await takeScreenshot(page, 'pinterest-login-error-content');
+          return false;
+        }
+      } catch (e) {
+        log(`Pinterest: Error check failed: ${e.message}`);
+      }
+
+      // Also verify we actually navigated away from login
+      const finalUrl = page.url();
+      log(`Pinterest: Post-login URL: ${finalUrl}`);
+      if (finalUrl.includes('login') || finalUrl.includes('login?')) {
+        if (attempt < 2) {
+          log(`Pinterest: URL still has login (attempt ${attempt}), retrying...`);
+          await humanDelay(5000, 8000);
+          continue;
+        }
+        log('Pinterest: Still on login page — login failed');
+        await takeScreenshot(page, 'pinterest-still-on-login');
+        return false;
+      }
+
+      log('Pinterest: Login successful!');
+      return true;
+    } catch (e) {
+      if (attempt < 2) {
+        log(`Pinterest: Login attempt ${attempt} threw error: ${e.message} — retrying...`);
+        await humanDelay(3000, 5000);
+        continue;
+      }
+      log(`Pinterest login error: ${e.message}`);
+      await takeScreenshot(page, 'pinterest-login-error');
       return false;
     }
-
-    log('Pinterest: Login successful!');
-    return true;
-  } catch (e) {
-    log(`Pinterest login error: ${e.message}`);
-    await takeScreenshot(page, 'pinterest-login-error');
-    return false;
   }
+  return false;
 }
 
 // Generate a Pinterest pin image using canvas template approach (works in GH Actions — no z-ai CLI needed)
