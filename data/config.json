@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "created": "2026-05-09",
-  "last_evolution": "2026-05-10",
+  "last_evolution": "2026-05-17",
   "site": {
     "url": "https://bgremoverdigital.craftedmindss.com",
     "brand_name": "BG Remover Digital",
@@ -13,8 +13,8 @@
     "start_date": "2026-05-09",
     "price_per_user": 9,
     "current_paid_users": 3,
-    "current_week": 2,
-    "current_phase": "week2_walking"
+    "current_week": 3,
+    "current_phase": "week3_running"
   },
   "mitigation": {
     "week1": {
