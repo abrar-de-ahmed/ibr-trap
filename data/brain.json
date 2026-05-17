@@ -563,7 +563,7 @@
     }
   },
   "backlinks": {
-    "total_created": 6,
+    "total_created": 12,
     "total_indexed": 0,
     "platforms": {
       "medium": {
@@ -573,7 +573,7 @@
         "status": "active"
       },
       "blogger": {
-        "created": 1,
+        "created": 2,
         "indexed": 0,
         "rank_impact": 0,
         "status": "active"
@@ -585,7 +585,7 @@
         "status": "active"
       },
       "devto": {
-        "created": 1,
+        "created": 3,
         "indexed": 0,
         "rank_impact": 0,
         "status": "active"
@@ -603,7 +603,7 @@
         "status": "active"
       }
     },
-    "directories_submitted": 3,
+    "directories_submitted": 6,
     "directories_approved": 0
   },
   "paid_users": 3,
