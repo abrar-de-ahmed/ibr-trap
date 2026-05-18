@@ -249,7 +249,7 @@
   },
   "social": {
     "reddit": {
-      "posts": 18,
+      "posts": 19,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "paused",
@@ -258,14 +258,14 @@
       "posted_count": 1
     },
     "twitter": {
-      "posts": 10,
+      "posts": 11,
       "avg_engagement": 0,
       "best_time": null,
       "status": "active",
       "posted_count": 1
     },
     "pinterest": {
-      "pins": 9,
+      "pins": 10,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
@@ -410,6 +410,32 @@
           "is_experiment": false,
           "post_url": null
         }
+      ],
+      "2026-05-18": [
+        {
+          "platform": "reddit",
+          "date": "2026-05-18",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "twitter",
+          "date": "2026-05-18",
+          "title": "Client-side AI background removal that actually works. No upload, no account, no watermarks. Just results. Try it free -> https://bgremoverdigital.craftedmindss.com\n#NoSignup #FreeTool",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-05-18",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        }
       ]
     },
     "engagement": {
@@ -538,11 +564,35 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-05-18": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 0,
+          "follows": 0,
+          "retweets": 0,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
       {
         "date": "2026-05-11",
+        "reddit": 0,
+        "twitter": 0,
+        "pinterest": 0
+      },
+      {
+        "date": "2026-05-18",
         "reddit": 0,
         "twitter": 0,
         "pinterest": 0
@@ -552,17 +602,17 @@
       "reddit": {
         "created": true,
         "username": "AbrardeAhmed",
-        "last_active": "2026-05-17"
+        "last_active": "2026-05-18"
       },
       "twitter": {
         "created": true,
         "username": "bg_remover",
-        "last_active": "2026-05-17"
+        "last_active": "2026-05-18"
       },
       "pinterest": {
         "created": true,
         "username": "BGRemoverPro",
-        "last_active": "2026-05-17"
+        "last_active": "2026-05-18"
       },
       "medium": {
         "created": false,
