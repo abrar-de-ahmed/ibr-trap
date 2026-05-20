@@ -33,7 +33,24 @@
       ],
       "created_date": "2026-05-18",
       "status": "generated"
+    },
+    {
+      "id": 3,
+      "title": "AI Background Removal: How It Works Under the Hood",
+      "title_variant_a": "AI Background Removal: How It Works Under the Hood",
+      "title_variant_b": "8 Tips for How It Works Under the Hood | BG Remover Digital",
+      "active_title": "A",
+      "topic": "AI Background Removal: How It Works Under the Hood",
+      "slug": "ai-background-removal-how-it-works",
+      "word_count": 781,
+      "keywords": [
+        "AI background removal",
+        "technology",
+        "how it works"
+      ],
+      "created_date": "2026-05-20",
+      "status": "generated"
     }
   ],
-  "next_post_id": 3
+  "next_post_id": 4
 }
