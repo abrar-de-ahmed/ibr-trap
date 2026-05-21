@@ -257,7 +257,7 @@
   },
   "social": {
     "reddit": {
-      "posts": 21,
+      "posts": 22,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "paused",
@@ -266,14 +266,14 @@
       "posted_count": 1
     },
     "twitter": {
-      "posts": 12,
+      "posts": 13,
       "avg_engagement": 0,
       "best_time": null,
       "status": "active",
       "posted_count": 1
     },
     "pinterest": {
-      "pins": 12,
+      "pins": 13,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
@@ -488,6 +488,32 @@
           "is_experiment": false,
           "post_url": null
         }
+      ],
+      "2026-05-21": [
+        {
+          "platform": "reddit",
+          "date": "2026-05-21",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "twitter",
+          "date": "2026-05-21",
+          "title": "Pro tip: Clean white backgrounds on product photos can boost sales by up to 30%. Remove backgrounds free -> https://bgremoverdigital.craftedmindss.com #SmallBusiness #PhotographyTip\n#BackgroundRemover #Photography #PhotoEditing",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-05-21",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        }
       ]
     },
     "engagement": {
@@ -670,6 +696,24 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-05-21": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 0,
+          "follows": 0,
+          "retweets": 0,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
@@ -690,17 +734,17 @@
       "reddit": {
         "created": true,
         "username": "AbrardeAhmed",
-        "last_active": "2026-05-20"
+        "last_active": "2026-05-21"
       },
       "twitter": {
         "created": true,
         "username": "bg_remover",
-        "last_active": "2026-05-20"
+        "last_active": "2026-05-21"
       },
       "pinterest": {
         "created": true,
         "username": "BGRemoverPro",
-        "last_active": "2026-05-20"
+        "last_active": "2026-05-21"
       },
       "medium": {
         "created": false,
