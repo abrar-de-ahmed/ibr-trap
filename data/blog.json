@@ -50,7 +50,24 @@
       ],
       "created_date": "2026-05-20",
       "status": "generated"
+    },
+    {
+      "id": 4,
+      "title": "How to Make Product Photos with Transparent Backgrounds",
+      "title_variant_a": "How to Make Product Photos with Transparent Backgrounds",
+      "title_variant_b": "5 Tips for How to Make Product Photos with Transparent Backgrounds | BG Remover Digital",
+      "active_title": "A",
+      "topic": "How to Make Product Photos with Transparent Backgrounds",
+      "slug": "product-photos-transparent-backgrounds",
+      "word_count": 739,
+      "keywords": [
+        "product photography",
+        "transparent background",
+        "ecommerce"
+      ],
+      "created_date": "2026-05-22",
+      "status": "generated"
     }
   ],
-  "next_post_id": 4
+  "next_post_id": 5
 }
