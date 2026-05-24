@@ -877,11 +877,11 @@
     }
   },
   "backlinks": {
-    "total_created": 12,
+    "total_created": 18,
     "total_indexed": 0,
     "platforms": {
       "medium": {
-        "created": 0,
+        "created": 2,
         "indexed": 0,
         "rank_impact": 0,
         "status": "active"
@@ -893,7 +893,7 @@
         "status": "active"
       },
       "tumblr": {
-        "created": 1,
+        "created": 2,
         "indexed": 0,
         "rank_impact": 0,
         "status": "active"
@@ -917,7 +917,7 @@
         "status": "active"
       }
     },
-    "directories_submitted": 6,
+    "directories_submitted": 9,
     "directories_approved": 0
   },
   "paid_users": 3,
