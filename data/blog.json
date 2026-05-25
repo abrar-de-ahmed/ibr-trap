@@ -67,7 +67,24 @@
       ],
       "created_date": "2026-05-22",
       "status": "generated"
+    },
+    {
+      "id": 5,
+      "title": "Background Removal for E-commerce: Complete Guide",
+      "title_variant_a": "Background Removal for E-commerce: Complete Guide",
+      "title_variant_b": "9 Tips for Complete Guide | BG Remover Digital",
+      "active_title": "A",
+      "topic": "Background Removal for E-commerce: Complete Guide",
+      "slug": "ecommerce-background-removal-guide",
+      "word_count": 778,
+      "keywords": [
+        "ecommerce",
+        "background removal",
+        "online store"
+      ],
+      "created_date": "2026-05-25",
+      "status": "generated"
     }
   ],
-  "next_post_id": 5
+  "next_post_id": 6
 }
