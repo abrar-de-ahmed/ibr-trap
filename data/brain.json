@@ -273,7 +273,7 @@
   },
   "social": {
     "reddit": {
-      "posts": 27,
+      "posts": 28,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "paused",
@@ -282,14 +282,14 @@
       "posted_count": 1
     },
     "twitter": {
-      "posts": 15,
+      "posts": 16,
       "avg_engagement": 0,
       "best_time": null,
       "status": "active",
       "posted_count": 1
     },
     "pinterest": {
-      "pins": 17,
+      "pins": 18,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
@@ -628,6 +628,32 @@
           "is_experiment": false,
           "post_url": null
         }
+      ],
+      "2026-05-28": [
+        {
+          "platform": "reddit",
+          "date": "2026-05-28",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "twitter",
+          "date": "2026-05-28",
+          "title": "Built a background remover that runs 100% in your browser. No server. No signup. No catch. Works offline too. -> https://bgremoverdigital.craftedmindss.com #BackgroundRemover #FreeTool\n#NoSignup #FreeTool",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-05-28",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        }
       ]
     },
     "engagement": {
@@ -918,6 +944,24 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-05-28": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 0,
+          "follows": 0,
+          "retweets": 0,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
@@ -944,17 +988,17 @@
       "reddit": {
         "created": true,
         "username": "AbrardeAhmed",
-        "last_active": "2026-05-27"
+        "last_active": "2026-05-28"
       },
       "twitter": {
         "created": true,
         "username": "bg_remover",
-        "last_active": "2026-05-27"
+        "last_active": "2026-05-28"
       },
       "pinterest": {
         "created": true,
         "username": "BGRemoverPro",
-        "last_active": "2026-05-27"
+        "last_active": "2026-05-28"
       },
       "medium": {
         "created": false,
