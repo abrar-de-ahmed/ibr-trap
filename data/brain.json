@@ -281,7 +281,7 @@
   },
   "social": {
     "reddit": {
-      "posts": 28,
+      "posts": 29,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "paused",
@@ -297,18 +297,18 @@
       "posted_count": 1
     },
     "pinterest": {
-      "pins": 18,
+      "pins": 19,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
-      "posted_count": 3
+      "posted_count": 4
     },
     "medium": {
       "posts": 0,
       "avg_reads": 0,
       "status": "paused"
     },
-    "total_posts": 5,
+    "total_posts": 6,
     "recent_posts": {
       "2026-05-10": [
         {
@@ -662,6 +662,24 @@
           "is_experiment": false,
           "post_url": null
         }
+      ],
+      "2026-05-29": [
+        {
+          "platform": "reddit",
+          "date": "2026-05-29",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-05-29",
+          "title": "ID Photo Background Remover - Free Online Tool",
+          "status": "posted",
+          "is_experiment": false,
+          "post_url": null
+        }
       ]
     },
     "engagement": {
@@ -970,6 +988,24 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-05-29": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 6,
+          "follows": 0,
+          "retweets": 1,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
@@ -996,17 +1032,17 @@
       "reddit": {
         "created": true,
         "username": "AbrardeAhmed",
-        "last_active": "2026-05-28"
+        "last_active": "2026-05-29"
       },
       "twitter": {
         "created": true,
         "username": "bg_remover",
-        "last_active": "2026-05-28"
+        "last_active": "2026-05-29"
       },
       "pinterest": {
         "created": true,
         "username": "BGRemoverPro",
-        "last_active": "2026-05-28"
+        "last_active": "2026-05-29"
       },
       "medium": {
         "created": false,
