@@ -84,7 +84,24 @@
       ],
       "created_date": "2026-05-25",
       "status": "generated"
+    },
+    {
+      "id": 6,
+      "title": "Remove Background from Jewelry Photos: Tips and Tools",
+      "title_variant_a": "Remove Background from Jewelry Photos: Tips and Tools",
+      "title_variant_b": "5 Tips for Tips and Tools | BG Remover Digital",
+      "active_title": "A",
+      "topic": "Remove Background from Jewelry Photos: Tips and Tools",
+      "slug": "jewelry-background-removal-tips",
+      "word_count": 736,
+      "keywords": [
+        "jewelry",
+        "background removal",
+        "product photography tips"
+      ],
+      "created_date": "2026-05-29",
+      "status": "generated"
     }
   ],
-  "next_post_id": 6
+  "next_post_id": 7
 }
