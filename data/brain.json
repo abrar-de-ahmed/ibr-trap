@@ -1115,7 +1115,7 @@
     }
   },
   "backlinks": {
-    "total_created": 18,
+    "total_created": 23,
     "total_indexed": 0,
     "platforms": {
       "medium": {
@@ -1131,13 +1131,13 @@
         "status": "active"
       },
       "tumblr": {
-        "created": 2,
+        "created": 3,
         "indexed": 0,
         "rank_impact": 0,
         "status": "active"
       },
       "devto": {
-        "created": 3,
+        "created": 4,
         "indexed": 0,
         "rank_impact": 0,
         "status": "active"
@@ -1155,7 +1155,7 @@
         "status": "active"
       }
     },
-    "directories_submitted": 9,
+    "directories_submitted": 12,
     "directories_approved": 0
   },
   "paid_users": 3,
