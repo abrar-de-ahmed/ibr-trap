@@ -101,7 +101,24 @@
       ],
       "created_date": "2026-05-29",
       "status": "generated"
+    },
+    {
+      "id": 7,
+      "title": "Amazon Product Image Requirements: Background Removal Guide",
+      "title_variant_a": "Amazon Product Image Requirements: Background Removal Guide",
+      "title_variant_b": "5 Tips for Background Removal Guide | BG Remover Digital",
+      "active_title": "A",
+      "topic": "Amazon Product Image Requirements: Background Removal Guide",
+      "slug": "amazon-image-requirements-guide",
+      "word_count": 802,
+      "keywords": [
+        "Amazon",
+        "product images",
+        "white background"
+      ],
+      "created_date": "2026-06-01",
+      "status": "generated"
     }
   ],
-  "next_post_id": 7
+  "next_post_id": 8
 }

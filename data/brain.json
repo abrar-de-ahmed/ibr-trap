@@ -205,7 +205,7 @@
   },
   "content": {
     "blog_posts": {
-      "total": 6,
+      "total": 7,
       "ranking_keywords": 0,
       "best_topic": null
     },
@@ -227,7 +227,7 @@
       }
     },
     "best_blog_length": "1200",
-    "faq_sections_added": 30,
+    "faq_sections_added": 35,
     "title_ab_tests": {
       "remove-backgrounds-without-photoshop": {
         "variant_a": "How to Remove Image Backgrounds Without Photoshop",
@@ -274,6 +274,14 @@
         "variant_b": "5 Tips for Tips and Tools | BG Remover Digital",
         "active": "A",
         "created": "2026-05-29",
+        "impressions_a": 0,
+        "impressions_b": 0
+      },
+      "amazon-image-requirements-guide": {
+        "variant_a": "Amazon Product Image Requirements: Background Removal Guide",
+        "variant_b": "5 Tips for Background Removal Guide | BG Remover Digital",
+        "active": "A",
+        "created": "2026-06-01",
         "impressions_a": 0,
         "impressions_b": 0
       }
