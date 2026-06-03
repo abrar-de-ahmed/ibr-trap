@@ -118,7 +118,24 @@
       ],
       "created_date": "2026-06-01",
       "status": "generated"
+    },
+    {
+      "id": 8,
+      "title": "Etsy Shop Success: How Clean Backgrounds Boost Sales",
+      "title_variant_a": "Etsy Shop Success: How Clean Backgrounds Boost Sales",
+      "title_variant_b": "9 Tips for How Clean Backgrounds Boost Sales | BG Remover Digital",
+      "active_title": "A",
+      "topic": "Etsy Shop Success: How Clean Backgrounds Boost Sales",
+      "slug": "etsy-shop-clean-backgrounds",
+      "word_count": 737,
+      "keywords": [
+        "Etsy",
+        "background removal",
+        "shop success"
+      ],
+      "created_date": "2026-06-03",
+      "status": "generated"
     }
   ],
-  "next_post_id": 8
+  "next_post_id": 9
 }
