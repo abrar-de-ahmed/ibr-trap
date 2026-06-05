@@ -135,7 +135,24 @@
       ],
       "created_date": "2026-06-03",
       "status": "generated"
+    },
+    {
+      "id": 9,
+      "title": "Free vs Paid Background Removers: What You Actually Get",
+      "title_variant_a": "Free vs Paid Background Removers: What You Actually Get",
+      "title_variant_b": "5 Tips for What You Actually Get | BG Remover Digital",
+      "active_title": "A",
+      "topic": "Free vs Paid Background Removers: What You Actually Get",
+      "slug": "free-vs-paid-background-removers",
+      "word_count": 835,
+      "keywords": [
+        "free vs paid",
+        "background remover comparison",
+        "pricing"
+      ],
+      "created_date": "2026-06-05",
+      "status": "generated"
     }
   ],
-  "next_post_id": 9
+  "next_post_id": 10
 }

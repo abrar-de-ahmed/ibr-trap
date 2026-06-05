@@ -205,7 +205,7 @@
   },
   "content": {
     "blog_posts": {
-      "total": 8,
+      "total": 9,
       "ranking_keywords": 0,
       "best_topic": null
     },
@@ -227,7 +227,7 @@
       }
     },
     "best_blog_length": "1200",
-    "faq_sections_added": 40,
+    "faq_sections_added": 45,
     "title_ab_tests": {
       "remove-backgrounds-without-photoshop": {
         "variant_a": "How to Remove Image Backgrounds Without Photoshop",
@@ -290,6 +290,14 @@
         "variant_b": "9 Tips for How Clean Backgrounds Boost Sales | BG Remover Digital",
         "active": "A",
         "created": "2026-06-03",
+        "impressions_a": 0,
+        "impressions_b": 0
+      },
+      "free-vs-paid-background-removers": {
+        "variant_a": "Free vs Paid Background Removers: What You Actually Get",
+        "variant_b": "5 Tips for What You Actually Get | BG Remover Digital",
+        "active": "A",
+        "created": "2026-06-05",
         "impressions_a": 0,
         "impressions_b": 0
       }
