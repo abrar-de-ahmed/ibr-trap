@@ -152,7 +152,24 @@
       ],
       "created_date": "2026-06-05",
       "status": "generated"
+    },
+    {
+      "id": 10,
+      "title": "How to Remove Backgrounds from Batch Images Efficiently",
+      "title_variant_a": "How to Remove Backgrounds from Batch Images Efficiently",
+      "title_variant_b": "5 Tips for How to Remove Backgrounds from Batch Images Efficiently | BG Remover Digital",
+      "active_title": "A",
+      "topic": "How to Remove Backgrounds from Batch Images Efficiently",
+      "slug": "batch-background-removal",
+      "word_count": 736,
+      "keywords": [
+        "batch processing",
+        "efficient",
+        "productivity"
+      ],
+      "created_date": "2026-06-08",
+      "status": "generated"
     }
   ],
-  "next_post_id": 10
+  "next_post_id": 11
 }
