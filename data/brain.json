@@ -313,7 +313,7 @@
   },
   "social": {
     "reddit": {
-      "posts": 38,
+      "posts": 39,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "paused",
@@ -826,6 +826,16 @@
           "is_experiment": false,
           "post_url": null
         }
+      ],
+      "2026-06-08": [
+        {
+          "platform": "reddit",
+          "date": "2026-06-08",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        }
       ]
     },
     "engagement": {
@@ -1314,6 +1324,24 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-06-08": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 6,
+          "follows": 4,
+          "retweets": 1,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
@@ -1340,23 +1368,29 @@
         "reddit": 0,
         "twitter": 0,
         "pinterest": 0
+      },
+      {
+        "date": "2026-06-08",
+        "reddit": 0,
+        "twitter": 4,
+        "pinterest": 0
       }
     ],
     "account_status": {
       "reddit": {
         "created": true,
         "username": "AbrardeAhmed",
-        "last_active": "2026-06-07"
+        "last_active": "2026-06-08"
       },
       "twitter": {
         "created": true,
         "username": "bg_remover",
-        "last_active": "2026-06-07"
+        "last_active": "2026-06-08"
       },
       "pinterest": {
         "created": true,
         "username": "BGRemoverPro",
-        "last_active": "2026-06-07"
+        "last_active": "2026-06-08"
       },
       "medium": {
         "created": false,
