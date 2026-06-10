@@ -169,7 +169,24 @@
       ],
       "created_date": "2026-06-08",
       "status": "generated"
+    },
+    {
+      "id": 11,
+      "title": "10 Creative Uses for Transparent Background Images",
+      "title_variant_a": "10 Creative Uses for Transparent Background Images",
+      "title_variant_b": "5 Tips for 10 Creative Uses for Transparent Background Images | BG Remover Digital",
+      "active_title": "A",
+      "topic": "10 Creative Uses for Transparent Background Images",
+      "slug": "creative-uses-transparent-images",
+      "word_count": 702,
+      "keywords": [
+        "transparent images",
+        "creative uses",
+        "design tips"
+      ],
+      "created_date": "2026-06-10",
+      "status": "generated"
     }
   ],
-  "next_post_id": 11
+  "next_post_id": 12
 }
