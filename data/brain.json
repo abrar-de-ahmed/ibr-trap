@@ -321,7 +321,7 @@
   },
   "social": {
     "reddit": {
-      "posts": 41,
+      "posts": 42,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "paused",
@@ -330,14 +330,14 @@
       "posted_count": 1
     },
     "twitter": {
-      "posts": 17,
+      "posts": 18,
       "avg_engagement": 0,
       "best_time": null,
       "status": "active",
       "posted_count": 1
     },
     "pinterest": {
-      "pins": 21,
+      "pins": 22,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
@@ -859,6 +859,32 @@
         {
           "platform": "reddit",
           "date": "2026-06-10",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        }
+      ],
+      "2026-06-11": [
+        {
+          "platform": "reddit",
+          "date": "2026-06-11",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "twitter",
+          "date": "2026-06-11",
+          "title": "POV: You just discovered you can remove backgrounds for free in your browser without any signup -> https://bgremoverdigital.craftedmindss.com\n#BackgroundRemover #FreeTool",
+          "status": "failed",
+          "is_experiment": true,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-06-11",
           "title": "",
           "status": "failed",
           "is_experiment": false,
@@ -1406,6 +1432,24 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-06-11": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 0,
+          "follows": 0,
+          "retweets": 0,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
@@ -1444,17 +1488,17 @@
       "reddit": {
         "created": true,
         "username": "AbrardeAhmed",
-        "last_active": "2026-06-10"
+        "last_active": "2026-06-11"
       },
       "twitter": {
         "created": true,
         "username": "bg_remover",
-        "last_active": "2026-06-10"
+        "last_active": "2026-06-11"
       },
       "pinterest": {
         "created": true,
         "username": "BGRemoverPro",
-        "last_active": "2026-06-10"
+        "last_active": "2026-06-11"
       },
       "medium": {
         "created": false,
