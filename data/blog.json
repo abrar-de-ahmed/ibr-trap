@@ -186,7 +186,25 @@
       ],
       "created_date": "2026-06-10",
       "status": "generated"
+    },
+    {
+      "id": 12,
+      "title": "Background Removal for Social Media: Instagram, Pinterest, Twitter",
+      "title_variant_a": "Background Removal for Social Media: Instagram, Pinterest, Twitter",
+      "title_variant_b": "8 Tips for Instagram, Pinterest, Twitter | BG Remover Digital",
+      "active_title": "A",
+      "topic": "Background Removal for Social Media: Instagram, Pinterest, Twitter",
+      "slug": "social-media-background-removal",
+      "word_count": 734,
+      "keywords": [
+        "social media",
+        "Instagram",
+        "Pinterest",
+        "Twitter"
+      ],
+      "created_date": "2026-06-12",
+      "status": "generated"
     }
   ],
-  "next_post_id": 12
+  "next_post_id": 13
 }

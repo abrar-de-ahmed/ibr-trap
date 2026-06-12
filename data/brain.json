@@ -205,7 +205,7 @@
   },
   "content": {
     "blog_posts": {
-      "total": 11,
+      "total": 12,
       "ranking_keywords": 0,
       "best_topic": null
     },
@@ -227,7 +227,7 @@
       }
     },
     "best_blog_length": "1200",
-    "faq_sections_added": 55,
+    "faq_sections_added": 60,
     "title_ab_tests": {
       "remove-backgrounds-without-photoshop": {
         "variant_a": "How to Remove Image Backgrounds Without Photoshop",
@@ -314,6 +314,14 @@
         "variant_b": "5 Tips for 10 Creative Uses for Transparent Background Images | BG Remover Digital",
         "active": "A",
         "created": "2026-06-10",
+        "impressions_a": 0,
+        "impressions_b": 0
+      },
+      "social-media-background-removal": {
+        "variant_a": "Background Removal for Social Media: Instagram, Pinterest, Twitter",
+        "variant_b": "8 Tips for Instagram, Pinterest, Twitter | BG Remover Digital",
+        "active": "A",
+        "created": "2026-06-12",
         "impressions_a": 0,
         "impressions_b": 0
       }
