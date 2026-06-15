@@ -204,7 +204,24 @@
       ],
       "created_date": "2026-06-12",
       "status": "generated"
+    },
+    {
+      "id": 13,
+      "title": "Background Removal for Real Estate Photography",
+      "title_variant_a": "Background Removal for Real Estate Photography",
+      "title_variant_b": "8 Tips for Background Removal for Real Estate Photography | BG Remover Digital",
+      "active_title": "A",
+      "topic": "Background Removal for Real Estate Photography",
+      "slug": "real-estate-background-removal",
+      "word_count": 739,
+      "keywords": [
+        "real estate",
+        "property photos",
+        "background removal"
+      ],
+      "created_date": "2026-06-15",
+      "status": "generated"
     }
   ],
-  "next_post_id": 13
+  "next_post_id": 14
 }
