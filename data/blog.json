@@ -221,7 +221,24 @@
       ],
       "created_date": "2026-06-15",
       "status": "generated"
+    },
+    {
+      "id": 14,
+      "title": "How to Remove Background from Passport Photos at Home",
+      "title_variant_a": "How to Remove Background from Passport Photos at Home",
+      "title_variant_b": "8 Tips for How to Remove Background from Passport Photos at Home | BG Remover Digital",
+      "active_title": "A",
+      "topic": "How to Remove Background from Passport Photos at Home",
+      "slug": "passport-photo-background-removal",
+      "word_count": 779,
+      "keywords": [
+        "passport photo",
+        "ID photo",
+        "background removal"
+      ],
+      "created_date": "2026-06-17",
+      "status": "generated"
     }
   ],
-  "next_post_id": 14
+  "next_post_id": 15
 }
