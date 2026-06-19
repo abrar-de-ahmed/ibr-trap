@@ -205,7 +205,7 @@
   },
   "content": {
     "blog_posts": {
-      "total": 14,
+      "total": 15,
       "ranking_keywords": 0,
       "best_topic": null
     },
@@ -227,7 +227,7 @@
       }
     },
     "best_blog_length": "1200",
-    "faq_sections_added": 70,
+    "faq_sections_added": 75,
     "title_ab_tests": {
       "remove-backgrounds-without-photoshop": {
         "variant_a": "How to Remove Image Backgrounds Without Photoshop",
@@ -338,6 +338,14 @@
         "variant_b": "8 Tips for How to Remove Background from Passport Photos at Home | BG Remover Digital",
         "active": "A",
         "created": "2026-06-17",
+        "impressions_a": 0,
+        "impressions_b": 0
+      },
+      "science-ai-background-removal": {
+        "variant_a": "The Science Behind AI Background Removal Technology",
+        "variant_b": "7 Tips for The Science Behind AI Background Removal Technology | BG Remover Digital",
+        "active": "A",
+        "created": "2026-06-19",
         "impressions_a": 0,
         "impressions_b": 0
       }

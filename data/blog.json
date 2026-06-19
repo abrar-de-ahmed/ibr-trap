@@ -238,7 +238,24 @@
       ],
       "created_date": "2026-06-17",
       "status": "generated"
+    },
+    {
+      "id": 15,
+      "title": "The Science Behind AI Background Removal Technology",
+      "title_variant_a": "The Science Behind AI Background Removal Technology",
+      "title_variant_b": "7 Tips for The Science Behind AI Background Removal Technology | BG Remover Digital",
+      "active_title": "A",
+      "topic": "The Science Behind AI Background Removal Technology",
+      "slug": "science-ai-background-removal",
+      "word_count": 732,
+      "keywords": [
+        "AI technology",
+        "neural networks",
+        "computer vision"
+      ],
+      "created_date": "2026-06-19",
+      "status": "generated"
     }
   ],
-  "next_post_id": 15
+  "next_post_id": 16
 }
