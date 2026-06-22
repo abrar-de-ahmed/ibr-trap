@@ -255,7 +255,24 @@
       ],
       "created_date": "2026-06-19",
       "status": "generated"
+    },
+    {
+      "id": 16,
+      "title": "Transparent PNG vs White Background: When to Use Which",
+      "title_variant_a": "Transparent PNG vs White Background: When to Use Which",
+      "title_variant_b": "6 Tips for When to Use Which | BG Remover Digital",
+      "active_title": "A",
+      "topic": "Transparent PNG vs White Background: When to Use Which",
+      "slug": "transparent-png-vs-white-background",
+      "word_count": 745,
+      "keywords": [
+        "transparent PNG",
+        "white background",
+        "when to use"
+      ],
+      "created_date": "2026-06-22",
+      "status": "generated"
     }
   ],
-  "next_post_id": 16
+  "next_post_id": 17
 }

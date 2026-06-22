@@ -205,7 +205,7 @@
   },
   "content": {
     "blog_posts": {
-      "total": 15,
+      "total": 16,
       "ranking_keywords": 0,
       "best_topic": null
     },
@@ -227,7 +227,7 @@
       }
     },
     "best_blog_length": "1200",
-    "faq_sections_added": 75,
+    "faq_sections_added": 80,
     "title_ab_tests": {
       "remove-backgrounds-without-photoshop": {
         "variant_a": "How to Remove Image Backgrounds Without Photoshop",
@@ -346,6 +346,14 @@
         "variant_b": "7 Tips for The Science Behind AI Background Removal Technology | BG Remover Digital",
         "active": "A",
         "created": "2026-06-19",
+        "impressions_a": 0,
+        "impressions_b": 0
+      },
+      "transparent-png-vs-white-background": {
+        "variant_a": "Transparent PNG vs White Background: When to Use Which",
+        "variant_b": "6 Tips for When to Use Which | BG Remover Digital",
+        "active": "A",
+        "created": "2026-06-22",
         "impressions_a": 0,
         "impressions_b": 0
       }
