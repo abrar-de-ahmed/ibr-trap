@@ -4,13 +4,9 @@
   "lastKnownHashes": {
     "homepage": "b1c4435edfbdec01f40e23ae995a6e8fcc60e31a666aaf513eef0b05484e2f0b",
     "homepageStable": "b1c4435edfbdec01f40e23ae995a6e8fcc60e31a666aaf513eef0b05484e2f0b",
-    "homepageFull": "167429272da84f9c6dbfbac89a4793c077271b8bf1a346b7749d629476295ff3"
+    "homepageFull": "48862d5a0412589d4f251394134981c6eeb93c17e34b51c5cd92623c3227eca3"
   },
   "responseTimeHistory": [
-    {
-      "time": "2026-05-10T08:02:55.340Z",
-      "ms": 151
-    },
     {
       "time": "2026-05-10T13:07:35.632Z",
       "ms": 216
@@ -678,13 +674,17 @@
     {
       "time": "2026-06-22T20:39:19.004Z",
       "ms": 373
+    },
+    {
+      "time": "2026-06-23T02:46:27.227Z",
+      "ms": 172
     }
   ],
   "alerts": [],
-  "checkCount": 166,
+  "checkCount": 167,
   "firstCheck": "2026-05-11",
   "bravoOverride": null,
-  "lastCheck": "2026-06-22",
+  "lastCheck": "2026-06-23",
   "v2MigrationDate": "2026-05-10",
   "v2MigrationNote": "Reset from v1 — all previous alerts were false positives (Content Tampering: Next.js build hash changes, Injected Code: GA4 not whitelisted, Site Unreachable: ghost.findings crash bug). See commit for details.",
   "v3MigrationDate": "2026-05-11",
