@@ -272,7 +272,24 @@
       ],
       "created_date": "2026-06-22",
       "status": "generated"
+    },
+    {
+      "id": 17,
+      "title": "Background Removal for Graphic Designers: A Complete Workflow",
+      "title_variant_a": "Background Removal for Graphic Designers: A Complete Workflow",
+      "title_variant_b": "8 Tips for A Complete Workflow | BG Remover Digital",
+      "active_title": "A",
+      "topic": "Background Removal for Graphic Designers: A Complete Workflow",
+      "slug": "graphic-designer-background-removal",
+      "word_count": 727,
+      "keywords": [
+        "graphic design",
+        "workflow",
+        "designer tips"
+      ],
+      "created_date": "2026-06-24",
+      "status": "generated"
     }
   ],
-  "next_post_id": 17
+  "next_post_id": 18
 }
