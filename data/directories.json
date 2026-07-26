@@ -1190,6 +1190,73 @@
       "approved_date": null,
       "backlink_url": null,
       "notes": "Target platform: hashnode.dev. Write 600-800 words following the outline. Include natural backlink in Introduction and conclusion."
+    },
+    {
+      "id": 46,
+      "type": "web20",
+      "platform": "tumblr.com",
+      "name": "Background Removal for Social Media: A Creator's Complete Guide",
+      "topic": "Social media image editing",
+      "submission_url": "https://tumblr.com",
+      "site_url": "https://bgremoverdigital.craftedmindss.com",
+      "blog_title": "Background Removal for Social Media: A Creator's Complete Guide",
+      "word_count_range": "500-700",
+      "outline": [
+        "Introduction: Visual content dominates social media",
+        "Why removing backgrounds boosts engagement",
+        "Instagram: Creating thumb-stopping product posts",
+        "Pinterest: Clean images get more saves",
+        "Twitter/X: Stand out in the timeline",
+        "YouTube: Custom thumbnails that pop",
+        "Free tools for instant background removal",
+        "Conclusion with link to BG Remover Digital"
+      ],
+      "backlink_placement": "Free tools section and conclusion",
+      "keywords": [
+        "social media",
+        "background removal",
+        "content creator",
+        "Instagram",
+        "Pinterest"
+      ],
+      "status": "prepared",
+      "submitted_date": "2026-07-26",
+      "approved_date": null,
+      "backlink_url": null,
+      "notes": "Target platform: tumblr.com. Write 500-700 words following the outline. Include natural backlink in Free tools section and conclusion."
+    },
+    {
+      "id": 47,
+      "type": "web20",
+      "platform": "hashnode.dev",
+      "name": "Building an AI-Powered Background Remover: A Developer's Journey",
+      "topic": "Technical deep-dive",
+      "submission_url": "https://hashnode.dev",
+      "site_url": "https://bgremoverdigital.craftedmindss.com",
+      "blog_title": "Building an AI-Powered Background Remover: A Developer's Journey",
+      "word_count_range": "600-800",
+      "outline": [
+        "Introduction: The idea behind BG Remover Digital",
+        "Choosing the right AI model for background removal",
+        "Browser-based AI: Running models in the client (WebAssembly, TensorFlow.js)",
+        "Performance optimization for real-time processing",
+        "UX design: Making it simple for non-technical users",
+        "Handling edge cases (complex backgrounds, transparent objects)",
+        "Lessons learned and future plans",
+        "Try it yourself: link to the live tool"
+      ],
+      "backlink_placement": "Introduction and conclusion",
+      "keywords": [
+        "AI development",
+        "background removal",
+        "TensorFlow.js",
+        "web development"
+      ],
+      "status": "prepared",
+      "submitted_date": "2026-07-26",
+      "approved_date": null,
+      "backlink_url": null,
+      "notes": "Target platform: hashnode.dev. Write 600-800 words following the outline. Include natural backlink in Introduction and conclusion."
     }
   ],
   "total_submitted": 0,
