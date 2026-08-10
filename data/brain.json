@@ -369,7 +369,7 @@
   },
   "social": {
     "reddit": {
-      "posts": 100,
+      "posts": 101,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "active",
@@ -383,7 +383,7 @@
       "posted_count": 1
     },
     "pinterest": {
-      "pins": 53,
+      "pins": 54,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
@@ -396,24 +396,6 @@
     },
     "total_posts": 6,
     "recent_posts": {
-      "2026-05-11": [
-        {
-          "platform": "twitter",
-          "date": "2026-05-11",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        },
-        {
-          "platform": "pinterest",
-          "date": "2026-05-11",
-          "title": "How to Remove Backgrounds from Photos - Free Browser Tool",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        }
-      ],
       "2026-05-12": [
         {
           "platform": "reddit",
@@ -1730,27 +1712,27 @@
           "is_experiment": false,
           "post_url": null
         }
+      ],
+      "2026-08-10": [
+        {
+          "platform": "reddit",
+          "date": "2026-08-10",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-08-10",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        }
       ]
     },
     "engagement": {
-      "2026-05-11": {
-        "reddit": {
-          "likes": 0,
-          "follows": 0,
-          "comments": 0
-        },
-        "twitter": {
-          "likes": 0,
-          "follows": 0,
-          "retweets": 0,
-          "comments": 0
-        },
-        "pinterest": {
-          "likes": 0,
-          "follows": 0,
-          "saves": 0
-        }
-      },
       "2026-05-12": {
         "reddit": {
           "likes": 0,
@@ -3298,15 +3280,27 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-08-10": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 7,
+          "follows": 4,
+          "retweets": 1,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
-      {
-        "date": "2026-05-18",
-        "reddit": 0,
-        "twitter": 0,
-        "pinterest": 0
-      },
       {
         "date": "2026-05-25",
         "reddit": 0,
@@ -3372,23 +3366,29 @@
         "reddit": 0,
         "twitter": 4,
         "pinterest": 0
+      },
+      {
+        "date": "2026-08-10",
+        "reddit": 0,
+        "twitter": 4,
+        "pinterest": 0
       }
     ],
     "account_status": {
       "reddit": {
         "created": true,
         "username": "AbrardeAhmed",
-        "last_active": "2026-08-09"
+        "last_active": "2026-08-10"
       },
       "twitter": {
         "created": true,
         "username": "bg_remover",
-        "last_active": "2026-08-09"
+        "last_active": "2026-08-10"
       },
       "pinterest": {
         "created": true,
         "username": "BGRemoverPro",
-        "last_active": "2026-08-09"
+        "last_active": "2026-08-10"
       },
       "medium": {
         "created": false,
