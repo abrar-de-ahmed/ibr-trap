@@ -369,21 +369,21 @@
   },
   "social": {
     "reddit": {
-      "posts": 120,
+      "posts": 121,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "active",
       "posted_count": 1
     },
     "twitter": {
-      "posts": 23,
+      "posts": 24,
       "avg_engagement": 0,
       "best_time": null,
       "status": "active",
       "posted_count": 1
     },
     "pinterest": {
-      "pins": 73,
+      "pins": 74,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
@@ -396,16 +396,6 @@
     },
     "total_posts": 6,
     "recent_posts": {
-      "2026-05-31": [
-        {
-          "platform": "reddit",
-          "date": "2026-05-31",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        }
-      ],
       "2026-06-01": [
         {
           "platform": "reddit",
@@ -1775,27 +1765,35 @@
           "is_experiment": false,
           "post_url": null
         }
+      ],
+      "2026-08-30": [
+        {
+          "platform": "reddit",
+          "date": "2026-08-30",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "twitter",
+          "date": "2026-08-30",
+          "title": "Built a background remover that runs 100% in your browser. No server. No signup. No catch. Works offline too. -> https://bgremoverdigital.craftedmindss.com #BackgroundRemover #FreeTool\n#NoSignup #FreeTool",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-08-30",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        }
       ]
     },
     "engagement": {
-      "2026-05-31": {
-        "reddit": {
-          "likes": 0,
-          "follows": 0,
-          "comments": 0
-        },
-        "twitter": {
-          "likes": 6,
-          "follows": 0,
-          "retweets": 1,
-          "comments": 0
-        },
-        "pinterest": {
-          "likes": 0,
-          "follows": 0,
-          "saves": 0
-        }
-      },
       "2026-06-01": {
         "reddit": {
           "likes": 0,
@@ -3397,6 +3395,24 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-08-30": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 0,
+          "follows": 0,
+          "retweets": 0,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
@@ -3477,17 +3493,17 @@
       "reddit": {
         "created": true,
         "username": "AbrardeAhmed",
-        "last_active": "2026-08-29"
+        "last_active": "2026-08-30"
       },
       "twitter": {
         "created": true,
         "username": "bg_remover",
-        "last_active": "2026-08-29"
+        "last_active": "2026-08-30"
       },
       "pinterest": {
         "created": true,
         "username": "BGRemoverPro",
-        "last_active": "2026-08-29"
+        "last_active": "2026-08-30"
       },
       "medium": {
         "created": false,
