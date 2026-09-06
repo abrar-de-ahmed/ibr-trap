@@ -3568,7 +3568,7 @@
     }
   },
   "backlinks": {
-    "total_created": 57,
+    "total_created": 59,
     "total_indexed": 0,
     "platforms": {
       "medium": {
@@ -3584,13 +3584,13 @@
         "status": "active"
       },
       "tumblr": {
-        "created": 16,
+        "created": 17,
         "indexed": 0,
         "rank_impact": 0,
         "status": "active"
       },
       "devto": {
-        "created": 17,
+        "created": 18,
         "indexed": 0,
         "rank_impact": 0,
         "status": "active"
