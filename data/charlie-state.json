@@ -4,13 +4,9 @@
   "lastKnownHashes": {
     "homepage": "b1c4435edfbdec01f40e23ae995a6e8fcc60e31a666aaf513eef0b05484e2f0b",
     "homepageStable": "b1c4435edfbdec01f40e23ae995a6e8fcc60e31a666aaf513eef0b05484e2f0b",
-    "homepageFull": "462803fab8d3f3c7b8da8bc7419bc6177594321d14bc01755472f2fac4aa9d87"
+    "homepageFull": "c10207d6cc5b50aae8fc9b2c301dd12124af1f573d053525f082b003630c8da8"
   },
   "responseTimeHistory": [
-    {
-      "time": "2026-08-17T00:56:57.480Z",
-      "ms": 329
-    },
     {
       "time": "2026-08-17T06:42:19.987Z",
       "ms": 228
@@ -678,10 +674,14 @@
     {
       "time": "2026-09-29T17:57:30.854Z",
       "ms": 341
+    },
+    {
+      "time": "2026-09-29T21:57:20.416Z",
+      "ms": 293
     }
   ],
   "alerts": [],
-  "checkCount": 554,
+  "checkCount": 555,
   "firstCheck": "2026-05-11",
   "bravoOverride": null,
   "lastCheck": "2026-09-29",
