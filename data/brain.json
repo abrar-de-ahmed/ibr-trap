@@ -369,21 +369,21 @@
   },
   "social": {
     "reddit": {
-      "posts": 156,
+      "posts": 157,
       "avg_engagement": 0,
       "best_subreddit": null,
       "status": "active",
       "posted_count": 1
     },
     "twitter": {
-      "posts": 54,
+      "posts": 55,
       "avg_engagement": 0,
       "best_time": null,
       "status": "active",
       "posted_count": 1
     },
     "pinterest": {
-      "pins": 109,
+      "pins": 110,
       "avg_clicks": 0,
       "best_type": null,
       "status": "active",
@@ -396,16 +396,6 @@
     },
     "total_posts": 6,
     "recent_posts": {
-      "2026-07-06": [
-        {
-          "platform": "reddit",
-          "date": "2026-07-06",
-          "title": "",
-          "status": "failed",
-          "is_experiment": false,
-          "post_url": null
-        }
-      ],
       "2026-07-07": [
         {
           "platform": "reddit",
@@ -2279,27 +2269,35 @@
           "is_experiment": false,
           "post_url": null
         }
+      ],
+      "2026-10-05": [
+        {
+          "platform": "reddit",
+          "date": "2026-10-05",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "twitter",
+          "date": "2026-10-05",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        },
+        {
+          "platform": "pinterest",
+          "date": "2026-10-05",
+          "title": "",
+          "status": "failed",
+          "is_experiment": false,
+          "post_url": null
+        }
       ]
     },
     "engagement": {
-      "2026-07-06": {
-        "reddit": {
-          "likes": 0,
-          "follows": 0,
-          "comments": 0
-        },
-        "twitter": {
-          "likes": 7,
-          "follows": 4,
-          "retweets": 1,
-          "comments": 0
-        },
-        "pinterest": {
-          "likes": 0,
-          "follows": 0,
-          "saves": 0
-        }
-      },
       "2026-07-07": {
         "reddit": {
           "likes": 0,
@@ -3901,15 +3899,27 @@
           "follows": 0,
           "saves": 0
         }
+      },
+      "2026-10-05": {
+        "reddit": {
+          "likes": 0,
+          "follows": 0,
+          "comments": 0
+        },
+        "twitter": {
+          "likes": 0,
+          "follows": 0,
+          "retweets": 0,
+          "comments": 0
+        },
+        "pinterest": {
+          "likes": 0,
+          "follows": 0,
+          "saves": 0
+        }
       }
     },
     "weekly_follows": [
-      {
-        "date": "2026-07-13",
-        "reddit": 0,
-        "twitter": 4,
-        "pinterest": 0
-      },
       {
         "date": "2026-07-20",
         "reddit": 0,
@@ -3975,23 +3985,29 @@
         "reddit": 0,
         "twitter": 0,
         "pinterest": 0
+      },
+      {
+        "date": "2026-10-05",
+        "reddit": 0,
+        "twitter": 0,
+        "pinterest": 0
       }
     ],
     "account_status": {
       "reddit": {
         "created": true,
         "username": "AbrardeAhmed",
-        "last_active": "2026-10-04"
+        "last_active": "2026-10-05"
       },
       "twitter": {
         "created": true,
         "username": "bg_remover",
-        "last_active": "2026-10-04"
+        "last_active": "2026-10-05"
       },
       "pinterest": {
         "created": true,
         "username": "BGRemoverPro",
-        "last_active": "2026-10-04"
+        "last_active": "2026-10-05"
       },
       "medium": {
         "created": false,
